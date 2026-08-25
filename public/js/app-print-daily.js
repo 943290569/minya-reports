@@ -41,7 +41,7 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .info-box span { display: block; font-size: 8px; color: #555; margin-bottom: 0.5mm; }
 .info-box strong { font-size: 9px; }
 .section-title { background: #eeeeee; border: 1px solid #444; text-align: center; font-weight: bold; font-size: 9.5px; padding: 0.7mm; margin: 0.8mm 0 0.5mm; }
-table { width: 198mm; border-collapse: collapse; margin: 0 auto; }
+table { width: 100%; border-collapse: collapse; margin: 0; }
 th, td { border: 1px solid #555; padding: calc(0.55mm + 0.5px) 0.7mm; text-align: center; vertical-align: middle; font-size: 9px; line-height: 1.05; }
 th { background: #f5f5f5; font-weight: bold; }
 .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1mm; margin: 1mm 0; }
