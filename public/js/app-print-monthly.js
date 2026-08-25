@@ -4,6 +4,8 @@
 
 async function buildMonthlyReportHtml() {
   const monthly = calculateMonthlyReport();
+  if (!monthly.month || monthly.reports.length === 0) return null;
+
   const monthlyOperationsData = await buildMonthlyOperationsData();
   const operationsTotals = monthlyOperationsData?.operationsTotals || {
     coverAslobVehicles: 0,
@@ -21,10 +23,22 @@ async function buildMonthlyReportHtml() {
     externalTammQuantity: 0,
   };
 
-  if (!monthly.month || monthly.reports.length === 0) return null;
+  const dieselData = monthlyOperationsData?.diesel || {
+    dieselTotal: monthly.dieselTotal,
+    dieselByReportId: new Map(),
+  };
 
-  const rows = monthly.reports.map((report) => `
-    <tr><td>${formatDate(report.report_date)}</td><td>${formatNumber(report.total_trucks)}</td><td>${formatNumber(report.total_waste_tons)}</td><td>${formatNumber(report.total_diesel)}</td></tr>`).join("");
+  const dieselTotal = Number(dieselData.dieselTotal || 0);
+  const dieselAverage = monthly.days > 0 ? dieselTotal / monthly.days : 0;
+
+  const rows = monthly.reports.map((report) => {
+    const id = Number(report.id);
+    const dailyDiesel = dieselData.dieselByReportId?.has(id)
+      ? dieselData.dieselByReportId.get(id)
+      : Number(report.total_diesel || 0);
+
+    return `<tr><td>${formatDate(report.report_date)}</td><td>${formatNumber(report.total_trucks)}</td><td>${formatNumber(report.total_waste_tons)}</td><td>${formatNumber(dailyDiesel)}</td></tr>`;
+  }).join("");
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -67,8 +81,8 @@ th { background: #f5f5f5; }
       <div class="summary-box"><span>متوسط النفايات اليومي</span><strong>${formatNumber(monthly.wasteAverage)} طن/يوم</strong></div>
       <div class="summary-box"><span>إجمالي الشاحنات</span><strong>${formatNumber(monthly.trucksTotal)}</strong></div>
       <div class="summary-box"><span>متوسط الشاحنات اليومي</span><strong>${formatNumber(monthly.trucksAverage)}</strong></div>
-      <div class="summary-box"><span>إجمالي السولار</span><strong>${formatNumber(monthly.dieselTotal)} لتر</strong></div>
-      <div class="summary-box"><span>متوسط السولار اليومي</span><strong>${formatNumber(monthly.dieselAverage)} لتر/يوم</strong></div>
+      <div class="summary-box"><span>إجمالي السولار</span><strong>${formatNumber(dieselTotal)} لتر</strong></div>
+      <div class="summary-box"><span>متوسط السولار اليومي</span><strong>${formatNumber(dieselAverage)} لتر/يوم</strong></div>
       <div class="summary-box"><span>أعلى كمية نفايات</span><strong>${formatNumber(monthly.maxWaste)} طن</strong></div>
       <div class="summary-box"><span>تاريخ أعلى كمية</span><strong>${formatDate(monthly.maxWasteDate)}</strong></div>
       <div class="summary-box"><span>أقل كمية نفايات</span><strong>${formatNumber(monthly.minWaste)} طن</strong></div>
@@ -85,7 +99,7 @@ th { background: #f5f5f5; }
       <tr><td>طمم خارجي</td><td>${formatNumber(operationsTotals.externalTammVehicles)}</td><td>${formatNumber(operationsTotals.externalTammQuantity)}</td><td>طن</td></tr>
     </tbody></table>
     <div class="section-title">التفاصيل اليومية للشهر</div>
-    <table><thead><tr><th>التاريخ</th><th>عدد الشاحنات</th><th>كمية النفايات طن</th><th>السولار لتر</th></tr></thead><tbody>${rows}<tr><th>المجموع</th><th>${formatNumber(monthly.trucksTotal)}</th><th>${formatNumber(monthly.wasteTotal)}</th><th>${formatNumber(monthly.dieselTotal)}</th></tr></tbody></table>
+    <table><thead><tr><th>التاريخ</th><th>عدد الشاحنات</th><th>كمية النفايات طن</th><th>السولار لتر</th></tr></thead><tbody>${rows}<tr><th>المجموع</th><th>${formatNumber(monthly.trucksTotal)}</th><th>${formatNumber(monthly.wasteTotal)}</th><th>${formatNumber(dieselTotal)}</th></tr></tbody></table>
   </div>
   <div class="official-footer"><img src="/assets/footer.png" alt="التذييل الرسمي"></div>
 </div>
@@ -100,16 +114,19 @@ async function printMonthlyReport() {
     showMessage("اختر الشهر أولًا");
     return;
   }
+
   const html = await buildMonthlyReportHtml();
   if (!html) {
     showMessage("لا توجد تقارير محفوظة لهذا الشهر");
     return;
   }
+
   const popup = window.open("", "_blank");
   if (!popup) {
     showMessage("المتصفح منع نافذة الطباعة");
     return;
   }
+
   popup.document.write(html);
   popup.document.close();
 }
