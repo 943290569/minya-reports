@@ -32,7 +32,7 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .report { width: 202mm; height: 289mm; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; }
 .official-header { width: 210mm; height: 30mm; margin-right: -4mm; margin-left: -4mm; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-header img { width: 210mm; height: 30mm; display: block; object-fit: fill; }
-.report-content { width: 100%; flex: 1; display: flex; flex-direction: column; }
+.report-content { width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .report-title { text-align: center; border-top: 1px solid #444; border-bottom: 1px solid #444; padding: 1.5mm 1mm; margin-bottom: 1mm; }
 .report-title h1 { margin: 0; font-size: 13px; }
 .report-number { direction: ltr; margin-top: 1mm; font-size: 9px; font-weight: bold; }
