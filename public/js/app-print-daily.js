@@ -41,7 +41,7 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .info-box span { display: block; font-size: 8px; color: #555; margin-bottom: 0.5mm; }
 .info-box strong { font-size: 9px; }
 .section-title { background: #eeeeee; border: 1px solid #444; text-align: center; font-weight: bold; font-size: 9.5px; padding: 0.7mm; margin: 0.8mm 0 0.5mm; }
-table { width: calc(100% - 8mm); max-width: calc(100% - 8mm); margin: 0 4mm; border-collapse: collapse; table-layout: fixed; }
+table { width: 100%; max-width: 100%; margin: 0; border-collapse: collapse; table-layout: fixed; }
 th, td { border: 1px solid #555; padding: calc(0.55mm + 0.5px) 0.7mm; text-align: center; vertical-align: middle; font-size: 9px; line-height: 1.05; overflow-wrap: anywhere; word-break: normal; }
 th { background: #f5f5f5; font-weight: bold; }
 .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1mm; margin: 1mm 0; }
@@ -51,7 +51,7 @@ th { background: #f5f5f5; font-weight: bold; }
 .notes { border: 1px solid #444; min-height: 9mm; padding: 1mm; font-size: 9.5px; white-space: pre-wrap; }
 .official-footer { width: 210mm; height: 22mm; margin-right: -10mm; margin-left: -4mm; margin-top: auto; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-footer img { width: 210mm; height: 22mm; display: block; object-fit: fill; }
-@media print { html, body { width: 210mm; height: 297mm; overflow: hidden; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .report { width: 202mm; height: 289mm; overflow: hidden; } table, tr, th, td { page-break-inside: avoid; } }
+@media print { html, body { width: 202mm; height: 289mm; overflow: hidden; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .report { width: 202mm; height: 289mm; margin: 0; overflow: hidden; } table, tr, th, td { page-break-inside: avoid; } }
 </style>
 </head>
 <body>
