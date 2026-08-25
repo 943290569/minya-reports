@@ -62,8 +62,8 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .summary-box span { display: block; font-size: 9px; color: #555; margin-bottom: 1mm; }
 .summary-box strong { display: block; font-size: 12px; }
 .section-title { background: #eeeeee; border: 1px solid #444; text-align: center; font-weight: bold; font-size: 11px; padding: 1mm; margin: 2mm 0 1mm; }
-table { width: 100%; border-collapse: collapse; }
-th, td { border: 1px solid #555; padding: 2mm; text-align: center; font-size: 9.5px; }
+table { width: calc(100% - 8mm); max-width: calc(100% - 8mm); margin: 0 4mm; border-collapse: collapse; table-layout: fixed; }
+th, td { border: 1px solid #555; padding: 2mm; text-align: center; font-size: 9.5px; overflow-wrap: anywhere; word-break: normal; }
 th { background: #f5f5f5; }
 .official-footer { width: 210mm; height: 22mm; margin-right: -10mm; margin-left: -4mm; margin-top: auto; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-footer img { width: 210mm; height: 22mm; display: block; object-fit: fill; }
