@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<style>
+
+.monthly-report {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid #d1d5db;
+}
+
+.monthly-report h3 {
+  margin: 0 0 18px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.monthly-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.monthly-summary > div {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 14px 10px;
+  text-align: center;
+  min-height: 94px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.monthly-summary span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.monthly-summary strong {
+  display: block;
+  font-size: 21px;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.monthly-summary small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.monthly-actions {
+  display: flex;
+  justify-content: center;
+  margin: 18px 0;
+}
+
+#printMonthlyReportBtn {
+  min-width: 220px;
+  padding: 11px 20px;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.archive-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.archive-summary > div {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.archive-summary span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.archive-summary strong {
+  display: block;
+  font-size: 20px;
+}
+
+.archive-summary small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.archive-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.archive-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.archive-filters input {
+  width: 100%;
+}
+
+#clearArchiveFiltersBtn {
+  height: 42px;
+  padding: 0 18px;
+}
+
+@media (max-width: 1000px) {
+  .monthly-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .archive-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .monthly-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .archive-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .monthly-summary,
+  .archive-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+</style>
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    نظام إدارة مكب المنيا
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+</head>
+
+<body>
+
+  <header class="top-header">
+
+    <div>
+      <h1>
+        نظام إدارة مكب المنيا
+      </h1>
+
+      <p>
+        التقرير التشغيلي والبيئي اليومي
+      </p>
+    </div>
+
+    <nav>
+
+      <button
+        id="newReportBtn"
+        type="button"
+      >
+        تقرير جديد
+      </button>
+
+      <button
+        id="archiveBtn"
+        type="button"
+      >
+        الأرشيف
+      </button>
+
+    </nav>
+
+  </header>
+
+  <main class="container">
+
+    <div
+      id="message"
+      class="message"
+    ></div>
+
+    <section
+      id="reportFormSection"
+      class="panel"
+    >
+      <h2>بيانات التقرير</h2>
+      <div class="form-grid">
+        <label>تاريخ التقرير<input id="reportDate" type="date"></label>
+        <label>حالة الطقس<input id="weather" type="text" value="مشمس"></label>
+        <label>درجة الحرارة<input id="temperature" type="number" value="10"></label>
+        <label>وقت البداية<input id="startTime" type="time" value="04:00"></label>
+        <label>وقت النهاية<input id="endTime" type="time" value="19:00"></label>
+      </div>
+    </section>
+
+    <section class="panel"><h2>شؤون الموظفين</h2><table id="crewsTable"><thead><tr><th>طواقم العمل</th><th>العدد</th><th>الملاحظات</th></tr></thead><tbody></tbody></table></section>
+
+    <section class="panel"><h2>العمليات</h2><table id="operationsTable"><thead><tr><th>العملية</th><th>وقت البداية</th><th>وقت النهاية</th><th>عدد المركبات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></section>
+
+    <section class="panel"><h2>محطات الترحيل</h2><table id="stationsTable"><thead><tr><th>المحطة</th><th>عدد الشاحنات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></section>
+
+    <section class="panel"><h2>تقرير الصيانة اليومي</h2><table id="equipmentTable"><thead><tr><th>اسم الآلية</th><th>حالة الآلية</th><th>وصف الحالة</th><th>ساعات العمل</th><th>كمية السولار</th></tr></thead><tbody></tbody></table></section>
+
+    <section class="panel"><h2>الملاحظات</h2><textarea id="notes" rows="5" placeholder="اكتب الملاحظات اليومية هنا..."></textarea></section>
+
+    <section class="panel">
+      <h2>الملخص اليومي</h2>
+      <div class="daily-summary">
+        <div><span>عدد العاملين</span><strong id="summaryWorkers">0</strong></div>
+        <div><span>عدد الشاحنات</span><strong id="summaryTrucks">0</strong></div>
+        <div><span>إجمالي النفايات</span><strong id="summaryWaste">0</strong><small>طن</small></div>
+        <div><span>إجمالي السولار</span><strong id="summaryDiesel">0</strong><small>لتر</small></div>
+        <div><span>معدات تعمل</span><strong id="summaryWorkingEquipment">0</strong></div>
+        <div><span>متعطل / صيانة</span><strong id="summaryStoppedEquipment">0</strong></div>
+      </div>
+    </section>
+
+    <section class="actions"><button id="saveBtn" type="button">حفظ التقرير</button></section>
+
+    <section id="archiveSection" class="panel hidden">
+      <h2>أرشيف التقارير</h2>
+
+      <div class="archive-filters">
+        <label>البحث بالتاريخ<input id="archiveDateFilter" type="date"></label>
+        <label>الشهر<input id="archiveMonthFilter" type="month"></label>
+        <button id="clearArchiveFiltersBtn" type="button">مسح الفلاتر</button>
+      </div>
+
+      <div class="archive-summary">
+        <div><span>عدد التقارير</span><strong id="archiveReportsCount">0</strong></div>
+        <div><span>مجموع النفايات</span><strong id="archiveWasteTotal">0</strong><small>طن</small></div>
+        <div><span>مجموع الشاحنات</span><strong id="archiveTrucksTotal">0</strong></div>
+        <div><span>مجموع السولار</span><strong id="archiveDieselTotal">0</strong><small>لتر</small></div>
+      </div>
+
+      <div id="monthlyReportSection" class="monthly-report">
+        <h3>التقرير الشهري</h3>
+        <div class="monthly-summary">
+          <div><span>عدد أيام التشغيل المسجلة</span><strong id="monthlyDaysCount">0</strong></div>
+          <div><span>إجمالي النفايات</span><strong id="monthlyWasteTotal">0</strong><small>طن</small></div>
+          <div><span>متوسط النفايات اليومي</span><strong id="monthlyWasteAverage">0</strong><small>طن/يوم</small></div>
+          <div><span>إجمالي الشاحنات</span><strong id="monthlyTrucksTotal">0</strong></div>
+          <div><span>متوسط الشاحنات اليومي</span><strong id="monthlyTrucksAverage">0</strong></div>
+          <div><span>إجمالي السولار</span><strong id="monthlyDieselTotal">0</strong><small>لتر</small></div>
+          <div><span>متوسط السولار اليومي</span><strong id="monthlyDieselAverage">0</strong><small>لتر/يوم</small></div>
+          <div><span>أعلى كمية نفايات</span><strong id="monthlyMaxWaste">0</strong><small>طن</small></div>
+          <div><span>تاريخ أعلى كمية</span><strong id="monthlyMaxWasteDate">-</strong></div>
+          <div><span>أقل كمية نفايات</span><strong id="monthlyMinWaste">0</strong><small>طن</small></div>
+          <div><span>تاريخ أقل كمية</span><strong id="monthlyMinWasteDate">-</strong></div>
+        </div>
+        <div class="monthly-actions"><button id="printMonthlyReportBtn" type="button">طباعة التقرير الشهري</button></div>
+      </div>
+
+      <table id="archiveTable"><thead><tr><th>رقم التقرير</th><th>التاريخ</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th><th>الإجراءات</th></tr></thead><tbody></tbody></table>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+
+</body>
+
+</html>
