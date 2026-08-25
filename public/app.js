@@ -6,7 +6,6 @@
   "js/app-edit.js",
   "js/app-print-daily.js",
   "js/app-print-monthly.js",
-  "js/app-monthly-diesel-fix.js",
   "js/app-final.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
