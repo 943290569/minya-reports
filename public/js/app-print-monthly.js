@@ -53,7 +53,7 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .report { width: 202mm; height: 289mm; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; }
 .official-header { width: 210mm; height: 30mm; margin-right: -4mm; margin-left: -4mm; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-header img { width: 210mm; height: 30mm; display: block; object-fit: fill; }
-.report-content { width: 100%; flex: 1; }
+.report-content { width: 202mm; min-width: 202mm; max-width: 202mm; flex: 1; }
 .title { text-align: center; border-top: 1px solid #444; border-bottom: 1px solid #444; padding: 2mm; margin-bottom: 2mm; }
 .title h1 { margin: 0; font-size: 15px; }
 .title p { margin: 1mm 0 0; font-size: 11px; font-weight: bold; }
@@ -62,12 +62,12 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .summary-box span { display: block; font-size: 9px; color: #555; margin-bottom: 1mm; }
 .summary-box strong { display: block; font-size: 12px; }
 .section-title { background: #eeeeee; border: 1px solid #444; text-align: center; font-weight: bold; font-size: 11px; padding: 1mm; margin: 2mm 0 1mm; }
-table { width: calc(100% - 8mm); max-width: calc(100% - 8mm); margin: 0 4mm; border-collapse: collapse; table-layout: fixed; }
+table { width: 202mm; min-width: 202mm; max-width: 202mm; margin: 0; border-collapse: collapse; table-layout: fixed; }
 th, td { border: 1px solid #555; padding: 2mm; text-align: center; font-size: 9.5px; overflow-wrap: anywhere; word-break: normal; }
 th { background: #f5f5f5; }
 .official-footer { width: 210mm; height: 22mm; margin-right: -10mm; margin-left: -4mm; margin-top: auto; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-footer img { width: 210mm; height: 22mm; display: block; object-fit: fill; }
-@media print { html, body { width: 210mm; height: 297mm; overflow: hidden; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+@media print { html, body { width: 210mm; height: 297mm; overflow: hidden; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } table { width: 202mm !important; min-width: 202mm !important; max-width: 202mm !important; } }
 </style>
 </head>
 <body>
