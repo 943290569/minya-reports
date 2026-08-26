@@ -1,0 +1,48 @@
+name: Patch Full Backup
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/patch-full-backup.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch server backup logic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('server.js')
+          s=p.read_text()
+          old='''    attachments: db.prepare(`SELECT id,report_id,original_name,mime_type,size_bytes,created_at FROM attachments WHERE report_id=? ORDER BY id`).all(reportId),'''
+          new='''    attachments: db.prepare(`SELECT id,report_id,original_name,stored_name,mime_type,size_bytes,created_at FROM attachments WHERE report_id=? ORDER BY id`).all(reportId).map((a) => {\n      const file = path.join(uploadsDir, a.stored_name);\n      return { ...a, data_base64: fs.existsSync(file) ? fs.readFileSync(file).toString("base64") : "" };\n    }),'''
+          assert old in s, 'backup attachment query not found'
+          s=s.replace(old,new,1)
+
+          old='''insertChildren(result.lastInsertRowid,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); } for(const m of backup.maintenance||[])'''
+          new='''insertChildren(result.lastInsertRowid,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const buffer=Buffer.from(a.data_base64,"base64"); const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${result.lastInsertRowid}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_by,created_at) VALUES (?,?,?,?,?,?,?)`).run(result.lastInsertRowid,a.original_name||"مرفق",stored,a.mime_type||"application/octet-stream",buffer.length,req.user.id,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[])'''
+          assert old in s, 'restore insertion point not found'
+          s=s.replace(old,new,1)
+
+          old='''audit(req.user,"ADD_ATTACHMENT","report",reportId,name); res.json({ok:true,id:r.lastInsertRowid});'''
+          new='''audit(req.user,"ADD_ATTACHMENT","report",reportId,name); writeAutomaticBackup("attachment-add"); res.json({ok:true,id:r.lastInsertRowid});'''
+          assert old in s, 'attachment add hook not found'
+          s=s.replace(old,new,1)
+
+          old='''app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); try{fs.unlinkSync(path.join(uploadsDir,a.stored_name));}catch{} db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });'''
+          new='''app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); writeAutomaticBackup("pre-attachment-delete"); try{fs.unlinkSync(path.join(uploadsDir,a.stored_name));}catch{} db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });'''
+          assert old in s, 'attachment delete route not found'
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Validate syntax
+        run: node --check server.js
+      - name: Commit patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server.js
+          git commit -m "Include attachment files in backups" || exit 0
+          git push
