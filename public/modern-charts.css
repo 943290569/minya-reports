@@ -1,0 +1,262 @@
+/* =========================================================
+   Modern SVG monthly charts
+========================================================= */
+
+.monthly-chart {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.monthly-chart > h4 {
+  display: none;
+}
+
+#monthlyChartMetricSwitcher {
+  display: inline-flex !important;
+  gap: 6px !important;
+  margin: 16px 18px 0 !important;
+  padding: 5px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+#monthlyChartMetricSwitcher button {
+  min-width: 96px;
+  padding: 8px 14px !important;
+  color: #475467 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  font-size: 13px;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+#monthlyChartMetricSwitcher button.modern-chart-active {
+  color: #0f513b !important;
+  background: #fff !important;
+  box-shadow: 0 2px 7px rgba(16,24,40,.08) !important;
+}
+
+.monthly-chart-scroll {
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+.modern-chart-shell {
+  padding: 18px 20px 20px;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%);
+}
+
+.modern-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 8px;
+}
+
+.modern-chart-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #7a8699;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.modern-chart-head h4 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.modern-chart-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.modern-chart-stats span {
+  min-width: 110px;
+  text-align: left;
+}
+
+.modern-chart-stats small,
+.modern-chart-stats strong {
+  display: block;
+}
+
+.modern-chart-stats small {
+  margin-bottom: 3px;
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.modern-chart-stats strong {
+  color: #344054;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.modern-chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.modern-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 280px;
+  overflow: visible;
+}
+
+.modern-chart-grid {
+  stroke: #e8edf2;
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+
+.modern-chart-axis-label,
+.modern-chart-x-label,
+.modern-chart-axis-title {
+  fill: #8a94a6;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 11px;
+}
+
+.modern-chart-axis-title {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.modern-chart-average {
+  stroke: #98a2b3;
+  stroke-width: 1.5;
+  stroke-dasharray: 7 6;
+}
+
+.modern-chart-average-label {
+  fill: #667085;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.modern-chart-line {
+  fill: none;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.modern-chart-area {
+  opacity: .13;
+}
+
+.modern-chart-point {
+  stroke: #fff;
+  stroke-width: 2.2;
+  cursor: pointer;
+  transition: r 120ms ease;
+}
+
+.modern-chart-point:hover {
+  r: 7;
+}
+
+.modern-chart-bar {
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.modern-chart-bar:hover {
+  opacity: .78;
+}
+
+.chart-waste.modern-chart-line { stroke: #176b4f; }
+.chart-waste.modern-chart-area { fill: #2f9b75; }
+.chart-waste.modern-chart-point { fill: #176b4f; }
+.chart-trucks.modern-chart-bar { fill: #2563eb; }
+.chart-diesel.modern-chart-line { stroke: #b7791f; }
+.chart-diesel.modern-chart-area { fill: #d89a36; }
+.chart-diesel.modern-chart-point { fill: #b7791f; }
+
+.modern-chart-tooltip {
+  position: absolute;
+  z-index: 10;
+  min-width: 120px;
+  padding: 9px 11px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  color: #fff;
+  background: rgba(20, 28, 38, .94);
+  border-radius: 9px;
+  box-shadow: 0 8px 22px rgba(16,24,40,.22);
+  text-align: center;
+}
+
+.modern-chart-tooltip strong,
+.modern-chart-tooltip span {
+  display: block;
+}
+
+.modern-chart-tooltip strong {
+  margin-bottom: 3px;
+  font-size: 11px;
+}
+
+.modern-chart-tooltip span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.modern-chart-loading {
+  padding: 70px 20px;
+  color: #667085;
+  text-align: center;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .modern-chart-shell {
+    padding: 14px 10px 16px;
+  }
+
+  .modern-chart-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modern-chart-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .modern-chart-stats span {
+    min-width: 0;
+    padding: 9px;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .modern-chart-svg {
+    min-height: 230px;
+  }
+
+  #monthlyChartMetricSwitcher {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    width: calc(100% - 20px);
+    margin: 10px !important;
+  }
+
+  #monthlyChartMetricSwitcher button {
+    min-width: 0;
+    padding: 8px 5px !important;
+  }
+}
