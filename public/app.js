@@ -15,7 +15,8 @@
   "js/page-mode.js",
   "js/app-smart-status.js",
   "js/app-modern-charts.js",
-  "js/app-monthly-table.js"
+  "js/app-monthly-table.js",
+  "js/app-executive-dashboard.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
@@ -25,4 +26,11 @@ if (!document.querySelector('link[href="modern-charts.css"]')) {
   modernChartsCss.rel = "stylesheet";
   modernChartsCss.href = "modern-charts.css";
   document.head.appendChild(modernChartsCss);
+}
+
+if (!document.querySelector('link[href="executive-dashboard.css"]')) {
+  const executiveDashboardCss = document.createElement("link");
+  executiveDashboardCss.rel = "stylesheet";
+  executiveDashboardCss.href = "executive-dashboard.css";
+  document.head.appendChild(executiveDashboardCss);
 }
