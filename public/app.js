@@ -31,7 +31,8 @@
   "modern-charts.css",
   "executive-dashboard.css",
   "v3.css",
-  "report-attachments.css"
+  "report-attachments.css",
+  "edit-flow.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href="${href}"]`)) {
     const link = document.createElement("link");
