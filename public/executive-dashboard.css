@@ -1,0 +1,186 @@
+/* =========================================================
+   Executive dashboard
+========================================================= */
+
+.executive-dashboard {
+  margin: 22px 0;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #dfe6ee;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(16,24,40,.07);
+}
+
+.executive-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.executive-head span {
+  display: block;
+  margin-bottom: 4px;
+  color: #7b8794;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .7px;
+}
+
+.executive-head h3 {
+  margin: 0;
+  color: #22313c;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.executive-head p {
+  margin: 5px 0 0;
+  color: #7b8794;
+  font-size: 12px;
+}
+
+.executive-head a {
+  color: #176b4f;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.executive-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 12px;
+}
+
+.executive-card,
+.executive-highlight {
+  padding: 16px;
+  border: 1px solid #e1e7ee;
+  border-radius: 14px;
+  background: linear-gradient(180deg,#fff 0%,#fbfcfd 100%);
+}
+
+.executive-card span,
+.executive-highlight span {
+  display: block;
+  color: #697586;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.executive-card strong,
+.executive-highlight strong {
+  display: block;
+  margin: 7px 0 4px;
+  color: #1f2937;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.executive-card small,
+.executive-highlight small {
+  color: #8b96a5;
+  font-size: 11px;
+}
+
+.executive-card small[data-tone="up"] { color: #b54708; font-weight: 800; }
+.executive-card small[data-tone="down"] { color: #176b4f; font-weight: 800; }
+.executive-card small[data-tone="neutral"] { color: #7b8794; }
+
+.executive-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.executive-trend-panel {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #e1e7ee;
+  border-radius: 14px;
+  background: #fbfcfd;
+}
+
+.executive-trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.executive-trend-head strong {
+  color: #2a3742;
+  font-size: 14px;
+}
+
+.executive-trend-head small {
+  color: #7b8794;
+}
+
+.executive-trend-bars {
+  height: 150px;
+  display: grid;
+  grid-template-columns: repeat(12,minmax(18px,1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.executive-trend-item {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.executive-trend-column {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eef3f6;
+  overflow: hidden;
+}
+
+.executive-trend-column span {
+  width: 72%;
+  min-height: 3px;
+  display: block;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg,#3b9c79,#176b4f);
+}
+
+.executive-trend-item small {
+  margin-top: 5px;
+  color: #8b96a5;
+  font-size: 10px;
+}
+
+.executive-error::after {
+  content: "تعذر تحميل بعض المؤشرات التنفيذية.";
+  display: block;
+  margin-top: 12px;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .executive-comparison-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .executive-year-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .executive-dashboard { padding: 14px; border-radius: 16px; }
+  .executive-head { align-items: flex-start; flex-direction: column; }
+  .executive-comparison-grid { grid-template-columns: 1fr 1fr; }
+  .executive-card strong,
+  .executive-highlight strong { font-size: 19px; }
+  .executive-trend-panel { overflow-x: auto; }
+  .executive-trend-bars { min-width: 620px; }
+}
