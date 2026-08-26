@@ -201,11 +201,132 @@ document.getElementById("clearArchiveFiltersBtn")?.addEventListener("click", () 
   setTimeout(() => renderMonthlyMetricChart("waste"), 100);
 });
 
+/* =========================================================
+   تصدير التقرير الشهري CSV لفتحه في Excel
+========================================================= */
+
+function csvCell(value) {
+  const text = String(value ?? "").replace(/"/g, '""');
+  return `"${text}"`;
+}
+
+async function exportMonthlyCsv() {
+  const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+  if (!monthValue) {
+    showMessage("اختر الشهر أولًا");
+    return;
+  }
+
+  const reports = [...archiveReports]
+    .filter((report) => String(report.report_date || "").startsWith(monthValue))
+    .sort((a, b) => String(a.report_date || "").localeCompare(String(b.report_date || "")));
+
+  if (!reports.length) {
+    showMessage("لا توجد تقارير محفوظة لهذا الشهر");
+    return;
+  }
+
+  showMessage("جاري تجهيز ملف الشهر...");
+
+  const details = await Promise.all(
+    reports.map((report) => getReport(report.id).catch(() => null))
+  );
+
+  const dieselById = new Map();
+  details.forEach((data, index) => {
+    const report = reports[index];
+    const diesel = data
+      ? (data.equipment || []).reduce((sum, item) => sum + Number(item.diesel_liters || 0), 0)
+      : Number(report.total_diesel || 0);
+    dieselById.set(Number(report.id), diesel);
+  });
+
+  const wasteTotal = reports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const trucksTotal = reports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+  const dieselTotal = reports.reduce((sum, report) => sum + Number(dieselById.get(Number(report.id)) || 0), 0);
+  const days = reports.length;
+
+  const maxReport = reports.reduce((max, report) =>
+    Number(report.total_waste_tons || 0) > Number(max.total_waste_tons || 0) ? report : max
+  );
+  const minReport = reports.reduce((min, report) =>
+    Number(report.total_waste_tons || 0) < Number(min.total_waste_tons || 0) ? report : min
+  );
+
+  const rows = [
+    ["التقرير الشهري لمكب المنيا", getMonthName(monthValue)],
+    [],
+    ["البيان", "القيمة"],
+    ["عدد أيام التشغيل المسجلة", days],
+    ["إجمالي النفايات طن", wasteTotal],
+    ["متوسط النفايات اليومي طن/يوم", days ? wasteTotal / days : 0],
+    ["إجمالي الشاحنات", trucksTotal],
+    ["متوسط الشاحنات اليومي", days ? trucksTotal / days : 0],
+    ["إجمالي السولار لتر", dieselTotal],
+    ["متوسط السولار اليومي لتر/يوم", days ? dieselTotal / days : 0],
+    ["أعلى كمية نفايات طن", Number(maxReport.total_waste_tons || 0)],
+    ["تاريخ أعلى كمية", maxReport.report_date],
+    ["أقل كمية نفايات طن", Number(minReport.total_waste_tons || 0)],
+    ["تاريخ أقل كمية", minReport.report_date],
+    [],
+    ["التاريخ", "عدد الشاحنات", "كمية النفايات طن", "السولار لتر"],
+    ...reports.map((report) => [
+      report.report_date,
+      Number(report.total_trucks || 0),
+      Number(report.total_waste_tons || 0),
+      Number(dieselById.get(Number(report.id)) || 0),
+    ]),
+    ["المجموع", trucksTotal, wasteTotal, dieselTotal],
+  ];
+
+  const csv = "\uFEFF" + rows
+    .map((row) => row.map(csvCell).join(","))
+    .join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `minya-monthly-${monthValue}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+
+  showMessage("تم تصدير التقرير الشهري بنجاح");
+}
+
+function setupMonthlyExportButton() {
+  const actions = document.querySelector(".monthly-actions");
+  if (!actions || document.getElementById("exportMonthlyCsvBtn")) return;
+
+  actions.style.gap = "10px";
+  actions.style.flexWrap = "wrap";
+
+  const button = document.createElement("button");
+  button.id = "exportMonthlyCsvBtn";
+  button.type = "button";
+  button.textContent = "تصدير Excel / CSV";
+  button.style.minWidth = "220px";
+  button.style.padding = "11px 20px";
+  button.style.border = "0";
+  button.style.borderRadius = "7px";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "15px";
+  button.style.fontWeight = "700";
+  button.addEventListener("click", exportMonthlyCsv);
+
+  actions.appendChild(button);
+}
+
+setupMonthlyExportButton();
+
 window.openReport = openReport;
 window.editReport = editReport;
 window.printReport = printReport;
 window.deleteReport = deleteReport;
 window.printMonthlyReport = printMonthlyReport;
 window.renderMonthlyMetricChart = renderMonthlyMetricChart;
+window.exportMonthlyCsv = exportMonthlyCsv;
 
 renderAll();
