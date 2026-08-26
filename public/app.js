@@ -20,7 +20,8 @@
   "js/app-executive-dashboard.js",
   "js/app-system-link.js",
   "js/app-credit.js",
-  "js/app-v3-pages.js"
+  "js/app-v3-pages.js",
+  "js/app-report-attachments.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
