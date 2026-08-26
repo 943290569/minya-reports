@@ -300,6 +300,10 @@ async function refreshArchiveDiesel(filteredReports) {
   }
 }
 
+function goToEditReport(id) {
+  window.location.href = `/report?edit=${encodeURIComponent(id)}`;
+}
+
 function renderArchiveReports() {
   const dateFilter = document.getElementById("archiveDateFilter")?.value || "";
   const monthFilter = document.getElementById("archiveMonthFilter")?.value || "";
@@ -332,14 +336,15 @@ function renderArchiveReports() {
         <td>${formatNumber(report.total_diesel)}</td>
         <td>
           <button onclick="openReport(${report.id})">فتح</button>
-          <button onclick="editReport(${report.id})">تعديل</button>
+          <button class="role-editor-action" onclick="goToEditReport(${report.id})">تعديل</button>
           <button onclick="printReport(${report.id})">طباعة</button>
-          <button onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
+          <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
         </td>
       </tr>`).join("");
 
   refreshArchiveDiesel(filteredReports);
   updateMonthlySummary();
+  if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
 }
 
 async function loadArchive(showStatus = true) {
