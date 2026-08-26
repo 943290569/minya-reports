@@ -15,6 +15,36 @@
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value);
   }
 
+  function formatBytes(bytes) {
+    const value = Number(bytes || 0);
+    if (value < 1024) return `${formatNumber(value)} B`;
+    if (value < 1024 * 1024) return `${formatNumber(value / 1024)} KB`;
+    return `${formatNumber(value / (1024 * 1024))} MB`;
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "-";
+    try {
+      return new Date(value).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return String(value);
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  }
+
   function setText(id, value) {
     const element = document.getElementById(id);
     if (element) element.textContent = value;
@@ -28,10 +58,15 @@
     badge.textContent = text;
   }
 
+  async function api(url) {
+    const response = await fetch(url);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل البيانات");
+    return data;
+  }
+
   async function fetchReports() {
-    const response = await fetch("/api/reports");
-    const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل التقارير");
+    const data = await api("/api/reports");
     return Array.isArray(data.reports) ? data.reports : [];
   }
 
@@ -47,7 +82,7 @@
 
       setText("systemServerState", "متصل");
       setText("systemVersion", `${health.database || "SQLite"} · ${health.version || "-"}`);
-      setHealth(true, "النظام يعمل بشكل طبيعي");
+      setHealth(true, health.integrity === "ok" ? "قاعدة البيانات سليمة" : "النظام يعمل");
 
       const sorted = [...reports].sort((a, b) =>
         String(a.report_date || "").localeCompare(String(b.report_date || ""))
@@ -60,10 +95,7 @@
       setText("systemLatestNo", latest?.report_no || "-");
       setText("systemOldestDate", oldest ? formatDate(oldest.report_date) : "-");
       setText("systemOldestNo", oldest?.report_no || "-");
-      setText(
-        "systemDateRange",
-        oldest && latest ? `${formatDate(oldest.report_date)} — ${formatDate(latest.report_date)}` : "لا توجد بيانات"
-      );
+      setText("systemDateRange", oldest && latest ? `${formatDate(oldest.report_date)} — ${formatDate(latest.report_date)}` : "لا توجد بيانات");
 
       const waste = reports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
       const trucks = reports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
@@ -79,83 +111,84 @@
     }
   }
 
-  async function buildFullBackup() {
-    const reports = await fetchReports();
-    const details = [];
+  async function loadStorage() {
+    try {
+      const data = await api("/api/system/storage");
+      const percent = Math.max(0, Number(data.usage_percent || 0));
+      const remaining = Math.max(0, Number(data.reference_limit_bytes || 0) - Number(data.total_bytes || 0));
 
-    for (let index = 0; index < reports.length; index += 1) {
-      const report = reports[index];
-      setText("backupStatus", `جاري تجهيز ${index + 1} من ${reports.length}`);
+      setText("storageUsed", formatBytes(data.total_bytes));
+      setText("storagePercent", `${formatNumber(percent)}%`);
+      setText("storageRemaining", `متبقي ${formatBytes(remaining)}`);
+      setText("storageDatabase", formatBytes(data.database_bytes));
+      setText("storageUploads", formatBytes(data.uploads_bytes));
+      setText("storageBackups", formatBytes(data.backups_bytes));
+      setText("storageAttachmentsCount", `${formatNumber(data.attachments_count)} مرفق`);
+      setText("storageBackupsCount", `${formatNumber(data.backups_count)} نسخة`);
 
-      try {
-        const response = await fetch(`/api/reports/${report.id}`);
-        const data = await response.json();
-        if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل التقرير");
-        details.push(data);
-      } catch (error) {
-        console.error(`فشل نسخ التقرير ${report.id}`, error);
-        details.push({ ok: false, report, backup_error: error.message });
+      const bar = document.getElementById("storageProgressBar");
+      if (bar) {
+        bar.style.width = `${Math.min(percent, 100)}%`;
+        bar.dataset.level = data.level || "ok";
       }
-    }
 
-    return {
-      backup_format: "minya-landfill-full-backup",
-      backup_version: 1,
-      exported_at: new Date().toISOString(),
-      reports_count: reports.length,
-      reports: details,
-    };
+      const state = document.getElementById("storageState");
+      if (state) {
+        state.className = `storage-state ${data.level || "ok"}`;
+        state.textContent = data.level === "danger" ? "قريب من الامتلاء" : data.level === "warning" ? "تنبيه مساحة" : "المساحة طبيعية";
+      }
+
+      const notice = document.getElementById("storageNotice");
+      if (notice) {
+        if (data.level === "danger") notice.textContent = "تنبيه: الاستخدام تجاوز 85% من مرجع 512MB. نزّل نسخة خارجية وراجع المرفقات والنسخ القديمة.";
+        else if (data.level === "warning") notice.textContent = "الاستخدام تجاوز 70% من مرجع 512MB. يفضل متابعة نمو المرفقات والنسخ الاحتياطية.";
+        else notice.textContent = "الاستخدام ضمن المستوى الطبيعي. 512MB هو مرجع مراقبة فقط ولا يتم حذف البيانات تلقائيًا.";
+      }
+    } catch (error) {
+      console.error("فشل تحميل مساحة التخزين", error);
+      setText("storageState", "غير متاح");
+    }
   }
 
-  async function downloadBackup() {
-    const button = document.getElementById("downloadBackupBtn");
-    if (button) button.disabled = true;
-
+  async function loadSavedBackups() {
+    const body = document.getElementById("savedBackupsBody");
+    if (!body) return;
     try {
-      setText("backupStatus", "جاري تجهيز النسخة...");
-      const backup = await buildFullBackup();
-      const json = JSON.stringify(backup, null, 2);
-      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
+      const data = await api("/api/backups");
+      const rows = Array.isArray(data.backups) ? data.backups : [];
+      body.innerHTML = rows.length
+        ? rows.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${formatDateTime(item.created_at)}</td><td>${formatBytes(item.size_bytes)}</td><td><a class="backup-download-link" href="/api/backups/${encodeURIComponent(item.name)}/download">تنزيل</a></td></tr>`).join("")
+        : `<tr><td colspan="4">لا توجد نسخ تلقائية محفوظة بعد.</td></tr>`;
+    } catch (error) {
+      console.error("فشل تحميل النسخ المحفوظة", error);
+      body.innerHTML = `<tr><td colspan="4">تعذر تحميل قائمة النسخ.</td></tr>`;
+    }
+  }
+
+  function registerBackupDownload() {
+    const link = document.getElementById("downloadCurrentBackup");
+    if (!link) return;
+    link.addEventListener("click", () => {
       const now = new Date();
-      const stamp = [
-        now.getFullYear(),
-        String(now.getMonth() + 1).padStart(2, "0"),
-        String(now.getDate()).padStart(2, "0"),
-      ].join("-");
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `minya-landfill-backup-${stamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-
-      const timeText = now.toLocaleString("ar-EG", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
+      const timeText = now.toLocaleString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
       localStorage.setItem("minyaLastBackupTime", timeText);
       setText("lastBackupTime", timeText);
-      setText("backupStatus", `تم تنزيل ${formatNumber(backup.reports_count)} تقرير`);
-    } catch (error) {
-      console.error("فشل إنشاء النسخة الاحتياطية", error);
-      setText("backupStatus", "فشل إنشاء النسخة الاحتياطية");
-    } finally {
-      if (button) button.disabled = false;
-    }
+      setText("backupStatus", "بدأ تنزيل النسخة الكاملة");
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     const storedBackupTime = localStorage.getItem("minyaLastBackupTime");
     if (storedBackupTime) setText("lastBackupTime", storedBackupTime);
 
-    document.getElementById("downloadBackupBtn")?.addEventListener("click", downloadBackup);
+    registerBackupDownload();
+    document.getElementById("refreshBackupsBtn")?.addEventListener("click", () => {
+      loadStorage();
+      loadSavedBackups();
+    });
+
     loadSystemStatus();
+    loadStorage();
+    loadSavedBackups();
   });
 })();
