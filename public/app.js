@@ -11,7 +11,8 @@
   "js/app-print-annual.js",
   "js/app-annual-comparison.js",
   "js/app-annual-insights.js",
-  "js/app-archive-search.js"
+  "js/app-archive-search.js",
+  "js/page-mode.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
