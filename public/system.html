@@ -35,7 +35,7 @@
       <div>
         <span class="system-kicker">SYSTEM MANAGEMENT</span>
         <h2>حالة النظام والنسخ الاحتياطي</h2>
-        <p>متابعة سلامة الاتصال بالقاعدة وحفظ نسخة خارجية كاملة من بيانات التقارير.</p>
+        <p>متابعة سلامة قاعدة البيانات، مساحة التخزين، والمرفقات والنسخ الاحتياطية.</p>
       </div>
       <div id="systemHealthBadge" class="system-health-badge loading">جاري الفحص...</div>
     </section>
@@ -47,15 +47,30 @@
       <div class="system-metric"><span>أقدم تقرير</span><strong id="systemOldestDate">-</strong><small id="systemOldestNo">-</small></div>
     </section>
 
+    <section class="system-panel storage-panel">
+      <div class="system-panel-head"><div><span>STORAGE</span><h3>مساحة التخزين</h3></div><strong id="storageState" class="storage-state">جاري الحساب...</strong></div>
+      <div class="storage-main">
+        <div class="storage-usage"><strong id="storageUsed">0 MB</strong><span>من مرجع 512 MB</span></div>
+        <div class="storage-progress" aria-label="نسبة استخدام التخزين"><i id="storageProgressBar"></i></div>
+        <div class="storage-percent"><strong id="storagePercent">0%</strong><span id="storageRemaining">متبقي 512 MB</span></div>
+      </div>
+      <div class="storage-breakdown">
+        <div><span>قاعدة البيانات</span><strong id="storageDatabase">0 MB</strong></div>
+        <div><span>المرفقات</span><strong id="storageUploads">0 MB</strong><small id="storageAttachmentsCount">0 مرفق</small></div>
+        <div><span>النسخ الاحتياطية</span><strong id="storageBackups">0 MB</strong><small id="storageBackupsCount">0 نسخة</small></div>
+      </div>
+      <p id="storageNotice" class="storage-notice">يتم استخدام 512MB كمرجع مراقبة فقط، ولا يقوم النظام بحذف البيانات تلقائيًا عند الاقتراب منه.</p>
+    </section>
+
     <section class="system-grid">
       <div class="system-panel">
         <div class="system-panel-head"><div><span>BACKUP</span><h3>نسخة احتياطية كاملة</h3></div></div>
-        <p>يتم جمع كل التقارير مع تفاصيل الموظفين والعمليات والمحطات والمعدات في ملف JSON واحد.</p>
+        <p>النسخة الكاملة تشمل التقارير والتفاصيل وسجل الصيانة ومحتوى الصور وملفات PDF المرفقة.</p>
         <div class="system-backup-info">
-          <div><span>آخر نسخة من هذا الجهاز</span><strong id="lastBackupTime">لم يتم إنشاء نسخة بعد</strong></div>
+          <div><span>آخر نسخة من هذا الجهاز</span><strong id="lastBackupTime">لم يتم تنزيل نسخة بعد</strong></div>
           <div><span>حالة النسخ</span><strong id="backupStatus">جاهز</strong></div>
         </div>
-        <a href="/api/backup/download" class="system-primary-btn" style="text-decoration:none;display:flex;align-items:center;justify-content:center;">تنزيل نسخة احتياطية كاملة</a>
+        <a id="downloadCurrentBackup" href="/api/backup/download" class="system-primary-btn" style="text-decoration:none;display:flex;align-items:center;justify-content:center;">تنزيل نسخة احتياطية كاملة الآن</a>
       </div>
 
       <div class="system-panel">
@@ -69,9 +84,20 @@
       </div>
     </section>
 
+    <section class="system-panel backups-panel">
+      <div class="system-panel-head"><div><span>RESTORE POINTS</span><h3>آخر النسخ الاحتياطية المحفوظة</h3></div><button id="refreshBackupsBtn" type="button" class="system-small-btn">تحديث</button></div>
+      <p>يعرض النظام آخر 20 نسخة تلقائية محفوظة على الخادم. يمكن للمدير تنزيل أي نسخة للاحتفاظ بها خارج الموقع.</p>
+      <div class="backup-table-wrap">
+        <table class="backup-table">
+          <thead><tr><th>اسم النسخة</th><th>التاريخ</th><th>الحجم</th><th>إجراء</th></tr></thead>
+          <tbody id="savedBackupsBody"><tr><td colspan="4">جاري تحميل النسخ...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="system-panel system-note-panel">
       <div class="system-panel-head"><div><span>SAFETY</span><h3>حماية البيانات</h3></div></div>
-      <p>يتم إنشاء نسخ تلقائية عند الحفظ والتعديل وقبل الحذف والاستعادة، إضافة إلى النسخة اليدوية التي يمكن تنزيلها من هذه الصفحة.</p>
+      <p>يتم إنشاء نسخ تلقائية عند الحفظ والتعديل وإضافة المرفقات، وقبل الحذف والاستعادة. يحتفظ الخادم بآخر 20 نسخة تلقائية لتقليل استهلاك المساحة.</p>
     </section>
 
     <div class="app-design-credit system-design-credit"><span>تصميم قسم المكب</span><strong>المهندس محمد جبرين</strong></div>
