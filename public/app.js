@@ -1,5 +1,6 @@
 // Minya Landfill app loader
 [
+  "js/app-auth.js",
   "js/app-core.js",
   "js/app-form.js",
   "js/app-monthly.js",
@@ -18,21 +19,21 @@
   "js/app-monthly-table.js",
   "js/app-executive-dashboard.js",
   "js/app-system-link.js",
-  "js/app-credit.js"
+  "js/app-credit.js",
+  "js/app-v3-pages.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
 
-if (!document.querySelector('link[href="modern-charts.css"]')) {
-  const modernChartsCss = document.createElement("link");
-  modernChartsCss.rel = "stylesheet";
-  modernChartsCss.href = "modern-charts.css";
-  document.head.appendChild(modernChartsCss);
-}
-
-if (!document.querySelector('link[href="executive-dashboard.css"]')) {
-  const executiveDashboardCss = document.createElement("link");
-  executiveDashboardCss.rel = "stylesheet";
-  executiveDashboardCss.href = "executive-dashboard.css";
-  document.head.appendChild(executiveDashboardCss);
-}
+[
+  "modern-charts.css",
+  "executive-dashboard.css",
+  "v3.css"
+].forEach((href) => {
+  if (!document.querySelector(`link[href="${href}"]`)) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }
+});
