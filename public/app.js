@@ -13,7 +13,15 @@
   "js/app-annual-insights.js",
   "js/app-archive-search.js",
   "js/page-mode.js",
-  "js/app-smart-status.js"
+  "js/app-smart-status.js",
+  "js/app-modern-charts.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
+
+if (!document.querySelector('link[href="modern-charts.css"]')) {
+  const modernChartsCss = document.createElement("link");
+  modernChartsCss.rel = "stylesheet";
+  modernChartsCss.href = "modern-charts.css";
+  document.head.appendChild(modernChartsCss);
+}
