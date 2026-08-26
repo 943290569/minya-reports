@@ -31,7 +31,16 @@ async function buildPreviousMonthComparison(monthValue) {
     String(report.report_date || "").startsWith(previousMonth)
   );
 
-  if (!reports.length) return null;
+  if (!reports.length) {
+    return {
+      month: previousMonth,
+      days: 0,
+      wasteTotal: 0,
+      trucksTotal: 0,
+      dieselTotal: 0,
+      hasData: false,
+    };
+  }
 
   const wasteTotal = reports.reduce(
     (sum, report) => sum + Number(report.total_waste_tons || 0),
@@ -60,6 +69,7 @@ async function buildPreviousMonthComparison(monthValue) {
     wasteTotal,
     trucksTotal,
     dieselTotal,
+    hasData: true,
   };
 }
 
@@ -102,15 +112,19 @@ async function buildMonthlyReportHtml() {
     return `<tr><td>${formatDate(report.report_date)}</td><td>${formatNumber(report.total_trucks)}</td><td>${formatNumber(report.total_waste_tons)}</td><td>${formatNumber(dailyDiesel)}</td></tr>`;
   }).join("");
 
-  const comparisonHtml = previous ? `
-    <div class="section-title comparison-title">مقارنة مع الشهر السابق - ${getMonthName(previous.month)}</div>
+  const previousMonthLabel = previous?.month ? getMonthName(previous.month) : "الشهر السابق";
+  const comparisonHtml = previous?.hasData ? `
+    <div class="section-title comparison-title">مقارنة مع الشهر السابق - ${previousMonthLabel}</div>
     <div class="comparison-grid">
       <div><span>النفايات</span><strong>${formatChangeText(monthly.wasteTotal, previous.wasteTotal)}</strong><small>${formatNumber(previous.wasteTotal)} ← ${formatNumber(monthly.wasteTotal)} طن</small></div>
       <div><span>الشاحنات</span><strong>${formatChangeText(monthly.trucksTotal, previous.trucksTotal)}</strong><small>${formatNumber(previous.trucksTotal)} ← ${formatNumber(monthly.trucksTotal)}</small></div>
       <div><span>السولار</span><strong>${formatChangeText(dieselTotal, previous.dieselTotal)}</strong><small>${formatNumber(previous.dieselTotal)} ← ${formatNumber(dieselTotal)} لتر</small></div>
     </div>
     <div class="executive-summary">خلال ${getMonthName(monthly.month)} تم تسجيل ${formatNumber(monthly.days)} يوم تشغيل، بإجمالي ${formatNumber(monthly.wasteTotal)} طن نفايات ومتوسط ${formatNumber(monthly.wasteAverage)} طن/يوم. مقارنة بالشهر السابق، سجلت النفايات ${formatChangeText(monthly.wasteTotal, previous.wasteTotal)}، والشاحنات ${formatChangeText(monthly.trucksTotal, previous.trucksTotal)}، والسولار ${formatChangeText(dieselTotal, previous.dieselTotal)}.</div>
-  ` : "";
+  ` : `
+    <div class="section-title comparison-title">مقارنة مع الشهر السابق - ${previousMonthLabel}</div>
+    <div class="comparison-empty">لا توجد بيانات محفوظة للشهر السابق للمقارنة.</div>
+  `;
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -140,6 +154,7 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .comparison-grid span { display: block; font-size: 9.5px; color: #555; }
 .comparison-grid strong { display: block; font-size: 11.5px; margin: 0.4mm 0; }
 .comparison-grid small { display: block; font-size: 8.5px; }
+.comparison-empty { border: 1px solid #777; text-align: center; padding: 1.3mm; font-size: 10.5px; font-weight: bold; margin-bottom: 0.8mm; }
 .executive-summary { border: 1px solid #777; padding: 1mm 1.3mm; font-size: 9.5px; line-height: 1.25; margin-bottom: 0.8mm; text-align: right; }
 table { width: 202mm; min-width: 202mm; max-width: 202mm; margin: 0; border-collapse: collapse; table-layout: fixed; }
 th, td { border: 1px solid #555; padding: 1.1mm 1mm; text-align: center; font-size: 10.5px; line-height: 1.1; overflow-wrap: anywhere; word-break: normal; }
