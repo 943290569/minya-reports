@@ -17,7 +17,8 @@
   "js/app-modern-charts.js",
   "js/app-monthly-table.js",
   "js/app-executive-dashboard.js",
-  "js/app-system-link.js"
+  "js/app-system-link.js",
+  "js/app-credit.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
