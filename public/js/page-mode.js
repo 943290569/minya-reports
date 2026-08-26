@@ -21,6 +21,23 @@
 
   const page = getPageFromPath();
 
+  function formatDashboardNumber(value) {
+    const number = Number(value || 0);
+    return new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(number);
+  }
+
+  function getLocalDateParts() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return {
+      today: `${year}-${month}-${day}`,
+      month: `${year}-${month}`,
+      year: String(year),
+    };
+  }
+
   function buildNavigation() {
     const header = document.querySelector(".top-header");
     if (!header) return;
@@ -59,6 +76,73 @@
     if (typeof loadArchive === "function") setTimeout(() => loadArchive(false), 50);
   }
 
+  async function loadDashboardData() {
+    const status = document.getElementById("dashboardDataStatus");
+    try {
+      if (status) status.textContent = "جاري تحميل المؤشرات...";
+
+      const response = await fetch("/api/reports");
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل البيانات");
+
+      const reports = Array.isArray(data.reports) ? data.reports : [];
+      const dates = getLocalDateParts();
+      const todayReport = reports.find((report) => String(report.report_date || "") === dates.today) || null;
+      const monthReports = reports.filter((report) => String(report.report_date || "").startsWith(dates.month));
+      const yearReports = reports.filter((report) => String(report.report_date || "").startsWith(`${dates.year}-`));
+
+      const sum = (items, key) => items.reduce((total, item) => total + Number(item[key] || 0), 0);
+
+      const values = {
+        todayWaste: todayReport ? Number(todayReport.total_waste_tons || 0) : 0,
+        todayTrucks: todayReport ? Number(todayReport.total_trucks || 0) : 0,
+        todayDiesel: todayReport ? Number(todayReport.total_diesel || 0) : 0,
+        monthWaste: sum(monthReports, "total_waste_tons"),
+        monthTrucks: sum(monthReports, "total_trucks"),
+        monthDays: monthReports.length,
+        yearWaste: sum(yearReports, "total_waste_tons"),
+        yearReports: yearReports.length,
+      };
+
+      Object.entries(values).forEach(([key, value]) => {
+        const element = document.getElementById(`dash-${key}`);
+        if (element) element.textContent = formatDashboardNumber(value);
+      });
+
+      const todayState = document.getElementById("dashboardTodayState");
+      if (todayState) {
+        todayState.textContent = todayReport
+          ? `تم تسجيل تقرير اليوم ${dates.today}`
+          : `لا يوجد تقرير محفوظ لليوم ${dates.today}`;
+        todayState.classList.toggle("has-report", Boolean(todayReport));
+      }
+
+      const recentBody = document.getElementById("dashboardRecentReports");
+      if (recentBody) {
+        const recent = [...reports]
+          .sort((a, b) => String(b.report_date || "").localeCompare(String(a.report_date || "")))
+          .slice(0, 5);
+
+        recentBody.innerHTML = recent.length
+          ? recent.map((report) => `
+              <tr>
+                <td>${String(report.report_date || "-")}</td>
+                <td>${String(report.report_no || "-")}</td>
+                <td>${formatDashboardNumber(report.total_waste_tons)} طن</td>
+                <td>${formatDashboardNumber(report.total_trucks)}</td>
+                <td>${formatDashboardNumber(report.total_diesel)} لتر</td>
+              </tr>
+            `).join("")
+          : '<tr><td colspan="5">لا توجد تقارير محفوظة حتى الآن.</td></tr>';
+      }
+
+      if (status) status.textContent = `آخر تحديث: ${new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}`;
+    } catch (error) {
+      console.error("فشل تحميل لوحة المعلومات", error);
+      if (status) status.textContent = "تعذر تحميل مؤشرات لوحة المعلومات.";
+    }
+  }
+
   function buildDashboard() {
     const main = document.querySelector("main.container");
     if (!main) return;
@@ -74,36 +158,54 @@
         <div>
           <span class="dashboard-kicker">MINYA LANDFILL</span>
           <h2>لوحة إدارة التقارير التشغيلية</h2>
-          <p>إدارة التقارير اليومية، الأرشيف، التحليل الشهري والسنوي من واجهة واحدة منظمة.</p>
+          <p>متابعة فورية لأداء المكب والوصول إلى التقارير اليومية والتحليلات الشهرية والسنوية.</p>
+          <div id="dashboardTodayState" class="dashboard-today-state">جاري التحقق من تقرير اليوم...</div>
         </div>
         <a class="dashboard-primary-action" href="/report">إنشاء تقرير جديد</a>
       </div>
 
+      <div class="dashboard-section-head">
+        <div>
+          <span>نظرة سريعة</span>
+          <h3>مؤشرات التشغيل الحالية</h3>
+        </div>
+        <small id="dashboardDataStatus">جاري تحميل المؤشرات...</small>
+      </div>
+
+      <div class="dashboard-metrics">
+        <div class="dashboard-metric-card"><span>نفايات اليوم</span><strong id="dash-todayWaste">0</strong><small>طن</small></div>
+        <div class="dashboard-metric-card"><span>شاحنات اليوم</span><strong id="dash-todayTrucks">0</strong><small>شاحنة</small></div>
+        <div class="dashboard-metric-card"><span>سولار اليوم</span><strong id="dash-todayDiesel">0</strong><small>لتر</small></div>
+        <div class="dashboard-metric-card"><span>نفايات الشهر</span><strong id="dash-monthWaste">0</strong><small>طن</small></div>
+        <div class="dashboard-metric-card"><span>شاحنات الشهر</span><strong id="dash-monthTrucks">0</strong><small>شاحنة</small></div>
+        <div class="dashboard-metric-card"><span>أيام الشهر المسجلة</span><strong id="dash-monthDays">0</strong><small>يوم</small></div>
+        <div class="dashboard-metric-card"><span>نفايات السنة</span><strong id="dash-yearWaste">0</strong><small>طن</small></div>
+        <div class="dashboard-metric-card"><span>تقارير السنة</span><strong id="dash-yearReports">0</strong><small>تقرير</small></div>
+      </div>
+
       <div class="dashboard-grid">
-        <a class="dashboard-card" href="/report">
-          <span class="dashboard-icon">01</span>
-          <h3>التقرير اليومي</h3>
-          <p>إدخال بيانات التشغيل والموظفين والعمليات والمعدات وحفظ التقرير.</p>
-        </a>
-        <a class="dashboard-card" href="/archive">
-          <span class="dashboard-icon">02</span>
-          <h3>أرشيف التقارير</h3>
-          <p>البحث والفتح والتعديل والطباعة والوصول السريع للتقارير السابقة.</p>
-        </a>
-        <a class="dashboard-card" href="/monthly">
-          <span class="dashboard-icon">03</span>
-          <h3>التقرير الشهري</h3>
-          <p>المجاميع والمتوسطات والمقارنات والرسوم البيانية والتصدير.</p>
-        </a>
-        <a class="dashboard-card" href="/annual">
-          <span class="dashboard-icon">04</span>
-          <h3>التقرير السنوي</h3>
-          <p>تحليل سنوي متكامل، مقارنة السنوات، المؤشرات والطباعة والتصدير.</p>
-        </a>
+        <a class="dashboard-card" href="/report"><span class="dashboard-icon">01</span><h3>التقرير اليومي</h3><p>إدخال بيانات التشغيل والموظفين والعمليات والمعدات وحفظ التقرير.</p></a>
+        <a class="dashboard-card" href="/archive"><span class="dashboard-icon">02</span><h3>أرشيف التقارير</h3><p>البحث والفتح والتعديل والطباعة والوصول السريع للتقارير السابقة.</p></a>
+        <a class="dashboard-card" href="/monthly"><span class="dashboard-icon">03</span><h3>التقرير الشهري</h3><p>المجاميع والمتوسطات والمقارنات والرسوم البيانية والتصدير.</p></a>
+        <a class="dashboard-card" href="/annual"><span class="dashboard-icon">04</span><h3>التقرير السنوي</h3><p>تحليل سنوي متكامل، مقارنة السنوات، المؤشرات والطباعة والتصدير.</p></a>
+      </div>
+
+      <div class="dashboard-recent-panel">
+        <div class="dashboard-section-head compact">
+          <div><span>آخر النشاطات</span><h3>آخر 5 تقارير محفوظة</h3></div>
+          <a href="/archive">عرض الأرشيف كاملًا</a>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-recent-table">
+            <thead><tr><th>التاريخ</th><th>رقم التقرير</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th></tr></thead>
+            <tbody id="dashboardRecentReports"><tr><td colspan="5">جاري تحميل التقارير...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     `;
 
     main.appendChild(dashboard);
+    loadDashboardData();
   }
 
   function applyPageMode() {
