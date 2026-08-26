@@ -31,7 +31,6 @@
   padding: 14px 10px;
   text-align: center;
   min-height: 94px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -103,6 +102,73 @@
   text-align: center;
   font-size: 14px;
   color: #6b7280;
+}
+
+.monthly-chart {
+  margin: 18px 0;
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.monthly-chart h4 {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.monthly-chart-scroll {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.monthly-chart-bars {
+  min-width: 720px;
+  height: 240px;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  padding: 28px 8px 0;
+  border-bottom: 1px solid #9ca3af;
+}
+
+.monthly-chart-item {
+  flex: 1 0 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 24px;
+}
+
+.monthly-chart-value {
+  font-size: 10px;
+  color: #374151;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.monthly-chart-bar {
+  width: 70%;
+  min-height: 2px;
+  background: #2563eb;
+  border-radius: 4px 4px 0 0;
+}
+
+.monthly-chart-day {
+  font-size: 10px;
+  margin-top: 5px;
+  color: #4b5563;
+}
+
+.monthly-chart-empty {
+  padding: 24px 10px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .monthly-actions {
@@ -213,67 +279,28 @@
 </style>
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>
-    نظام إدارة مكب المنيا
-  </title>
-
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة مكب المنيا</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
   <header class="top-header">
-
     <div>
-      <h1>
-        نظام إدارة مكب المنيا
-      </h1>
-
-      <p>
-        التقرير التشغيلي والبيئي اليومي
-      </p>
+      <h1>نظام إدارة مكب المنيا</h1>
+      <p>التقرير التشغيلي والبيئي اليومي</p>
     </div>
-
     <nav>
-
-      <button
-        id="newReportBtn"
-        type="button"
-      >
-        تقرير جديد
-      </button>
-
-      <button
-        id="archiveBtn"
-        type="button"
-      >
-        الأرشيف
-      </button>
-
+      <button id="newReportBtn" type="button">تقرير جديد</button>
+      <button id="archiveBtn" type="button">الأرشيف</button>
     </nav>
-
   </header>
 
   <main class="container">
+    <div id="message" class="message"></div>
 
-    <div
-      id="message"
-      class="message"
-    ></div>
-
-    <section
-      id="reportFormSection"
-      class="panel"
-    >
+    <section id="reportFormSection" class="panel">
       <h2>بيانات التقرير</h2>
       <div class="form-grid">
         <label>تاريخ التقرير<input id="reportDate" type="date"></label>
@@ -285,13 +312,9 @@
     </section>
 
     <section class="panel"><h2>شؤون الموظفين</h2><table id="crewsTable"><thead><tr><th>طواقم العمل</th><th>العدد</th><th>الملاحظات</th></tr></thead><tbody></tbody></table></section>
-
     <section class="panel"><h2>العمليات</h2><table id="operationsTable"><thead><tr><th>العملية</th><th>وقت البداية</th><th>وقت النهاية</th><th>عدد المركبات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></section>
-
     <section class="panel"><h2>محطات الترحيل</h2><table id="stationsTable"><thead><tr><th>المحطة</th><th>عدد الشاحنات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></section>
-
     <section class="panel"><h2>تقرير الصيانة اليومي</h2><table id="equipmentTable"><thead><tr><th>اسم الآلية</th><th>حالة الآلية</th><th>وصف الحالة</th><th>ساعات العمل</th><th>كمية السولار</th></tr></thead><tbody></tbody></table></section>
-
     <section class="panel"><h2>الملاحظات</h2><textarea id="notes" rows="5" placeholder="اكتب الملاحظات اليومية هنا..."></textarea></section>
 
     <section class="panel">
@@ -350,16 +373,92 @@
           <div id="monthlyComparisonEmpty" class="monthly-comparison-empty hidden">اختر شهرًا لعرض المقارنة.</div>
         </div>
 
+        <div class="monthly-chart">
+          <h4>كميات النفايات اليومية خلال الشهر</h4>
+          <div id="monthlyWasteChart" class="monthly-chart-scroll">
+            <div class="monthly-chart-empty">اختر شهرًا لعرض الرسم البياني.</div>
+          </div>
+        </div>
+
         <div class="monthly-actions"><button id="printMonthlyReportBtn" type="button">طباعة التقرير الشهري</button></div>
       </div>
 
       <table id="archiveTable"><thead><tr><th>رقم التقرير</th><th>التاريخ</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th><th>الإجراءات</th></tr></thead><tbody></tbody></table>
     </section>
-
   </main>
 
   <script src="app.js"></script>
+  <script>
+  (function () {
+    function renderMonthlyWasteChart() {
+      const target = document.getElementById('monthlyWasteChart');
+      const monthInput = document.getElementById('archiveMonthFilter');
+      if (!target || !monthInput) return;
+
+      const monthValue = monthInput.value || '';
+      if (!monthValue) {
+        target.innerHTML = '<div class="monthly-chart-empty">اختر شهرًا لعرض الرسم البياني.</div>';
+        return;
+      }
+
+      const reports = (typeof archiveReports !== 'undefined' ? archiveReports : [])
+        .filter(function (report) {
+          return String(report.report_date || '').startsWith(monthValue);
+        })
+        .sort(function (a, b) {
+          return String(a.report_date || '').localeCompare(String(b.report_date || ''));
+        });
+
+      if (!reports.length) {
+        target.innerHTML = '<div class="monthly-chart-empty">لا توجد بيانات لهذا الشهر.</div>';
+        return;
+      }
+
+      const maxWaste = Math.max.apply(null, reports.map(function (report) {
+        return Number(report.total_waste_tons || 0);
+      }).concat([1]));
+
+      const bars = reports.map(function (report) {
+        const waste = Number(report.total_waste_tons || 0);
+        const height = Math.max(2, Math.round((waste / maxWaste) * 170));
+        const day = String(report.report_date || '').slice(-2);
+        const displayWaste = typeof formatNumber === 'function' ? formatNumber(waste) : waste;
+        return '<div class="monthly-chart-item" title="' + String(report.report_date || '') + ' - ' + displayWaste + ' طن">' +
+          '<div class="monthly-chart-value">' + displayWaste + '</div>' +
+          '<div class="monthly-chart-bar" style="height:' + height + 'px"></div>' +
+          '<div class="monthly-chart-day">' + day + '</div>' +
+          '</div>';
+      }).join('');
+
+      target.innerHTML = '<div class="monthly-chart-bars">' + bars + '</div>';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const monthInput = document.getElementById('archiveMonthFilter');
+      const archiveButton = document.getElementById('archiveBtn');
+      const clearButton = document.getElementById('clearArchiveFiltersBtn');
+
+      if (monthInput) {
+        monthInput.addEventListener('change', function () {
+          setTimeout(renderMonthlyWasteChart, 50);
+        });
+        monthInput.addEventListener('input', function () {
+          setTimeout(renderMonthlyWasteChart, 50);
+        });
+      }
+
+      if (archiveButton) archiveButton.addEventListener('click', function () { setTimeout(renderMonthlyWasteChart, 150); });
+      if (clearButton) clearButton.addEventListener('click', function () { setTimeout(renderMonthlyWasteChart, 50); });
+
+      const monthlyDays = document.getElementById('monthlyDaysCount');
+      if (monthlyDays && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(renderMonthlyWasteChart).observe(monthlyDays, { childList: true, characterData: true, subtree: true });
+      }
+
+      setTimeout(renderMonthlyWasteChart, 100);
+    });
+  })();
+  </script>
 
 </body>
-
 </html>
