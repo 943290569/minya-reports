@@ -170,7 +170,10 @@ app.delete("/api/reports/:id", (req, res) => {
   } catch (error) { res.status(500).json({ ok: false, message: "فشل حذف التقرير", error: error.message }); }
 });
 
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+const appPages = ["/", "/report", "/archive", "/monthly", "/annual"];
+appPages.forEach((route) => {
+  app.get(route, (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log("");
