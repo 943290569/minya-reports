@@ -11,8 +11,42 @@ async function getReport(id) {
   return data;
 }
 
+function ensureEditBanner(reportNo = "") {
+  let banner = document.getElementById("reportEditBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "reportEditBanner";
+    banner.className = "report-edit-banner no-print";
+    const main = document.querySelector("main.container");
+    const firstPanel = main?.querySelector("section.panel");
+    if (main && firstPanel) main.insertBefore(banner, firstPanel);
+  }
+  if (!banner) return;
+  banner.innerHTML = `
+    <div>
+      <span>وضع التعديل</span>
+      <strong>${escapeHtml(reportNo || "تقرير محفوظ")}</strong>
+    </div>
+    <div class="report-edit-actions">
+      <a href="/archive">العودة للأرشيف</a>
+      <button type="button" id="cancelReportEditBtn">إلغاء التعديل</button>
+    </div>
+  `;
+  const cancel = document.getElementById("cancelReportEditBtn");
+  if (cancel) cancel.onclick = () => { window.location.href = "/report"; };
+}
+
+function clearEditBanner() {
+  document.getElementById("reportEditBanner")?.remove();
+}
+
 async function editReport(id) {
   try {
+    if (window.MINYA_USER?.role === "viewer") {
+      showMessage("هذا الحساب للقراءة فقط ولا يمكنه تعديل التقارير");
+      return;
+    }
+
     showMessage("جاري تحميل التقرير للتعديل...");
     const data = await getReport(id);
     editingId = Number(id);
@@ -59,6 +93,13 @@ async function editReport(id) {
 
     renderAll();
     document.getElementById("saveBtn").textContent = "تحديث التقرير";
+    ensureEditBanner(data.report.report_no);
+    if (typeof window.refreshReportAttachments === "function") {
+      window.refreshReportAttachments(editingId);
+    }
+    if (typeof window.refreshSmartStatus === "function") {
+      window.refreshSmartStatus();
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
     showMessage(`أنت تعدل التقرير: ${data.report.report_no}`);
   } catch (error) {
@@ -66,3 +107,31 @@ async function editReport(id) {
     showMessage(error.message);
   }
 }
+
+async function loadEditFromQuery() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (path !== "/report") return;
+  const id = Number(new URLSearchParams(window.location.search).get("edit") || 0);
+  if (!id) {
+    clearEditBanner();
+    return;
+  }
+
+  const waitForAuth = async () => {
+    for (let i = 0; i < 30 && !window.MINYA_USER; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (window.MINYA_USER?.role === "viewer") {
+      showMessage("هذا الحساب للقراءة فقط");
+      setTimeout(() => { window.location.href = "/archive"; }, 700);
+      return;
+    }
+    await editReport(id);
+  };
+
+  waitForAuth();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(loadEditFromQuery, 120);
+});
