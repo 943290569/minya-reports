@@ -102,6 +102,90 @@ async function buildMonthlyOperationsData() {
   };
 }
 
+function getPreviousMonthForArchive(monthValue) {
+  const [year, month] = String(monthValue || "").split("-").map(Number);
+  if (!year || !month) return "";
+  const date = new Date(year, month - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatArchiveChange(current, previous) {
+  const currentValue = Number(current || 0);
+  const previousValue = Number(previous || 0);
+  if (previousValue === 0) return "-";
+  const percent = ((currentValue - previousValue) / previousValue) * 100;
+  if (Math.abs(percent) < 0.05) return "بدون تغير";
+  return `${percent > 0 ? "زيادة" : "انخفاض"} ${formatNumber(Math.abs(percent))}%`;
+}
+
+async function updateMonthlyComparison(monthValue, currentDieselTotal = null) {
+  const title = document.getElementById("monthlyComparisonTitle");
+  const grid = document.getElementById("monthlyComparisonGrid");
+  const empty = document.getElementById("monthlyComparisonEmpty");
+
+  if (!title || !grid || !empty) return;
+
+  const setValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  };
+
+  if (!monthValue) {
+    title.textContent = "مقارنة مع الشهر السابق";
+    grid.classList.add("hidden");
+    empty.classList.remove("hidden");
+    empty.textContent = "اختر شهرًا لعرض المقارنة.";
+    return;
+  }
+
+  const currentReports = archiveReports.filter((report) =>
+    String(report.report_date || "").startsWith(monthValue)
+  );
+
+  const previousMonth = getPreviousMonthForArchive(monthValue);
+  const previousReports = archiveReports.filter((report) =>
+    String(report.report_date || "").startsWith(previousMonth)
+  );
+
+  title.textContent = `مقارنة مع الشهر السابق - ${getMonthName(previousMonth)}`;
+
+  if (!currentReports.length || !previousReports.length) {
+    grid.classList.add("hidden");
+    empty.classList.remove("hidden");
+    empty.textContent = "لا توجد بيانات محفوظة للشهر السابق للمقارنة.";
+    return;
+  }
+
+  const currentWaste = currentReports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const currentTrucks = currentReports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+  const previousWaste = previousReports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const previousTrucks = previousReports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+
+  let currentDiesel = currentDieselTotal;
+  if (currentDiesel === null) {
+    const currentDetails = await getMonthlyDetailedReports(monthValue);
+    currentDiesel = calculateDieselFromDetailedReports(currentDetails).dieselTotal;
+  }
+
+  let previousDiesel = previousReports.reduce((sum, report) => sum + Number(report.total_diesel || 0), 0);
+  try {
+    const previousDetails = await getMonthlyDetailedReports(previousMonth);
+    previousDiesel = calculateDieselFromDetailedReports(previousDetails).dieselTotal;
+  } catch (error) {
+    console.error("فشل حساب سولار الشهر السابق", error);
+  }
+
+  setValue("monthlyWasteChange", formatArchiveChange(currentWaste, previousWaste));
+  setValue("monthlyWasteChangeValues", `${formatNumber(previousWaste)} ← ${formatNumber(currentWaste)} طن`);
+  setValue("monthlyTrucksChange", formatArchiveChange(currentTrucks, previousTrucks));
+  setValue("monthlyTrucksChangeValues", `${formatNumber(previousTrucks)} ← ${formatNumber(currentTrucks)}`);
+  setValue("monthlyDieselChange", formatArchiveChange(currentDiesel, previousDiesel));
+  setValue("monthlyDieselChangeValues", `${formatNumber(previousDiesel)} ← ${formatNumber(currentDiesel)} لتر`);
+
+  empty.classList.add("hidden");
+  grid.classList.remove("hidden");
+}
+
 function calculateMonthlyReport() {
   const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
 
@@ -179,6 +263,7 @@ async function updateMonthlySummary() {
   if (!monthly.month || !monthly.reports.length) {
     setValue("monthlyDieselTotal", "0");
     setValue("monthlyDieselAverage", "0");
+    await updateMonthlyComparison(monthly.month, 0);
     return;
   }
 
@@ -187,10 +272,12 @@ async function updateMonthlySummary() {
     const { dieselTotal } = calculateDieselFromDetailedReports(detailedReports);
     setValue("monthlyDieselTotal", formatNumber(dieselTotal));
     setValue("monthlyDieselAverage", formatNumber(monthly.days ? dieselTotal / monthly.days : 0));
+    await updateMonthlyComparison(monthly.month, dieselTotal);
   } catch (error) {
     console.error("فشل حساب السولار الشهري", error);
     setValue("monthlyDieselTotal", formatNumber(monthly.dieselTotal));
     setValue("monthlyDieselAverage", formatNumber(monthly.dieselAverage));
+    await updateMonthlyComparison(monthly.month, monthly.dieselTotal);
   }
 }
 
