@@ -9,7 +9,8 @@
   "js/app-final.js",
   "js/app-annual-export.js",
   "js/app-print-annual.js",
-  "js/app-annual-comparison.js"
+  "js/app-annual-comparison.js",
+  "js/app-annual-insights.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
