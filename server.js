@@ -339,6 +339,39 @@ app.get("/api/alerts", requireAuth, (req,res)=>{
 });
 
 app.get("/api/audit", requireRole("admin"), (req,res)=>{ const limit=Math.min(Number(req.query.limit||200),1000); res.json({ok:true,logs:db.prepare(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?`).all(limit)}); });
+
+function directorySize(dir) {
+  if (!fs.existsSync(dir)) return 0;
+  return fs.readdirSync(dir).reduce((sum, name) => {
+    try { const st=fs.statSync(path.join(dir,name)); return sum + (st.isFile()?st.size:0); } catch { return sum; }
+  }, 0);
+}
+function listBackupFiles() {
+  if (!fs.existsSync(backupsDir)) return [];
+  return fs.readdirSync(backupsDir).filter(name=>name.endsWith(".json")).map(name=>{
+    const st=fs.statSync(path.join(backupsDir,name));
+    return {name,size_bytes:st.size,created_at:st.mtime.toISOString()};
+  }).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+}
+app.get("/api/system/storage", requireRole("admin"), (req,res)=>{
+  const database_bytes=fs.existsSync(dbPath)?fs.statSync(dbPath).size:0;
+  const uploads_bytes=directorySize(uploadsDir);
+  const backups_bytes=directorySize(backupsDir);
+  const total_bytes=database_bytes+uploads_bytes+backups_bytes;
+  const reference_limit_bytes=512*1024*1024;
+  const usage_percent=(total_bytes/reference_limit_bytes)*100;
+  const level=usage_percent>=85?"danger":usage_percent>=70?"warning":"ok";
+  res.json({ok:true,database_bytes,uploads_bytes,backups_bytes,total_bytes,reference_limit_bytes,usage_percent,level,attachments_count:db.prepare(`SELECT COUNT(*) AS c FROM attachments`).get().c,backups_count:listBackupFiles().length});
+});
+app.get("/api/backups", requireRole("admin"), (req,res)=>res.json({ok:true,backups:listBackupFiles().slice(0,20)}));
+app.get("/api/backups/:name/download", requireRole("admin"), (req,res)=>{
+  const name=path.basename(String(req.params.name||""));
+  if(!/^minya-.*\.json$/.test(name)) return res.status(400).json({ok:false,message:"اسم النسخة غير صالح"});
+  const file=path.join(backupsDir,name);
+  if(!fs.existsSync(file)) return res.status(404).json({ok:false,message:"النسخة غير موجودة"});
+  audit(req.user,"DOWNLOAD_SAVED_BACKUP","system","backup",name);
+  res.download(file,name);
+});
 app.get("/api/backup/download", requireRole("admin"), (req,res)=>{ audit(req.user,"DOWNLOAD_BACKUP","system","backup"); const data=JSON.stringify(buildBackupObject(),null,2); const name=`minya-backup-${localDateString()}-${Date.now()}.json`; res.setHeader("Content-Type","application/json; charset=utf-8"); res.setHeader("Content-Disposition",`attachment; filename=${name}`); res.send(data); });
 app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
   try { const backup=req.body; if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,message:"ملف النسخة غير صالح"}); writeAutomaticBackup("pre-restore"); const tx=db.transaction(()=>{ db.exec(`DELETE FROM attachments; DELETE FROM crews; DELETE FROM operations; DELETE FROM transfer_stations; DELETE FROM equipment; DELETE FROM daily_reports; DELETE FROM maintenance_logs;`); for(const item of backup.reports){ const r=item.report||{}; const result=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",Number(r.temperature||0),r.start_time||"",r.end_time||"",Number(r.total_trucks||0),Number(r.total_waste_tons||0),Number(r.total_diesel||0),r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString()); insertChildren(result.lastInsertRowid,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const buffer=Buffer.from(a.data_base64,"base64"); const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${result.lastInsertRowid}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_by,created_at) VALUES (?,?,?,?,?,?,?)`).run(result.lastInsertRowid,a.original_name||"مرفق",stored,a.mime_type||"application/octet-stream",buffer.length,req.user.id,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status||"ملاحظة",m.description||"",m.action_taken||"",Number(m.cost||0),req.user.id,m.created_at||new Date().toISOString()); } }); tx(); audit(req.user,"RESTORE_BACKUP","system","backup",`${backup.reports.length} reports`); writeAutomaticBackup("post-restore"); res.json({ok:true,message:"تمت استعادة النسخة بنجاح",count:backup.reports.length}); }
