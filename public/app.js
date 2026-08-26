@@ -12,7 +12,8 @@
   "js/app-annual-comparison.js",
   "js/app-annual-insights.js",
   "js/app-archive-search.js",
-  "js/page-mode.js"
+  "js/page-mode.js",
+  "js/app-smart-status.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
