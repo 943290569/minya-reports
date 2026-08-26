@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة النظام - مكب المنيا</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="multipage.css">
+  <link rel="stylesheet" href="system.css">
+</head>
+<body data-page="system">
+  <header class="top-header">
+    <div>
+      <h1>نظام إدارة مكب المنيا</h1>
+      <p>إدارة النظام والنسخ الاحتياطي</p>
+    </div>
+    <nav>
+      <a class="app-nav-link" href="/">الرئيسية</a>
+      <a class="app-nav-link" href="/report">تقرير جديد</a>
+      <a class="app-nav-link" href="/archive">الأرشيف</a>
+      <a class="app-nav-link" href="/monthly">التقرير الشهري</a>
+      <a class="app-nav-link" href="/annual">التقرير السنوي</a>
+      <a class="app-nav-link active" href="/system.html">إدارة النظام</a>
+    </nav>
+  </header>
+
+  <main class="container system-page">
+    <section class="system-hero">
+      <div>
+        <span class="system-kicker">SYSTEM MANAGEMENT</span>
+        <h2>حالة النظام والنسخ الاحتياطي</h2>
+        <p>متابعة سلامة الاتصال بالقاعدة وحفظ نسخة خارجية كاملة من بيانات التقارير.</p>
+      </div>
+      <div id="systemHealthBadge" class="system-health-badge loading">جاري الفحص...</div>
+    </section>
+
+    <section class="system-metrics" aria-label="مؤشرات النظام">
+      <div class="system-metric"><span>حالة الخادم</span><strong id="systemServerState">...</strong><small id="systemVersion">-</small></div>
+      <div class="system-metric"><span>عدد التقارير</span><strong id="systemReportsCount">0</strong><small>تقرير محفوظ</small></div>
+      <div class="system-metric"><span>أحدث تقرير</span><strong id="systemLatestDate">-</strong><small id="systemLatestNo">-</small></div>
+      <div class="system-metric"><span>أقدم تقرير</span><strong id="systemOldestDate">-</strong><small id="systemOldestNo">-</small></div>
+    </section>
+
+    <section class="system-grid">
+      <div class="system-panel">
+        <div class="system-panel-head">
+          <div><span>BACKUP</span><h3>نسخة احتياطية كاملة</h3></div>
+        </div>
+        <p>يتم جمع كل التقارير مع تفاصيل الموظفين والعمليات والمحطات والمعدات في ملف JSON واحد.</p>
+        <div class="system-backup-info">
+          <div><span>آخر نسخة من هذا الجهاز</span><strong id="lastBackupTime">لم يتم إنشاء نسخة بعد</strong></div>
+          <div><span>حالة النسخ</span><strong id="backupStatus">جاهز</strong></div>
+        </div>
+        <button id="downloadBackupBtn" class="system-primary-btn" type="button">تنزيل نسخة احتياطية كاملة</button>
+      </div>
+
+      <div class="system-panel">
+        <div class="system-panel-head">
+          <div><span>DATA</span><h3>نطاق البيانات المحفوظة</h3></div>
+        </div>
+        <div class="system-data-list">
+          <div><span>الفترة الزمنية</span><strong id="systemDateRange">-</strong></div>
+          <div><span>إجمالي النفايات المسجلة</span><strong id="systemWasteTotal">0 طن</strong></div>
+          <div><span>إجمالي الشاحنات المسجلة</span><strong id="systemTrucksTotal">0</strong></div>
+          <div><span>إجمالي السولار المسجل</span><strong id="systemDieselTotal">0 لتر</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="system-panel system-note-panel">
+      <div class="system-panel-head"><div><span>SAFETY</span><h3>حماية البيانات</h3></div></div>
+      <p>هذه الصفحة لا تحتوي على حذف أو استعادة تلقائية للقاعدة. النسخ الاحتياطي تنزيل فقط، لتجنب أي تعديل غير مقصود على البيانات التشغيلية.</p>
+    </section>
+  </main>
+
+  <script src="js/app-system.js"></script>
+</body>
+</html>
