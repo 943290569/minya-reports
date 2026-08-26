@@ -14,7 +14,8 @@
   "js/app-archive-search.js",
   "js/page-mode.js",
   "js/app-smart-status.js",
-  "js/app-modern-charts.js"
+  "js/app-modern-charts.js",
+  "js/app-monthly-table.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
