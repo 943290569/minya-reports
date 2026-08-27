@@ -42,7 +42,8 @@
   "admin-security.css",
   "admin-users.css",
   "report-workflow.css",
-  "reviews.css"
+  "reviews.css",
+  "report-responsive.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href="${href}"]`)) {
     const link = document.createElement("link");
