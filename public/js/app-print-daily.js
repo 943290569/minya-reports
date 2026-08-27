@@ -19,6 +19,18 @@ function buildFullReportHtml(data, autoPrint = false) {
   const equipmentRows = data.equipment.map((item) => `
       <tr><td>${escapeHtml(item.equipment_name)}</td><td>${escapeHtml(item.operating_status || "-")}</td><td>${escapeHtml(item.status_description || "-")}</td><td>${formatNumber(item.working_hours)}</td><td>${formatNumber(item.diesel_liters)}</td></tr>`).join("");
 
+  const previewAttachments = !autoPrint ? `
+  <section class="preview-attachments">
+    <h2>مرفقات التقرير</h2>
+    ${(Array.isArray(data.attachments) && data.attachments.length)
+      ? data.attachments.map((item) => `
+        <div class="preview-attachment-row">
+          <span>${escapeHtml(item.original_name || "مرفق")}</span>
+          <a href="/api/attachments/${Number(item.id)}/download" target="_blank" rel="noopener">فتح</a>
+        </div>`).join("")
+      : '<div class="preview-attachments-empty">لا توجد مرفقات لهذا التقرير.</div>'}
+  </section>` : "";
+
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -51,7 +63,15 @@ th { background: #f5f5f5; font-weight: bold; }
 .notes { border: 1px solid #444; min-height: 9mm; padding: 1mm; font-size: 9.5px; white-space: pre-wrap; }
 .official-footer { width: 210mm; height: 22mm; margin-right: -10mm; margin-left: -4mm; margin-top: auto; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-footer img { width: 210mm; height: 22mm; display: block; object-fit: fill; }
-@media print { html, body { width: 202mm; height: 289mm; overflow: hidden; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .report { width: 202mm; height: 289mm; margin: 0; overflow: hidden; } table, tr, th, td { page-break-inside: avoid; } }
+.preview-attachments { width: min(202mm, calc(100% - 24px)); margin: 18px auto 32px; padding: 14px; border: 1px solid #d7dfda; border-radius: 12px; background: #fff; }
+.preview-attachments h2 { margin: 0 0 12px; font-size: 16px; }
+.preview-attachment-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #edf0ee; }
+.preview-attachment-row:first-of-type { border-top: 0; }
+.preview-attachment-row span { min-width: 0; overflow-wrap: anywhere; }
+.preview-attachment-row a { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 70px; padding: 9px 14px; border-radius: 9px; background: #176b4f; color: #fff; text-decoration: none; font-weight: bold; }
+.preview-attachments-empty { color: #68746e; }
+@media(max-width:560px){.preview-attachment-row{align-items:stretch;flex-direction:column}.preview-attachment-row a{width:100%}}
+@media print { html, body { width: 202mm; height: 289mm; overflow: hidden; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .report { width: 202mm; height: 289mm; margin: 0; overflow: hidden; } .preview-attachments { display:none!important; } table, tr, th, td { page-break-inside: avoid; } }
 </style>
 </head>
 <body>
@@ -86,6 +106,7 @@ th { background: #f5f5f5; font-weight: bold; }
   </div>
   <div class="official-footer"><img src="/assets/footer.png" alt="التذييل الرسمي"></div>
 </div>
+${previewAttachments}
 <script>
 function fitDailyReport(){
   const report=document.querySelector('.report');
