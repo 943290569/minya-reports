@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const app = express();
 const PORT = Number(process.env.PORT || 5001);
 
-const dataDir = process.env.RAILWAY_ENVIRONMENT ? "/data" : __dirname;
+const dataDir = process.env.MINYA_DATA_DIR ? path.resolve(process.env.MINYA_DATA_DIR) : (process.env.RAILWAY_ENVIRONMENT ? "/data" : __dirname);
 const uploadsDir = path.join(dataDir, "uploads");
 const backupsDir = path.join(dataDir, "backups");
 fs.mkdirSync(dataDir, { recursive: true });
