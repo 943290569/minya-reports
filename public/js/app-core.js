@@ -20,14 +20,14 @@ function getDefaultCrews() {
 
 function getDefaultOperations() {
   return [
-    { operation_name: "مكب نفايات المنيا", start_time: "04:00", end_time: "19:00", vehicle_count: 0, quantity: 0, unit: "طن", notes: "" },
-    { operation_name: "مواد التغطية (اسلوب)", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "نقلة", notes: "" },
-    { operation_name: "مواد التغطية (طمم)", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "كوب", notes: "" },
-    { operation_name: "كميات المياه للتعقيم والترطيب", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "كوب", notes: "" },
-    { operation_name: "عدد مرات رش المياه", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "مرة", notes: "" },
-    { operation_name: "كميات العصارة المرحلة", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "كوب", notes: "" },
-    { operation_name: "خط الفرز", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "طن", notes: "" },
-    { operation_name: "طمم خارجي", start_time: "", end_time: "", vehicle_count: 0, quantity: 0, unit: "طن", notes: "" },
+    { operation_name: "مكب نفايات المنيا", vehicle_count: 0, quantity: 0, unit: "طن", notes: "" },
+    { operation_name: "مواد التغطية (اسلوب)", vehicle_count: 0, quantity: 0, unit: "نقلة", notes: "" },
+    { operation_name: "مواد التغطية (طمم)", vehicle_count: 0, quantity: 0, unit: "كوب", notes: "" },
+    { operation_name: "كميات المياه للتعقيم والترطيب", vehicle_count: 0, quantity: 0, unit: "كوب", notes: "" },
+    { operation_name: "عدد مرات رش المياه", vehicle_count: 0, quantity: 0, unit: "مرة", notes: "" },
+    { operation_name: "كميات العصارة المرحلة", vehicle_count: 0, quantity: 0, unit: "كوب", notes: "" },
+    { operation_name: "خط الفرز", vehicle_count: 0, quantity: 0, unit: "طن", notes: "" },
+    { operation_name: "طمم خارجي", vehicle_count: 0, quantity: 0, unit: "طن", notes: "" },
   ];
 }
 
@@ -129,8 +129,6 @@ function renderOperations() {
   operationsBody.innerHTML = operations.map((item, index) => `
     <tr>
       <td>${escapeHtml(item.operation_name)}</td>
-      <td><input type="time" value="${item.start_time || ""}" data-type="operation" data-index="${index}" data-field="start_time"></td>
-      <td><input type="time" value="${item.end_time || ""}" data-type="operation" data-index="${index}" data-field="end_time"></td>
       <td><input type="number" step="1" value="${Number(item.vehicle_count || 0)}" data-type="operation" data-index="${index}" data-field="vehicle_count"></td>
       <td><input type="number" step="0.01" value="${Number(item.quantity || 0)}" data-type="operation" data-index="${index}" data-field="quantity"></td>
       <td>${escapeHtml(item.unit || "")}</td>

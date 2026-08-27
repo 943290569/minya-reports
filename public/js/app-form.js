@@ -155,7 +155,7 @@ function buildPayload() {
       ).value,
 
     crews,
-    operations,
+    operations: operations.map(({ start_time, end_time, ...item }) => item),
     stations,
     equipment,
   };

@@ -11,7 +11,7 @@ function buildFullReportHtml(data, autoPrint = false) {
       <tr><td>${escapeHtml(item.crew_name)}</td><td>${formatNumber(item.crew_count)}</td><td>${escapeHtml(item.notes || "-")}</td></tr>`).join("");
 
   const operationRows = data.operations.map((item) => `
-      <tr><td>${escapeHtml(item.operation_name)}</td><td>${formatTime(item.start_time)}</td><td>${formatTime(item.end_time)}</td><td>${formatNumber(item.vehicle_count)}</td><td>${formatNumber(item.quantity)}</td><td>${escapeHtml(item.unit || "")}</td></tr>`).join("");
+      <tr><td>${escapeHtml(item.operation_name)}</td><td>${formatNumber(item.vehicle_count)}</td><td>${formatNumber(item.quantity)}</td><td>${escapeHtml(item.unit || "")}</td></tr>`).join("");
 
   const stationRows = data.stations.map((item) => `
       <tr><td>${escapeHtml(item.station_name)}</td><td>${formatNumber(item.truck_count)}</td><td>${formatNumber(item.waste_tons)}</td><td>${escapeHtml(item.unit || "طن")}</td></tr>`).join("");
@@ -69,7 +69,7 @@ th { background: #f5f5f5; font-weight: bold; }
     <div class="section-title">شؤون الموظفين</div>
     <table><thead><tr><th>طواقم العمل</th><th>العدد</th><th>الملاحظات</th></tr></thead><tbody>${crewRows}<tr><th>المجموع</th><th>${formatNumber(totalWorkers)}</th><th>-</th></tr></tbody></table>
     <div class="section-title">العمليات</div>
-    <table><thead><tr><th>العملية</th><th>وقت البداية</th><th>وقت النهاية</th><th>عدد المركبات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody>${operationRows}</tbody></table>
+    <table><thead><tr><th>العملية</th><th>عدد المركبات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody>${operationRows}</tbody></table>
     <div class="section-title">محطات الترحيل</div>
     <table><thead><tr><th>المحطة</th><th>عدد الشاحنات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody>${stationRows}</tbody></table>
     <div class="section-title">كميات النفايات الواردة لمكب المنيا</div>
