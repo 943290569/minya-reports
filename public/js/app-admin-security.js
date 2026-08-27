@@ -15,18 +15,38 @@
     content.appendChild(panel);
   }
   async function load(){
-    build(); const ub=document.getElementById('securityUsersBody'), sb=document.getElementById('securitySessionsBody'); if(!ub||!sb)return;
+    build();
+    const ub=document.getElementById('securityUsersBody');
+    const sb=document.getElementById('securitySessionsBody');
+    const sessionsCount=document.getElementById('secSessions');
+    const usersCount=document.getElementById('secUsers');
+    const lastLogin=document.getElementById('secLastLogin');
+    const lastFailed=document.getElementById('secLastFailed');
+    const msg=document.getElementById('securityMsg');
+    if(!ub||!sb||!sessionsCount||!usersCount||!lastLogin||!lastFailed||!msg)return;
     try{
       const d=await api('/api/security/sessions'); const users=d.users||[], sessions=d.sessions||[];
-      secSessions.textContent=sessions.length; secUsers.textContent=users.filter(x=>x.is_active).length;
-      const last=users.map(x=>x.last_success_login).filter(Boolean).sort().slice(-1)[0]; const failed=users.map(x=>x.last_failed_login).filter(Boolean).sort().slice(-1)[0];
-      secLastLogin.textContent=dt(last); secLastFailed.textContent=dt(failed);
+      sessionsCount.textContent=sessions.length;
+      usersCount.textContent=users.filter(x=>x.is_active).length;
+      const last=users.map(x=>x.last_success_login).filter(Boolean).sort().slice(-1)[0];
+      const failed=users.map(x=>x.last_failed_login).filter(Boolean).sort().slice(-1)[0];
+      lastLogin.textContent=dt(last); lastFailed.textContent=dt(failed);
       ub.innerHTML=users.length?users.map(u=>`<tr><td><strong>${esc(u.display_name)}</strong><small>${esc(u.username)}</small></td><td>${esc(u.role)}</td><td>${u.active_sessions||0}</td><td>${dt(u.last_success_login)}</td><td>${dt(u.last_failed_login)}</td><td><button class="logout-all" data-user="${u.id}" ${u.active_sessions?``:`disabled`}>خروج من كل الأجهزة</button></td></tr>`).join(''):`<tr><td colspan="6">لا توجد بيانات</td></tr>`;
       sb.innerHTML=sessions.length?sessions.map(s=>`<tr><td>${esc(s.display_name)}<small>${esc(s.username)}</small></td><td>${dt(s.created_at)}</td><td>${dt(s.expires_at)}</td><td><button class="revoke-session" data-session="${s.id}">إنهاء الجلسة</button></td></tr>`).join(''):`<tr><td colspan="4">لا توجد جلسات نشطة</td></tr>`;
-      document.querySelectorAll('.logout-all').forEach(b=>b.onclick=async()=>{if(!confirm('إنهاء جميع جلسات هذا المستخدم؟'))return;try{await api(`/api/security/users/${b.dataset.user}/logout-all`,{method:'POST'});securityMsg.textContent='تم إنهاء الجلسات';load();}catch(e){securityMsg.textContent=e.message;}});
-      document.querySelectorAll('.revoke-session').forEach(b=>b.onclick=async()=>{if(!confirm('إنهاء هذه الجلسة؟'))return;try{await api(`/api/security/sessions/${b.dataset.session}`,{method:'DELETE'});securityMsg.textContent='تم إنهاء الجلسة';load();}catch(e){securityMsg.textContent=e.message;}});
+      document.querySelectorAll('.logout-all').forEach(b=>b.onclick=async()=>{if(!confirm('إنهاء جميع جلسات هذا المستخدم؟'))return;try{await api(`/api/security/users/${b.dataset.user}/logout-all`,{method:'POST'});msg.textContent='تم إنهاء الجلسات';load();}catch(e){msg.textContent=e.message;}});
+      document.querySelectorAll('.revoke-session').forEach(b=>b.onclick=async()=>{if(!confirm('إنهاء هذه الجلسة؟'))return;try{await api(`/api/security/sessions/${b.dataset.session}`,{method:'DELETE'});msg.textContent='تم إنهاء الجلسة';load();}catch(e){msg.textContent=e.message;}});
     }catch(e){ub.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;}
   }
-  function init(){setTimeout(()=>{build();load();document.getElementById('securityRefresh')?.addEventListener('click',load);document.getElementById('securityCleanup')?.addEventListener('click',async()=>{try{const d=await api('/api/security/cleanup',{method:'POST'});securityMsg.textContent=`تم حذف ${d.sessions_removed||0} جلسة منتهية و${d.attempts_removed||0} محاولة قديمة`;load();}catch(e){securityMsg.textContent=e.message;}});},250);}
+  function init(){
+    setTimeout(()=>{
+      build(); load();
+      document.getElementById('securityRefresh')?.addEventListener('click',load);
+      document.getElementById('securityCleanup')?.addEventListener('click',async()=>{
+        const msg=document.getElementById('securityMsg');
+        try{const d=await api('/api/security/cleanup',{method:'POST'});if(msg)msg.textContent=`تم حذف ${d.sessions_removed||0} جلسة منتهية و${d.attempts_removed||0} محاولة قديمة`;load();}
+        catch(e){if(msg)msg.textContent=e.message;}
+      });
+    },250);
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
