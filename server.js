@@ -14,6 +14,20 @@ fs.mkdirSync(dataDir, { recursive: true });
 fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(backupsDir, { recursive: true });
 
+function safeUploadPath(storedName) {
+  const name = String(storedName || "");
+  if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\") || path.basename(name) !== name) return null;
+  const root = path.resolve(uploadsDir);
+  const file = path.resolve(root, name);
+  if (file === root || !file.startsWith(root + path.sep)) return null;
+  return file;
+}
+function safeUnlinkUpload(storedName) {
+  const file = safeUploadPath(storedName);
+  if (!file) return false;
+  try { if (fs.existsSync(file)) fs.unlinkSync(file); return true; } catch { return false; }
+}
+
 const dbPath = path.join(dataDir, "database.db");
 const db = new Database(dbPath);
 db.pragma("foreign_keys = ON");
@@ -225,8 +239,8 @@ function getFullReport(reportId, includeAttachmentData = false) {
   const attachmentRows = db.prepare(`SELECT id,report_id,original_name,stored_name,mime_type,size_bytes,created_at FROM attachments WHERE report_id=? ORDER BY id`).all(reportId);
   const attachments = includeAttachmentData
     ? attachmentRows.map((a) => {
-        const file = path.join(uploadsDir, a.stored_name);
-        return { ...a, data_base64: fs.existsSync(file) ? fs.readFileSync(file).toString("base64") : "" };
+        const file = safeUploadPath(a.stored_name);
+        return { ...a, data_base64: file && fs.existsSync(file) ? fs.readFileSync(file).toString("base64") : "" };
       })
     : attachmentRows.map(({ stored_name, ...a }) => a);
   return {
@@ -400,7 +414,7 @@ app.delete("/api/reports/:id", requireRole("admin"), (req,res)=>{
     const files=db.prepare(`SELECT stored_name FROM attachments WHERE report_id=?`).all(id).map(x=>x.stored_name);
     writeAutomaticBackup("pre-delete");
     db.prepare(`DELETE FROM daily_reports WHERE id=?`).run(id);
-    for(const stored of files){ try{ fs.unlinkSync(path.join(uploadsDir,stored)); }catch{} }
+    for(const stored of files){ safeUnlinkUpload(stored); }
     audit(req.user,"DELETE_REPORT","report",id,report.report_no);
     res.json({ok:true,message:"تم حذف التقرير بنجاح"});
   } catch(error){res.status(500).json({ok:false,message:"فشل حذف التقرير",error:error.message});}
@@ -439,8 +453,8 @@ app.post("/api/reports/:id/attachments", requireRole("admin","editor"), (req,res
   try { const reportId=Number(req.params.id); const report=db.prepare(`SELECT id,workflow_status FROM daily_reports WHERE id=?`).get(reportId); if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"}); if((report.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن إضافة مرفقات بعد إرسال التقرير للمراجعة أو اعتماده"}); const {name,mime_type,data_base64}=req.body; if(!name||!data_base64) return res.status(400).json({ok:false,message:"الملف مطلوب"}); const buffer=Buffer.from(String(data_base64).replace(/^data:[^;]+;base64,/,""),"base64"); if(buffer.length>8*1024*1024) return res.status(413).json({ok:false,message:"الحد الأقصى للملف 8MB"}); const ext=path.extname(name).replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${reportId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; fs.writeFileSync(path.join(uploadsDir,stored),buffer); const r=db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_by) VALUES (?,?,?,?,?,?)`).run(reportId,name,stored,mime_type||"application/octet-stream",buffer.length,req.user.id); audit(req.user,"ADD_ATTACHMENT","report",reportId,name); writeAutomaticBackup("attachment-add"); res.json({ok:true,id:r.lastInsertRowid}); }
   catch(error){res.status(500).json({ok:false,message:"فشل رفع المرفق",error:error.message});}
 });
-app.get("/api/attachments/:id/download", requireAuth, (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).end(); const file=path.join(uploadsDir,a.stored_name); if(!fs.existsSync(file)) return res.status(404).end(); res.type(a.mime_type); res.setHeader("Content-Disposition",`inline; filename*=UTF-8''${encodeURIComponent(a.original_name)}`); res.sendFile(file); });
-app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT a.*,r.workflow_status FROM attachments a JOIN daily_reports r ON r.id=a.report_id WHERE a.id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); if((a.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف مرفقات تقرير مرسل للمراجعة أو معتمد"}); writeAutomaticBackup("pre-attachment-delete"); try{fs.unlinkSync(path.join(uploadsDir,a.stored_name));}catch{} db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
+app.get("/api/attachments/:id/download", requireAuth, (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).end(); const file=safeUploadPath(a.stored_name); if(!file) return res.status(400).json({ok:false,message:"مسار المرفق غير صالح"}); if(!fs.existsSync(file)) return res.status(404).end(); res.type(a.mime_type); res.setHeader("Content-Disposition",`inline; filename*=UTF-8''${encodeURIComponent(a.original_name)}`); res.sendFile(file); });
+app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT a.*,r.workflow_status FROM attachments a JOIN daily_reports r ON r.id=a.report_id WHERE a.id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); if((a.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف مرفقات تقرير مرسل للمراجعة أو معتمد"}); writeAutomaticBackup("pre-attachment-delete"); safeUnlinkUpload(a.stored_name); db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
 
 app.get("/api/maintenance", requireAuth, (req,res)=>{ const {equipment_name="",from="",to=""}=req.query; let sql=`SELECT m.*,u.display_name AS created_by_name FROM maintenance_logs m LEFT JOIN users u ON u.id=m.created_by WHERE 1=1`; const p=[]; if(equipment_name){sql+=` AND m.equipment_name LIKE ?`;p.push(`%${equipment_name}%`);} if(from){sql+=` AND m.log_date>=?`;p.push(from);} if(to){sql+=` AND m.log_date<=?`;p.push(to);} sql+=` ORDER BY m.log_date DESC,m.id DESC`; res.json({ok:true,logs:db.prepare(sql).all(...p)}); });
 app.post("/api/maintenance", requireRole("admin","editor"), (req,res)=>{ const {equipment_name,log_date,status,description,action_taken,cost}=req.body; if(!equipment_name||!log_date||!description) return res.status(400).json({ok:false,message:"اسم الآلية والتاريخ والوصف مطلوبة"}); const r=db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by) VALUES (?,?,?,?,?,?,?)`).run(equipment_name,log_date,status||"ملاحظة",description,action_taken||"",Number(cost||0),req.user.id); audit(req.user,"CREATE_MAINTENANCE","maintenance",r.lastInsertRowid,equipment_name); writeAutomaticBackup("maintenance-create"); res.json({ok:true,id:r.lastInsertRowid}); });
@@ -515,8 +529,9 @@ app.get("/api/backups/:name/download", requireRole("admin"), (req,res)=>{
 app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
   const sqliteIntegrity=db.pragma("integrity_check", { simple:true });
   const attachmentRows=db.prepare(`SELECT id,report_id,original_name,stored_name FROM attachments ORDER BY id`).all();
-  const missingAttachments=attachmentRows.filter(a=>!fs.existsSync(path.join(uploadsDir,a.stored_name))).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name,stored_name:a.stored_name}));
-  const knownNames=new Set(attachmentRows.map(a=>a.stored_name));
+  const invalidAttachmentPaths=attachmentRows.filter(a=>!safeUploadPath(a.stored_name)).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name,stored_name:a.stored_name}));
+  const missingAttachments=attachmentRows.filter(a=>{const file=safeUploadPath(a.stored_name);return !file||!fs.existsSync(file);}).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name,stored_name:a.stored_name}));
+  const knownNames=new Set(attachmentRows.filter(a=>safeUploadPath(a.stored_name)).map(a=>a.stored_name));
   const orphanFiles=fs.readdirSync(uploadsDir).filter(name=>{try{return fs.statSync(path.join(uploadsDir,name)).isFile()&&!knownNames.has(name);}catch{return false;}});
   const reportsWithoutOperations=db.prepare(`SELECT id,report_no,report_date FROM daily_reports r WHERE NOT EXISTS (SELECT 1 FROM operations o WHERE o.report_id=r.id) ORDER BY report_date DESC`).all();
   const reportsWithoutEquipment=db.prepare(`SELECT id,report_no,report_date FROM daily_reports r WHERE NOT EXISTS (SELECT 1 FROM equipment e WHERE e.report_id=r.id) ORDER BY report_date DESC`).all();
@@ -529,7 +544,8 @@ app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
   const latestBackupAgeHours=latestBackup?Number(((Date.now()-latestBackup.mtime.getTime())/3600000).toFixed(1)):null;
   const issues=[];
   if(sqliteIntegrity!=="ok") issues.push({level:"danger",code:"sqlite",message:`فحص SQLite: ${sqliteIntegrity}`});
-  if(missingAttachments.length) issues.push({level:"danger",code:"missing_attachments",message:`يوجد ${missingAttachments.length} مرفق مسجل وملفه غير موجود`});
+  if(invalidAttachmentPaths.length) issues.push({level:"danger",code:"invalid_attachment_paths",message:`يوجد ${invalidAttachmentPaths.length} مرفق بمسار تخزين غير صالح`});
+  if(missingAttachments.length) issues.push({level:"danger",code:"missing_attachments",message:`يوجد ${missingAttachments.length} مرفق مسجل وملفه غير موجود أو مساره غير صالح`});
   if(orphanFiles.length) issues.push({level:"warning",code:"orphan_files",message:`يوجد ${orphanFiles.length} ملف مرفق غير مرتبط بقاعدة البيانات`});
   if(reportsWithoutOperations.length) issues.push({level:"warning",code:"no_operations",message:`يوجد ${reportsWithoutOperations.length} تقرير بدون سجلات عمليات`});
   if(reportsWithoutEquipment.length) issues.push({level:"warning",code:"no_equipment",message:`يوجد ${reportsWithoutEquipment.length} تقرير بدون سجلات معدات`});
@@ -538,7 +554,7 @@ app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
   if(!latestBackup) issues.push({level:"warning",code:"no_backup",message:"لا توجد نسخة احتياطية محفوظة"});
   else if(latestBackupAgeHours>72) issues.push({level:"warning",code:"old_backup",message:`آخر نسخة احتياطية منذ ${latestBackupAgeHours} ساعة`});
   const level=issues.some(x=>x.level==="danger")?"danger":issues.length?"warning":"ok";
-  res.json({ok:true,level,sqlite_integrity:sqliteIntegrity,missing_attachments:missingAttachments,orphan_files:orphanFiles,reports_without_operations:reportsWithoutOperations,reports_without_equipment:reportsWithoutEquipment,duplicate_dates:duplicateDates,duplicate_numbers:duplicateNumbers,expired_sessions:expiredSessions,latest_backup:latestBackup?latestBackup.name:null,latest_backup_age_hours:latestBackupAgeHours,issues});
+  res.json({ok:true,level,sqlite_integrity:sqliteIntegrity,invalid_attachment_paths:invalidAttachmentPaths,missing_attachments:missingAttachments,orphan_files:orphanFiles,reports_without_operations:reportsWithoutOperations,reports_without_equipment:reportsWithoutEquipment,duplicate_dates:duplicateDates,duplicate_numbers:duplicateNumbers,expired_sessions:expiredSessions,latest_backup:latestBackup?latestBackup.name:null,latest_backup_age_hours:latestBackupAgeHours,issues});
 });
 
 app.post("/api/backup/validate", requireRole("admin"), (req,res)=>{
