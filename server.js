@@ -353,6 +353,35 @@ function listBackupFiles() {
     return {name,size_bytes:st.size,created_at:st.mtime.toISOString()};
   }).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
 }
+app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
+  try {
+    const sqlite_integrity=db.pragma("integrity_check", { simple:true });
+    const attachmentRows=db.prepare(`SELECT id,report_id,original_name,stored_name FROM attachments ORDER BY id`).all();
+    const missing_attachments=attachmentRows.filter(a=>!fs.existsSync(path.join(uploadsDir,a.stored_name))).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name}));
+    const knownFiles=new Set(attachmentRows.map(a=>a.stored_name));
+    const orphan_files=fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDir).filter(name=>{ try{return fs.statSync(path.join(uploadsDir,name)).isFile()&&!knownFiles.has(name);}catch{return false;} }):[];
+    const reports_without_operations=db.prepare(`SELECT r.id,r.report_no,r.report_date FROM daily_reports r LEFT JOIN operations o ON o.report_id=r.id GROUP BY r.id HAVING COUNT(o.id)=0 ORDER BY r.report_date DESC`).all();
+    const reports_without_equipment=db.prepare(`SELECT r.id,r.report_no,r.report_date FROM daily_reports r LEFT JOIN equipment e ON e.report_id=r.id GROUP BY r.id HAVING COUNT(e.id)=0 ORDER BY r.report_date DESC`).all();
+    const duplicate_dates=db.prepare(`SELECT report_date,COUNT(*) AS count FROM daily_reports GROUP BY report_date HAVING COUNT(*)>1`).all();
+    const duplicate_numbers=db.prepare(`SELECT report_no,COUNT(*) AS count FROM daily_reports GROUP BY report_no HAVING COUNT(*)>1`).all();
+    const expired_sessions=db.prepare(`SELECT COUNT(*) AS c FROM sessions WHERE expires_at < ?`).get(new Date().toISOString()).c;
+    const backups=listBackupFiles();
+    const latest_backup=backups[0]||null;
+    const backup_age_hours=latest_backup?Math.max(0,(Date.now()-new Date(latest_backup.created_at).getTime())/3600000):null;
+    const issues=[];
+    if(sqlite_integrity!=="ok") issues.push({level:"danger",code:"sqlite",title:"فحص SQLite غير سليم",count:1});
+    if(missing_attachments.length) issues.push({level:"danger",code:"missing_attachments",title:"مرفقات مسجلة وملفاتها مفقودة",count:missing_attachments.length});
+    if(orphan_files.length) issues.push({level:"warning",code:"orphan_files",title:"ملفات غير مرتبطة بتقرير",count:orphan_files.length});
+    if(reports_without_operations.length) issues.push({level:"warning",code:"reports_without_operations",title:"تقارير بدون عمليات تشغيل",count:reports_without_operations.length});
+    if(reports_without_equipment.length) issues.push({level:"warning",code:"reports_without_equipment",title:"تقارير بدون بيانات معدات",count:reports_without_equipment.length});
+    if(duplicate_dates.length||duplicate_numbers.length) issues.push({level:"danger",code:"duplicates",title:"تكرار في معرفات التقارير",count:duplicate_dates.length+duplicate_numbers.length});
+    if(!latest_backup) issues.push({level:"warning",code:"no_backup",title:"لا توجد نسخة احتياطية محفوظة",count:1});
+    else if(backup_age_hours>72) issues.push({level:"warning",code:"old_backup",title:"آخر نسخة احتياطية أقدم من 72 ساعة",count:1});
+    const level=issues.some(x=>x.level==="danger")?"danger":issues.length?"warning":"ok";
+    res.json({ok:true,level,sqlite_integrity,issues,missing_attachments,orphan_files,reports_without_operations,reports_without_equipment,duplicate_dates,duplicate_numbers,expired_sessions,latest_backup,backup_age_hours,checked_at:new Date().toISOString()});
+  } catch(error){ res.status(500).json({ok:false,message:"فشل فحص سلامة البيانات",error:error.message}); }
+});
+
 app.get("/api/system/storage", requireRole("admin"), (req,res)=>{
   const database_bytes=fs.existsSync(dbPath)?fs.statSync(dbPath).size:0;
   const uploads_bytes=directorySize(uploadsDir);
