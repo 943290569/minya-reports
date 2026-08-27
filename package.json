@@ -1,14 +1,18 @@
 {
-  "name": "minya-landfill-v2",
-  "version": "1.0.0",
-  "description": "",
+  "name": "minya-landfill-system",
+  "version": "3.1.0",
+  "description": "Minya Landfill daily, monthly, annual and management reporting system",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "node scripts/check-js.js && node scripts/smoke-test.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "minya-landfill",
+    "reporting",
+    "solid-waste"
+  ],
+  "author": "Landfill Section",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
