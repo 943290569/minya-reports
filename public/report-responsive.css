@@ -32,6 +32,32 @@
   #stationsTable td {
     padding: 9px 8px;
   }
+
+  body[data-page="report"] .report-edit-banner,
+  body[data-page="report"] .report-workflow-panel,
+  body[data-page="report"] #reportAttachmentsPanel {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  body[data-page="report"] .workflow-summary {
+    align-items: flex-start;
+  }
+
+  body[data-page="report"] .workflow-actions {
+    width: 100%;
+  }
+
+  body[data-page="report"] .workflow-actions button {
+    min-height: 42px;
+    flex: 1 1 160px;
+  }
+
+  body[data-page="report"] .attachments-controls button,
+  body[data-page="report"] .attachment-actions a,
+  body[data-page="report"] .attachment-actions button {
+    min-height: 42px;
+  }
 }
 
 @media (max-width: 540px) {
@@ -49,5 +75,70 @@
   #stationsTable input {
     min-height: 36px;
     padding: 6px;
+  }
+
+  body[data-page="report"] .report-edit-banner,
+  body[data-page="report"] .report-workflow-panel,
+  body[data-page="report"] #reportAttachmentsPanel {
+    padding: 13px;
+    border-radius: 12px;
+  }
+
+  body[data-page="report"] .report-edit-actions {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-page="report"] .report-edit-actions a,
+  body[data-page="report"] .report-edit-actions button,
+  body[data-page="report"] .workflow-actions button,
+  body[data-page="report"] .attachments-controls button,
+  body[data-page="report"] .attachment-actions a,
+  body[data-page="report"] .attachment-actions button {
+    width: 100%;
+    min-height: 44px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  body[data-page="report"] .workflow-status-line {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  body[data-page="report"] .workflow-steps {
+    gap: 5px;
+  }
+
+  body[data-page="report"] .workflow-steps div {
+    flex: 0 0 auto;
+  }
+
+  body[data-page="report"] .workflow-steps b {
+    min-width: 12px;
+  }
+
+  body[data-page="report"] .report-attachments-head {
+    gap: 8px;
+  }
+
+  body[data-page="report"] .attachments-count {
+    align-self: flex-start;
+  }
+
+  body[data-page="report"] .attachment-meta,
+  body[data-page="report"] .attachment-meta strong {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body[data-page="report"] .attachment-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  body[data-page="report"] .attachments-controls input[type="file"] {
+    min-height: 44px;
   }
 }
