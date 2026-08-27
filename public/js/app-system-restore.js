@@ -174,10 +174,13 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function initRestore() {
     buildPanel();
     document.getElementById("restoreBackupFile")?.addEventListener("change", (event) => validateFile(event.target.files?.[0] || null));
     document.getElementById("restoreConfirmText")?.addEventListener("input", updateRestoreButton);
     document.getElementById("restoreBackupBtn")?.addEventListener("click", restoreBackup);
-  });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initRestore);
+  else initRestore();
 })();
