@@ -148,12 +148,23 @@ const reportColumns = new Set(db.pragma("table_info(daily_reports)").map((c) => 
   if (!reportColumns.has(name)) db.exec(`ALTER TABLE daily_reports ADD COLUMN ${name} ${definition}`);
 });
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+const regularJsonParser = express.json({ limit: "12mb" });
+const backupJsonParser = express.json({ limit: "50mb" });
+app.use((req,res,next) => {
+  if (req.path === "/api/backup/restore" || req.path === "/api/backup/validate") return backupJsonParser(req,res,next);
+  return regularJsonParser(req,res,next);
+});
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
+}
+function safeHashEqual(a, b) {
+  try {
+    const aa=Buffer.from(String(a), "hex"), bb=Buffer.from(String(b), "hex");
+    return aa.length === bb.length && aa.length > 0 && crypto.timingSafeEqual(aa, bb);
+  } catch { return false; }
 }
 function newSalt() { return crypto.randomBytes(16).toString("hex"); }
 function tokenHash(token) { return crypto.createHash("sha256").update(token).digest("hex"); }
@@ -164,7 +175,12 @@ function parseCookies(req) {
     return acc;
   }, {});
 }
+let lastSessionCleanup = 0;
 function currentUser(req) {
+  if (Date.now() - lastSessionCleanup > 60*60*1000) {
+    try { db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(new Date().toISOString()); } catch {}
+    lastSessionCleanup = Date.now();
+  }
   const token = parseCookies(req).minya_session;
   if (!token) return null;
   const row = db.prepare(`SELECT u.id,u.username,u.display_name,u.role,u.is_active,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?`).get(tokenHash(token));
@@ -261,13 +277,15 @@ app.post("/api/auth/login", (req, res) => {
   const normalized=String(username || "").trim();
   const ip=String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim().slice(0,120);
   const windowStart=new Date(Date.now()-15*60*1000).toISOString();
-  const failed=db.prepare(`SELECT COUNT(*) AS c FROM login_attempts WHERE username=? AND success=0 AND created_at>=?`).get(normalized,windowStart).c;
-  if(failed>=5){
+  const failedUserIp=db.prepare(`SELECT COUNT(*) AS c FROM login_attempts WHERE username=? AND ip_address=? AND success=0 AND created_at>=?`).get(normalized,ip,windowStart).c;
+  const failedIp=db.prepare(`SELECT COUNT(*) AS c FROM login_attempts WHERE ip_address=? AND success=0 AND created_at>=?`).get(ip,windowStart).c;
+  if(failedUserIp>=5 || failedIp>=20){
     audit(null,"LOGIN_LOCKED","user",normalized,`Too many failed attempts from ${ip}`);
     return res.status(429).json({ok:false,message:"تم إيقاف محاولات الدخول مؤقتًا لمدة 15 دقيقة بسبب تكرار المحاولات الفاشلة"});
   }
   const user = db.prepare(`SELECT * FROM users WHERE username=? AND is_active=1`).get(normalized);
-  if (!user || hashPassword(password || "", user.salt) !== user.password_hash) {
+  const suppliedHash = user ? hashPassword(password || "", user.salt) : "";
+  if (!user || !safeHashEqual(suppliedHash, user.password_hash)) {
     db.prepare(`INSERT INTO login_attempts (username,success,ip_address) VALUES (?,0,?)`).run(normalized,ip);
     audit(null,"LOGIN_FAILED","user",normalized,`Failed login from ${ip}`);
     return res.status(401).json({ok:false,message:"بيانات الدخول غير صحيحة"});
@@ -459,8 +477,8 @@ app.get("/api/attachments/:id/download", requireAuth, (req,res)=>{ const a=db.pr
 app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT a.*,r.workflow_status FROM attachments a JOIN daily_reports r ON r.id=a.report_id WHERE a.id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); if((a.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف مرفقات تقرير مرسل للمراجعة أو معتمد"}); writeAutomaticBackup("pre-attachment-delete"); try{fs.unlinkSync(path.join(uploadsDir,a.stored_name));}catch{} db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
 
 app.get("/api/maintenance", requireAuth, (req,res)=>{ const {equipment_name="",from="",to=""}=req.query; let sql=`SELECT m.*,u.display_name AS created_by_name FROM maintenance_logs m LEFT JOIN users u ON u.id=m.created_by WHERE 1=1`; const p=[]; if(equipment_name){sql+=` AND m.equipment_name LIKE ?`;p.push(`%${equipment_name}%`);} if(from){sql+=` AND m.log_date>=?`;p.push(from);} if(to){sql+=` AND m.log_date<=?`;p.push(to);} sql+=` ORDER BY m.log_date DESC,m.id DESC`; res.json({ok:true,logs:db.prepare(sql).all(...p)}); });
-app.post("/api/maintenance", requireRole("admin","editor"), (req,res)=>{ const {equipment_name,log_date,status,description,action_taken,cost}=req.body; if(!equipment_name||!log_date||!description) return res.status(400).json({ok:false,message:"اسم الآلية والتاريخ والوصف مطلوبة"}); const r=db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by) VALUES (?,?,?,?,?,?,?)`).run(equipment_name,log_date,status||"ملاحظة",description,action_taken||"",Number(cost||0),req.user.id); audit(req.user,"CREATE_MAINTENANCE","maintenance",r.lastInsertRowid,equipment_name); res.json({ok:true,id:r.lastInsertRowid}); });
-app.delete("/api/maintenance/:id", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); db.prepare(`DELETE FROM maintenance_logs WHERE id=?`).run(id); audit(req.user,"DELETE_MAINTENANCE","maintenance",id); res.json({ok:true}); });
+app.post("/api/maintenance", requireRole("admin","editor"), (req,res)=>{ const {equipment_name,log_date,status,description,action_taken,cost}=req.body; if(!equipment_name||!log_date||!description) return res.status(400).json({ok:false,message:"اسم الآلية والتاريخ والوصف مطلوبة"}); const r=db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by) VALUES (?,?,?,?,?,?,?)`).run(equipment_name,log_date,status||"ملاحظة",description,action_taken||"",Number(cost||0),req.user.id); audit(req.user,"CREATE_MAINTENANCE","maintenance",r.lastInsertRowid,equipment_name); writeAutomaticBackup("maintenance-create"); res.json({ok:true,id:r.lastInsertRowid}); });
+app.delete("/api/maintenance/:id", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); writeAutomaticBackup("pre-maintenance-delete"); db.prepare(`DELETE FROM maintenance_logs WHERE id=?`).run(id); audit(req.user,"DELETE_MAINTENANCE","maintenance",id); res.json({ok:true}); });
 
 app.get("/api/equipment/summary", requireAuth, (req,res)=>{
   const from=req.query.from||"0000-01-01", to=req.query.to||"9999-12-31";
