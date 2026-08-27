@@ -1,0 +1,22 @@
+name: Patch Lightweight Reports
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-lightweight-reports.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 .github/patch-lightweight-reports.py
+      - run: npm install
+      - run: npm test
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server.js
+          git commit -m "Keep normal report responses lightweight" || exit 0
+          git push
