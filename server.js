@@ -287,12 +287,34 @@ app.post("/api/users", requireRole("admin"), (req,res)=>{
   } catch(error){ res.status(400).json({ok:false,message:"تعذر إنشاء المستخدم",error:error.message}); }
 });
 app.put("/api/users/:id", requireRole("admin"), (req,res)=>{
-  const id=Number(req.params.id); const {display_name,role,is_active,password}=req.body;
-  const target=db.prepare(`SELECT * FROM users WHERE id=?`).get(id); if(!target) return res.status(404).json({ok:false,message:"المستخدم غير موجود"});
-  if(role && !["admin","editor","viewer"].includes(role)) return res.status(400).json({ok:false,message:"صلاحية غير صحيحة"});
-  db.prepare(`UPDATE users SET display_name=?,role=?,is_active=? WHERE id=?`).run(display_name ?? target.display_name, role ?? target.role, is_active===undefined?target.is_active:Number(Boolean(is_active)), id);
-  if(password){ if(String(password).length<8) return res.status(400).json({ok:false,message:"كلمة المرور قصيرة"}); const salt=newSalt(); db.prepare(`UPDATE users SET password_hash=?,salt=? WHERE id=?`).run(hashPassword(password,salt),salt,id); db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id); }
-  audit(req.user,"UPDATE_USER","user",id,JSON.stringify({role,is_active})); res.json({ok:true});
+  try {
+    const id=Number(req.params.id); const {display_name,role,is_active,password}=req.body;
+    const target=db.prepare(`SELECT * FROM users WHERE id=?`).get(id);
+    if(!target) return res.status(404).json({ok:false,message:"المستخدم غير موجود"});
+    if(role && !["admin","editor","viewer"].includes(role)) return res.status(400).json({ok:false,message:"صلاحية غير صحيحة"});
+    const nextRole=role ?? target.role;
+    const nextActive=is_active===undefined?target.is_active:Number(Boolean(is_active));
+    if(id===req.user.id && !nextActive) return res.status(400).json({ok:false,message:"لا يمكن إيقاف حساب المدير المستخدم حاليًا"});
+    const removesAdmin=target.role==="admin" && target.is_active && (nextRole!=="admin" || !nextActive);
+    if(removesAdmin){
+      const activeAdmins=db.prepare(`SELECT COUNT(*) AS c FROM users WHERE role='admin' AND is_active=1`).get().c;
+      if(activeAdmins<=1) return res.status(400).json({ok:false,message:"لا يمكن إيقاف أو خفض صلاحية آخر مدير فعال"});
+    }
+    if(password && String(password).length<8) return res.status(400).json({ok:false,message:"كلمة المرور يجب أن تكون 8 أحرف على الأقل"});
+    const tx=db.transaction(()=>{
+      db.prepare(`UPDATE users SET display_name=?,role=?,is_active=? WHERE id=?`).run(String(display_name ?? target.display_name).trim()||target.display_name,nextRole,nextActive,id);
+      if(password){
+        const salt=newSalt();
+        db.prepare(`UPDATE users SET password_hash=?,salt=? WHERE id=?`).run(hashPassword(password,salt),salt,id);
+        db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id);
+      } else if(!nextActive){
+        db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id);
+      }
+    });
+    tx();
+    audit(req.user,"UPDATE_USER","user",id,JSON.stringify({display_name:display_name??target.display_name,role:nextRole,is_active:nextActive,password_changed:Boolean(password)}));
+    res.json({ok:true,message:"تم تحديث المستخدم"});
+  } catch(error){res.status(500).json({ok:false,message:"تعذر تحديث المستخدم",error:error.message});}
 });
 
 app.get("/api/security/sessions", requireRole("admin"), (req,res)=>{
