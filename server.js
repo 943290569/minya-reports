@@ -28,6 +28,57 @@ function safeUnlinkUpload(storedName) {
   try { if (fs.existsSync(file)) fs.unlinkSync(file); return true; } catch { return false; }
 }
 
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+const MAX_BACKUP_ATTACHMENTS_BYTES = 40 * 1024 * 1024;
+function validateMimeType(value) {
+  const mime=String(value || "application/octet-stream").trim();
+  return mime.length <= 120 && /^[a-zA-Z0-9!#$&^_.+-]+\/[a-zA-Z0-9!#$&^_.+-]+$/.test(mime);
+}
+function decodeStrictBase64(value) {
+  const text=String(value || "").trim();
+  if (!text || text.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(text)) return null;
+  try {
+    const buffer=Buffer.from(text, "base64");
+    const normalized=text.replace(/=+$/, "");
+    if (buffer.toString("base64").replace(/=+$/, "") !== normalized) return null;
+    return buffer;
+  } catch { return null; }
+}
+function validateBackupObject(backup) {
+  const errors=[]; const dates=[]; const numbers=[];
+  let attachmentsCount=0, attachmentsBytes=0, invalidReports=0;
+  if(!backup || !Array.isArray(backup.reports)) return {valid:false,errors:["قائمة التقارير مفقودة"],summary:null};
+  backup.reports.forEach((item,reportIndex)=>{
+    const r=item&&item.report?item.report:{};
+    if(!r.report_date){ invalidReports++; return; }
+    dates.push(String(r.report_date));
+    numbers.push(String(r.report_no||generateReportNo(r.report_date)));
+    const attachments=Array.isArray(item.attachments)?item.attachments:[];
+    attachments.forEach((a,attachmentIndex)=>{
+      attachmentsCount++;
+      const label=String(a?.original_name || `مرفق ${attachmentIndex+1}`).slice(0,120);
+      if(!a || !a.data_base64){ errors.push(`المرفق ${label} في التقرير ${r.report_date} لا يحتوي بيانات`); return; }
+      if(String(a.original_name||"").length>255) errors.push(`اسم المرفق طويل جدًا في التقرير ${r.report_date}`);
+      if(!validateMimeType(a.mime_type)) errors.push(`نوع MIME غير صالح للمرفق ${label}`);
+      const buffer=decodeStrictBase64(a.data_base64);
+      if(!buffer){ errors.push(`بيانات Base64 غير صالحة للمرفق ${label}`); return; }
+      attachmentsBytes+=buffer.length;
+      if(buffer.length>MAX_ATTACHMENT_BYTES) errors.push(`المرفق ${label} يتجاوز الحد الأقصى 8MB`);
+    });
+  });
+  const dupDates=[...new Set(dates.filter((d,i)=>dates.indexOf(d)!==i))];
+  const dupNumbers=[...new Set(numbers.filter((d,i)=>numbers.indexOf(d)!==i))];
+  if(invalidReports) errors.push(`${invalidReports} تقرير بدون تاريخ`);
+  if(dupDates.length) errors.push(`تواريخ مكررة: ${dupDates.slice(0,5).join(", ")}`);
+  if(dupNumbers.length) errors.push(`أرقام تقارير مكررة: ${dupNumbers.slice(0,5).join(", ")}`);
+  if(attachmentsBytes>MAX_BACKUP_ATTACHMENTS_BYTES) errors.push("إجمالي المرفقات في النسخة يتجاوز الحد الآمن 40MB");
+  const sorted=[...dates].sort();
+  return {
+    valid:errors.length===0, errors,
+    summary:{reports_count:backup.reports.length,attachments_count:attachmentsCount,attachments_bytes:attachmentsBytes,maintenance_count:Array.isArray(backup.maintenance)?backup.maintenance.length:0,from_date:sorted[0]||null,to_date:sorted[sorted.length-1]||null,exported_at:backup.exported_at||null,system:backup.system||null,version:backup.version||null}
+  };
+}
+
 const dbPath = path.join(dataDir, "database.db");
 const db = new Database(dbPath);
 db.pragma("foreign_keys = ON");
@@ -559,29 +610,12 @@ app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
 
 app.post("/api/backup/validate", requireRole("admin"), (req,res)=>{
   try{
-    const backup=req.body;
-    if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,valid:false,message:"ملف النسخة غير صالح: قائمة التقارير مفقودة"});
-    const dates=[]; const numbers=[]; let attachments_count=0; let attachments_bytes=0; let invalid_reports=0;
-    for(const item of backup.reports){
-      const r=item&&item.report?item.report:{};
-      if(!r.report_date){invalid_reports++;continue;}
-      dates.push(String(r.report_date));
-      numbers.push(String(r.report_no||generateReportNo(r.report_date)));
-      for(const a of item.attachments||[]){attachments_count++;if(a.data_base64)attachments_bytes+=Math.floor(String(a.data_base64).length*0.75);}
-    }
-    const dupDates=[...new Set(dates.filter((d,i)=>dates.indexOf(d)!==i))];
-    const dupNumbers=[...new Set(numbers.filter((d,i)=>numbers.indexOf(d)!==i))];
-    const errors=[];
-    if(invalid_reports)errors.push(`${invalid_reports} تقرير بدون تاريخ`);
-    if(dupDates.length)errors.push(`تواريخ مكررة: ${dupDates.slice(0,5).join(", ")}`);
-    if(dupNumbers.length)errors.push(`أرقام تقارير مكررة: ${dupNumbers.slice(0,5).join(", ")}`);
-    const valid=errors.length===0;
-    const sorted=[...dates].sort();
-    res.status(valid?200:400).json({ok:valid,valid,message:valid?"النسخة صالحة مبدئيًا للاستعادة":"النسخة تحتوي أخطاء تمنع الاستعادة",errors,summary:{reports_count:backup.reports.length,attachments_count,attachments_bytes,maintenance_count:Array.isArray(backup.maintenance)?backup.maintenance.length:0,from_date:sorted[0]||null,to_date:sorted[sorted.length-1]||null,exported_at:backup.exported_at||null,system:backup.system||null,version:backup.version||null}});
+    const result=validateBackupObject(req.body);
+    res.status(result.valid?200:400).json({ok:result.valid,valid:result.valid,message:result.valid?"النسخة صالحة للاستعادة":"النسخة تحتوي أخطاء تمنع الاستعادة",errors:result.errors,summary:result.summary});
   }catch(error){res.status(400).json({ok:false,valid:false,message:"تعذر فحص النسخة",error:error.message});}
 });
 app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
-  try { const backup=req.body; if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,message:"ملف النسخة غير صالح"}); writeAutomaticBackup("pre-restore"); const tx=db.transaction(()=>{ ["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run()); for(const item of backup.reports){ const r=item.report; const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||""); const newId=rr.lastInsertRowid; insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; const buffer=Buffer.from(a.data_base64,"base64"); fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at); } }); tx();
+  try { const backup=req.body; const validation=validateBackupObject(backup); if(!validation.valid) return res.status(400).json({ok:false,message:"تم رفض الاستعادة لأن النسخة لم تجتز فحص السلامة",errors:validation.errors}); writeAutomaticBackup("pre-restore"); const tx=db.transaction(()=>{ ["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run()); for(const item of backup.reports){ const r=item.report; const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||""); const newId=rr.lastInsertRowid; insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; const buffer=decodeStrictBase64(a.data_base64); if(!buffer) throw new Error("بيانات مرفق غير صالحة أثناء الاستعادة"); fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at); } }); tx();
     const referenced=new Set(db.prepare(`SELECT stored_name FROM attachments`).all().map(x=>x.stored_name));
     for(const name of fs.readdirSync(uploadsDir)){
       const file=path.join(uploadsDir,name);
