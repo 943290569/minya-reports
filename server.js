@@ -361,6 +361,18 @@ app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{
   res.json({ok:true,sessions_removed:sessions,attempts_removed:attempts});
 });
 
+app.get("/api/reviews/pending", requireRole("admin"), (req,res)=>{
+  const from=String(req.query.from||"");
+  const to=String(req.query.to||"");
+  let sql=`SELECT r.*,COALESCE(u.display_name,u.username,'-') AS submitted_by_name FROM daily_reports r LEFT JOIN users u ON u.id=r.submitted_by WHERE r.workflow_status='pending'`;
+  const params=[];
+  if(from){sql+=` AND r.report_date>=?`;params.push(from);}
+  if(to){sql+=` AND r.report_date<=?`;params.push(to);}
+  sql+=` ORDER BY COALESCE(r.submitted_at,r.updated_at) ASC,r.report_date ASC`;
+  const reports=db.prepare(sql).all(...params);
+  res.json({ok:true,count:reports.length,reports});
+});
+
 app.get("/api/reports", requireAuth, (req, res) => {
   try { res.json({ ok:true, count:db.prepare(`SELECT COUNT(*) AS c FROM daily_reports`).get().c, reports:db.prepare(`SELECT * FROM daily_reports ORDER BY report_date DESC`).all() }); }
   catch(error){ res.status(500).json({ok:false,message:"فشل تحميل التقارير",error:error.message}); }
@@ -418,8 +430,9 @@ app.post("/api/reports/:id/reopen", requireRole("admin"), (req,res)=>{
   const id=Number(req.params.id); const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id);
   if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"});
   if((report.workflow_status || "draft") === "draft") return res.status(409).json({ok:false,message:"التقرير مسودة بالفعل"});
+  const reason=String(req.body?.reason||"").trim().slice(0,500);
   db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(id);
-  audit(req.user,"REOPEN_REPORT","report",id,report.report_no); writeAutomaticBackup("report-reopen");
+  audit(req.user,"REOPEN_REPORT","report",id,reason?`${report.report_no} | السبب: ${reason}`:report.report_no); writeAutomaticBackup("report-reopen");
   res.json({ok:true,message:"تمت إعادة فتح التقرير كمسودة",workflow_status:"draft"});
 });
 
@@ -550,7 +563,7 @@ app.get("/api/export/managerial.csv", requireAuth, (req,res)=>{
   const from=req.query.from||"0000-01-01",to=req.query.to||"9999-12-31"; const reports=db.prepare(`SELECT report_date,report_no,total_waste_tons,total_trucks,total_diesel,notes FROM daily_reports WHERE report_date BETWEEN ? AND ? ORDER BY report_date`).all(from,to); const esc=v=>`"${String(v??"").replace(/"/g,'""')}"`; const lines=[["التاريخ","رقم التقرير","النفايات طن","الشاحنات","السولار لتر","الملاحظات"],...reports.map(r=>[r.report_date,r.report_no,r.total_waste_tons,r.total_trucks,r.total_diesel,r.notes])].map(row=>row.map(esc).join(",")); res.setHeader("Content-Type","text/csv; charset=utf-8"); res.setHeader("Content-Disposition",`attachment; filename=minya-managerial-${from}-${to}.csv`); res.send("\uFEFF"+lines.join("\r\n"));
 });
 
-const appPages=["/","/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/admin"];
+const appPages=["/","/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin"];
 appPages.forEach(route=>app.get(route,(req,res)=>res.sendFile(path.join(__dirname,"public","index.html"))));
 
 app.listen(PORT,"0.0.0.0",()=>{
