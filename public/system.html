@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="multipage.css">
   <link rel="stylesheet" href="system.css">
+  <link rel="stylesheet" href="system-integrity.css">
   <link rel="stylesheet" href="v3.css">
 </head>
 <body data-page="system">
@@ -62,6 +63,25 @@
       <p id="storageNotice" class="storage-notice">يتم استخدام 512MB كمرجع مراقبة فقط، ولا يقوم النظام بحذف البيانات تلقائيًا عند الاقتراب منه.</p>
     </section>
 
+    <section class="system-panel integrity-panel">
+      <div class="system-panel-head">
+        <div><span>INTEGRITY</span><h3>فحص سلامة البيانات</h3></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong id="integrityState" class="integrity-state loading">جاري الفحص...</strong><button id="runIntegrityBtn" type="button" class="integrity-refresh">إعادة الفحص</button></div>
+      </div>
+      <p>فحص قراءة فقط لسلامة SQLite، المرفقات، تفاصيل التقارير، التكرارات، الجلسات المنتهية، وحداثة آخر نسخة احتياطية. لا يتم حذف أو إصلاح أي بيانات تلقائيًا.</p>
+      <div class="integrity-grid">
+        <div><span>SQLite</span><strong id="integritySqlite">...</strong></div>
+        <div><span>مرفقات مفقودة</span><strong id="integrityMissingFiles">0</strong></div>
+        <div><span>ملفات غير مرتبطة</span><strong id="integrityOrphanFiles">0</strong></div>
+        <div><span>تقارير بدون عمليات</span><strong id="integrityNoOperations">0</strong></div>
+        <div><span>تقارير بدون معدات</span><strong id="integrityNoEquipment">0</strong></div>
+        <div><span>جلسات منتهية</span><strong id="integrityExpiredSessions">0</strong></div>
+        <div><span>آخر نسخة احتياطية</span><strong id="integrityLastBackup">-</strong></div>
+        <div><span>آخر فحص</span><strong id="integrityCheckedAt">-</strong></div>
+      </div>
+      <div id="integrityIssues" class="integrity-issues"><div class="integrity-empty">جاري الفحص...</div></div>
+    </section>
+
     <section class="system-grid">
       <div class="system-panel">
         <div class="system-panel-head"><div><span>BACKUP</span><h3>نسخة احتياطية كاملة</h3></div></div>
@@ -105,5 +125,6 @@
 
   <script src="js/app-auth.js"></script>
   <script src="js/app-system.js"></script>
+  <script src="js/app-system-integrity.js"></script>
 </body>
 </html>
