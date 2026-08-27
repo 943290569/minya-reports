@@ -1,0 +1,53 @@
+/* Report screen responsiveness only. Official print CSS is untouched. */
+
+#operationsTable th:first-child,
+#operationsTable td:first-child {
+  width: 42%;
+  text-align: right;
+}
+
+#stationsTable th:first-child,
+#stationsTable td:first-child {
+  width: 38%;
+  text-align: right;
+}
+
+@media (max-width: 820px) {
+  #operationsTable,
+  #stationsTable {
+    min-width: 560px;
+  }
+
+  #crewsTable {
+    min-width: 620px;
+  }
+
+  #equipmentTable {
+    min-width: 820px;
+  }
+
+  #operationsTable th,
+  #operationsTable td,
+  #stationsTable th,
+  #stationsTable td {
+    padding: 9px 8px;
+  }
+}
+
+@media (max-width: 540px) {
+  #operationsTable,
+  #stationsTable {
+    min-width: 500px;
+  }
+
+  #operationsTable th:first-child,
+  #operationsTable td:first-child {
+    width: 46%;
+  }
+
+  #operationsTable input,
+  #stationsTable input {
+    min-height: 36px;
+    padding: 6px;
+  }
+}
