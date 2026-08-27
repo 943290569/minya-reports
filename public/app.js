@@ -43,7 +43,8 @@
   "admin-users.css",
   "report-workflow.css",
   "reviews.css",
-  "report-responsive.css"
+  "report-responsive.css",
+  "archive-mobile.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href="${href}"]`)) {
     const link = document.createElement("link");
