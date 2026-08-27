@@ -241,7 +241,7 @@ function getFullReport(reportId, includeAttachmentData = false) {
 function buildBackupObject() {
   const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id, true));
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
-  return { system: "Minya Landfill System", version: "3.0.0", exported_at: new Date().toISOString(), reports, maintenance };
+  return { system: "Minya Landfill System", version: "3.1.0", exported_at: new Date().toISOString(), reports, maintenance };
 }
 function writeAutomaticBackup(reason = "auto") {
   try {
@@ -255,7 +255,7 @@ function writeAutomaticBackup(reason = "auto") {
 
 app.get("/api/health", (req, res) => {
   const integrity = db.pragma("integrity_check", { simple: true });
-  res.json({ ok: true, system: "Minya Landfill System V3", database: "SQLite", version: "3.0.0", integrity });
+  res.json({ ok: true, system: "Minya Landfill System V3.1 Stable", database: "SQLite", version: "3.1.0", integrity });
 });
 
 app.get("/api/auth/status", (req, res) => {
@@ -356,58 +356,24 @@ app.get("/api/security/sessions", requireRole("admin"), (req,res)=>{
   const sessions=db.prepare(`SELECT s.id,s.user_id,s.expires_at,s.created_at,u.username,u.display_name,u.role FROM sessions s JOIN users u ON u.id=s.user_id ORDER BY s.created_at DESC`).all();
   const users=db.prepare(`SELECT u.id,u.username,u.display_name,u.role,u.is_active,
     (SELECT MAX(created_at) FROM login_attempts la WHERE la.username=u.username AND la.success=1) AS last_success_login,
-    (SELECT MAX(created_at) FROM login_attempts la WHERE la.username=u.username AND la.success=0) AS last_failed_login,
-    (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.expires_at>=?) AS active_sessions
-    FROM users u ORDER BY u.id`).all(new Date().toISOString());
-  res.json({ok:true,sessions,users});
+    (SELECT COUNT(*) FROM sessions ss WHERE ss.user_id=u.id) AS active_sessions
+    FROM users u ORDER BY u.id`).all();
+  res.json({ok:true,sessions,users,summary:{active_sessions:sessions.length,active_users:users.filter(x=>x.is_active).length,admins:users.filter(x=>x.role==="admin"&&x.is_active).length}});
 });
-app.delete("/api/security/sessions/:id", requireRole("admin"), (req,res)=>{
-  const id=Number(req.params.id);
-  const row=db.prepare(`SELECT s.id,s.user_id,u.username FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=?`).get(id);
-  if(!row) return res.status(404).json({ok:false,message:"الجلسة غير موجودة"});
-  db.prepare(`DELETE FROM sessions WHERE id=?`).run(id);
-  audit(req.user,"REVOKE_SESSION","user",row.user_id,row.username);
-  res.json({ok:true});
-});
-app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>{
-  const id=Number(req.params.id); const user=db.prepare(`SELECT id,username FROM users WHERE id=?`).get(id);
-  if(!user) return res.status(404).json({ok:false,message:"المستخدم غير موجود"});
-  const result=db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id);
-  audit(req.user,"LOGOUT_ALL_SESSIONS","user",id,`${user.username}: ${result.changes} sessions`);
-  res.json({ok:true,count:result.changes});
-});
-app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{
-  const sessions=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(new Date().toISOString()).changes;
-  const attempts=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(new Date(Date.now()-30*24*60*60*1000).toISOString()).changes;
-  audit(req.user,"SECURITY_CLEANUP","system","security",`${sessions} sessions, ${attempts} login attempts`);
-  res.json({ok:true,sessions_removed:sessions,attempts_removed:attempts});
-});
-
-app.get("/api/reviews/pending", requireRole("admin"), (req,res)=>{
-  const from=String(req.query.from||"");
-  const to=String(req.query.to||"");
-  let sql=`SELECT r.*,COALESCE(u.display_name,u.username,'-') AS submitted_by_name FROM daily_reports r LEFT JOIN users u ON u.id=r.submitted_by WHERE r.workflow_status='pending'`;
-  const params=[];
-  if(from){sql+=` AND r.report_date>=?`;params.push(from);}
-  if(to){sql+=` AND r.report_date<=?`;params.push(to);}
-  sql+=` ORDER BY COALESCE(r.submitted_at,r.updated_at) ASC,r.report_date ASC`;
-  const reports=db.prepare(sql).all(...params);
-  res.json({ok:true,count:reports.length,reports});
-});
+app.delete("/api/security/sessions/:id", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); const row=db.prepare(`SELECT s.*,u.username FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=?`).get(id); if(!row) return res.status(404).json({ok:false,message:"الجلسة غير موجودة"}); db.prepare(`DELETE FROM sessions WHERE id=?`).run(id); audit(req.user,"TERMINATE_SESSION","session",id,row.username); res.json({ok:true,message:"تم إنهاء الجلسة"}); });
+app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); const u=db.prepare(`SELECT username FROM users WHERE id=?`).get(id); if(!u) return res.status(404).json({ok:false,message:"المستخدم غير موجود"}); const r=db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id); audit(req.user,"LOGOUT_USER_ALL","user",id,`${u.username}:${r.changes}`); res.json({ok:true,count:r.changes,message:"تم إنهاء جميع جلسات المستخدم"}); });
+app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{ const now=new Date().toISOString(); const s=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(now); const cutoff=new Date(Date.now()-30*24*60*60*1000).toISOString(); const a=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(cutoff); audit(req.user,"SECURITY_CLEANUP","system","security",`sessions:${s.changes},attempts:${a.changes}`); res.json({ok:true,sessions_removed:s.changes,attempts_removed:a.changes}); });
 
 app.get("/api/reports", requireAuth, (req, res) => {
-  try { res.json({ ok:true, count:db.prepare(`SELECT COUNT(*) AS c FROM daily_reports`).get().c, reports:db.prepare(`SELECT * FROM daily_reports ORDER BY report_date DESC`).all() }); }
-  catch(error){ res.status(500).json({ok:false,message:"فشل تحميل التقارير",error:error.message}); }
+  const reports = db.prepare(`SELECT * FROM daily_reports ORDER BY report_date DESC`).all();
+  res.json({ ok: true, count: reports.length, reports });
 });
-app.get("/api/reports/:id", requireAuth, (req,res)=>{
-  try { const data=getFullReport(Number(req.params.id)); if(!data) return res.status(404).json({ok:false,message:"التقرير غير موجود"}); res.json({ok:true,...data}); }
-  catch(error){res.status(500).json({ok:false,message:"فشل فتح التقرير",error:error.message});}
-});
+app.get("/api/reports/:id", requireAuth, (req, res) => { const data = getFullReport(Number(req.params.id)); if (!data) return res.status(404).json({ ok:false,message:"التقرير غير موجود" }); res.json({ ok:true,...data }); });
 app.post("/api/reports", requireRole("admin","editor"), (req,res)=>{
   try {
     const {report_date,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,crews=[],operations=[],stations=[],equipment=[]}=req.body;
     if(!report_date) return res.status(400).json({ok:false,message:"تاريخ التقرير مطلوب"});
-    if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=?`).get(report_date)) return res.status(409).json({ok:false,message:"يوجد تقرير محفوظ مسبقًا لنفس التاريخ"});
+    if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=?`).get(report_date)) return res.status(409).json({ok:false,message:"يوجد تقرير محفوظ مسبقًا بنفس التاريخ"});
     const reportNo=generateReportNo(report_date);
     const tx=db.transaction(()=>{ const r=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(report_date,reportNo,weather||"",Number(temperature||0),start_time||"",end_time||"",Number(total_trucks||0),Number(total_waste_tons||0),Number(total_diesel||0),notes||""); insertChildren(r.lastInsertRowid,crews,operations,stations,equipment); return r.lastInsertRowid; });
     const id=tx(); audit(req.user,"CREATE_REPORT","report",id,reportNo); writeAutomaticBackup("report-create"); res.json({ok:true,message:"تم حفظ التقرير بنجاح",report:{id,report_no:reportNo}});
@@ -491,103 +457,115 @@ app.get("/api/search", requireAuth, (req,res)=>{
 });
 
 app.get("/api/weekly", requireAuth, (req,res)=>{
-  const start=req.query.start; if(!start) return res.status(400).json({ok:false,message:"حدد بداية الأسبوع"}); const d=new Date(`${start}T00:00:00Z`); const end=new Date(d.getTime()+6*86400000).toISOString().slice(0,10); const reports=db.prepare(`SELECT * FROM daily_reports WHERE report_date BETWEEN ? AND ? ORDER BY report_date`).all(start,end); const sum=k=>reports.reduce((s,r)=>s+Number(r[k]||0),0); res.json({ok:true,start,end,reports,summary:{days:reports.length,waste:sum("total_waste_tons"),trucks:sum("total_trucks"),diesel:sum("total_diesel"),waste_avg:reports.length?sum("total_waste_tons")/reports.length:0,trucks_avg:reports.length?sum("total_trucks")/reports.length:0,diesel_avg:reports.length?sum("total_diesel")/reports.length:0}});
+  const start=req.query.start; if(!start) return res.status(400).json({ok:false,message:"حدد بداية الأسبوع"}); const d=new Date(`${start}T00:00:00Z`); const end=new Date(d.getTime()+6*86400000).toISOString().slice(0,10); const reports=db.prepare(`SELECT * FROM daily_reports WHERE report_date BETWEEN ? AND ? ORDER BY report_date`).all(start,end); const sum=k=>reports.reduce((s,r)=>s+Number(r[k]||0),0); res.json({ok:true,start,end,reports,summary:{days:reports.length,waste:sum("total_waste_tons"),trucks:sum("total_trucks"),diesel:sum("total_diesel"),waste_avg:reports.length?sum("total_waste_tons")/reports.length:0,trucks_avg:reports.length?sum("total_trucks")/reports.length:0}});
 });
 
-app.get("/api/alerts", requireAuth, (req,res)=>{
-  const alerts=[]; const today=localDateString(); if(!db.prepare(`SELECT id FROM daily_reports WHERE report_date=?`).get(today)) alerts.push({level:"warning",title:"تقرير اليوم غير محفوظ",detail:today}); const latest=db.prepare(`SELECT * FROM daily_reports ORDER BY report_date DESC LIMIT 1`).get(); if(latest){ const stopped=db.prepare(`SELECT equipment_name,operating_status,status_description FROM equipment WHERE report_id=? AND operating_status IN ('متعطل','تحت الصيانة')`).all(latest.id); stopped.forEach(x=>alerts.push({level:"danger",title:`${x.equipment_name} - ${x.operating_status}`,detail:x.status_description||latest.report_date})); const month=latest.report_date.slice(0,7); const avg=db.prepare(`SELECT AVG(total_diesel) AS v,AVG(total_waste_tons) AS w FROM daily_reports WHERE report_date LIKE ?`).get(`${month}%`); if(Number(avg.v)>0&&Number(latest.total_diesel)>Number(avg.v)*1.2) alerts.push({level:"warning",title:"سولار أعلى من متوسط الشهر",detail:`${latest.total_diesel} لتر`}); if(Number(avg.w)>0&&Number(latest.total_waste_tons)>Number(avg.w)*1.2) alerts.push({level:"info",title:"نفايات أعلى من متوسط الشهر",detail:`${latest.total_waste_tons} طن`}); }
-  res.json({ok:true,alerts});
+app.get("/api/reviews/pending", requireRole("admin"), (req,res)=>{
+  const from=String(req.query.from||"");
+  const to=String(req.query.to||"");
+  let sql=`SELECT r.*,COALESCE(u.display_name,u.username,'-') AS submitted_by_name FROM daily_reports r LEFT JOIN users u ON u.id=r.submitted_by WHERE r.workflow_status='pending'`;
+  const params=[];
+  if(from){sql+=` AND r.report_date>=?`;params.push(from);}
+  if(to){sql+=` AND r.report_date<=?`;params.push(to);}
+  sql+=` ORDER BY COALESCE(r.submitted_at,r.updated_at) ASC,r.report_date ASC`;
+  const reports=db.prepare(sql).all(...params);
+  res.json({ok:true,count:reports.length,reports});
+});
+
+app.get("/api/export/managerial.csv", requireAuth, (req,res)=>{
+  const from=req.query.from||"0000-01-01", to=req.query.to||"9999-12-31"; const rows=db.prepare(`SELECT report_date,report_no,total_waste_tons,total_trucks,total_diesel,notes FROM daily_reports WHERE report_date BETWEEN ? AND ? ORDER BY report_date`).all(from,to); const escCsv=v=>`"${String(v??"").replaceAll('"','""')}"`; const csv=['التاريخ,رقم التقرير,النفايات طن,الشاحنات,السولار لتر,الملاحظات',...rows.map(r=>[r.report_date,r.report_no,r.total_waste_tons,r.total_trucks,r.total_diesel,r.notes].map(escCsv).join(','))].join('\n'); res.setHeader('Content-Type','text/csv; charset=utf-8'); res.setHeader('Content-Disposition','attachment; filename=minya-managerial.csv'); res.send('\ufeff'+csv);
 });
 
 app.get("/api/audit", requireRole("admin"), (req,res)=>{ const limit=Math.min(Number(req.query.limit||200),1000); res.json({ok:true,logs:db.prepare(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?`).all(limit)}); });
+app.get("/api/backup/download", requireRole("admin"), (req,res)=>{ const payload=buildBackupObject(); audit(req.user,"DOWNLOAD_BACKUP","system","full"); res.setHeader("Content-Disposition",`attachment; filename=minya-backup-${localDateString()}.json`); res.json(payload); });
 
 function directorySize(dir) {
-  if (!fs.existsSync(dir)) return 0;
-  return fs.readdirSync(dir).reduce((sum, name) => {
-    try { const st=fs.statSync(path.join(dir,name)); return sum + (st.isFile()?st.size:0); } catch { return sum; }
-  }, 0);
-}
-function listBackupFiles() {
-  if (!fs.existsSync(backupsDir)) return [];
-  return fs.readdirSync(backupsDir).filter(name=>name.endsWith(".json")).map(name=>{
-    const st=fs.statSync(path.join(backupsDir,name));
-    return {name,size_bytes:st.size,created_at:st.mtime.toISOString()};
-  }).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
-}
-app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
   try {
-    const sqlite_integrity=db.pragma("integrity_check", { simple:true });
-    const attachmentRows=db.prepare(`SELECT id,report_id,original_name,stored_name FROM attachments ORDER BY id`).all();
-    const missing_attachments=attachmentRows.filter(a=>!fs.existsSync(path.join(uploadsDir,a.stored_name))).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name}));
-    const knownFiles=new Set(attachmentRows.map(a=>a.stored_name));
-    const orphan_files=fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDir).filter(name=>{ try{return fs.statSync(path.join(uploadsDir,name)).isFile()&&!knownFiles.has(name);}catch{return false;} }):[];
-    const reports_without_operations=db.prepare(`SELECT r.id,r.report_no,r.report_date FROM daily_reports r LEFT JOIN operations o ON o.report_id=r.id GROUP BY r.id HAVING COUNT(o.id)=0 ORDER BY r.report_date DESC`).all();
-    const reports_without_equipment=db.prepare(`SELECT r.id,r.report_no,r.report_date FROM daily_reports r LEFT JOIN equipment e ON e.report_id=r.id GROUP BY r.id HAVING COUNT(e.id)=0 ORDER BY r.report_date DESC`).all();
-    const duplicate_dates=db.prepare(`SELECT report_date,COUNT(*) AS count FROM daily_reports GROUP BY report_date HAVING COUNT(*)>1`).all();
-    const duplicate_numbers=db.prepare(`SELECT report_no,COUNT(*) AS count FROM daily_reports GROUP BY report_no HAVING COUNT(*)>1`).all();
-    const expired_sessions=db.prepare(`SELECT COUNT(*) AS c FROM sessions WHERE expires_at < ?`).get(new Date().toISOString()).c;
-    const backups=listBackupFiles();
-    const latest_backup=backups[0]||null;
-    const backup_age_hours=latest_backup?Math.max(0,(Date.now()-new Date(latest_backup.created_at).getTime())/3600000):null;
-    const issues=[];
-    if(sqlite_integrity!=="ok") issues.push({level:"danger",code:"sqlite",title:"فحص SQLite غير سليم",count:1});
-    if(missing_attachments.length) issues.push({level:"danger",code:"missing_attachments",title:"مرفقات مسجلة وملفاتها مفقودة",count:missing_attachments.length});
-    if(orphan_files.length) issues.push({level:"warning",code:"orphan_files",title:"ملفات غير مرتبطة بتقرير",count:orphan_files.length});
-    if(reports_without_operations.length) issues.push({level:"warning",code:"reports_without_operations",title:"تقارير بدون عمليات تشغيل",count:reports_without_operations.length});
-    if(reports_without_equipment.length) issues.push({level:"warning",code:"reports_without_equipment",title:"تقارير بدون بيانات معدات",count:reports_without_equipment.length});
-    if(duplicate_dates.length||duplicate_numbers.length) issues.push({level:"danger",code:"duplicates",title:"تكرار في معرفات التقارير",count:duplicate_dates.length+duplicate_numbers.length});
-    if(!latest_backup) issues.push({level:"warning",code:"no_backup",title:"لا توجد نسخة احتياطية محفوظة",count:1});
-    else if(backup_age_hours>72) issues.push({level:"warning",code:"old_backup",title:"آخر نسخة احتياطية أقدم من 72 ساعة",count:1});
-    const level=issues.some(x=>x.level==="danger")?"danger":issues.length?"warning":"ok";
-    res.json({ok:true,level,sqlite_integrity,issues,missing_attachments,orphan_files,reports_without_operations,reports_without_equipment,duplicate_dates,duplicate_numbers,expired_sessions,latest_backup,backup_age_hours,checked_at:new Date().toISOString()});
-  } catch(error){ res.status(500).json({ok:false,message:"فشل فحص سلامة البيانات",error:error.message}); }
-});
-
+    return fs.readdirSync(dir, { withFileTypes: true }).reduce((sum, entry) => {
+      if (!entry.isFile()) return sum;
+      try { return sum + fs.statSync(path.join(dir, entry.name)).size; } catch { return sum; }
+    }, 0);
+  } catch { return 0; }
+}
 app.get("/api/system/storage", requireRole("admin"), (req,res)=>{
-  const database_bytes=fs.existsSync(dbPath)?fs.statSync(dbPath).size:0;
-  const uploads_bytes=directorySize(uploadsDir);
-  const backups_bytes=directorySize(backupsDir);
-  const total_bytes=database_bytes+uploads_bytes+backups_bytes;
-  const reference_limit_bytes=512*1024*1024;
-  const usage_percent=(total_bytes/reference_limit_bytes)*100;
-  const level=usage_percent>=85?"danger":usage_percent>=70?"warning":"ok";
-  res.json({ok:true,database_bytes,uploads_bytes,backups_bytes,total_bytes,reference_limit_bytes,usage_percent,level,attachments_count:db.prepare(`SELECT COUNT(*) AS c FROM attachments`).get().c,backups_count:listBackupFiles().length});
+  const dbBytes=fs.existsSync(dbPath)?fs.statSync(dbPath).size:0;
+  const uploadsBytes=directorySize(uploadsDir);
+  const backupsBytes=directorySize(backupsDir);
+  const totalBytes=dbBytes+uploadsBytes+backupsBytes;
+  const referenceLimitBytes=512*1024*1024;
+  const percent=referenceLimitBytes?Number(((totalBytes/referenceLimitBytes)*100).toFixed(2)):0;
+  const level=percent>=85?"danger":percent>=70?"warning":"ok";
+  const attachmentCount=db.prepare(`SELECT COUNT(*) AS count FROM attachments`).get().count;
+  const backupCount=fs.readdirSync(backupsDir).filter(name=>name.endsWith(".json")).length;
+  res.json({ok:true,db_bytes:dbBytes,uploads_bytes:uploadsBytes,backups_bytes:backupsBytes,total_bytes:totalBytes,reference_limit_bytes:referenceLimitBytes,percent,level,attachment_count:attachmentCount,backup_count:backupCount});
 });
-app.get("/api/backups", requireRole("admin"), (req,res)=>res.json({ok:true,backups:listBackupFiles().slice(0,20)}));
+app.get("/api/backups", requireRole("admin"), (req,res)=>{
+  const backups=fs.readdirSync(backupsDir).filter(name=>/^minya-.*\.json$/.test(name)).map(name=>{const stat=fs.statSync(path.join(backupsDir,name));return {name,size_bytes:stat.size,created_at:stat.mtime.toISOString()};}).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,20);
+  res.json({ok:true,backups});
+});
 app.get("/api/backups/:name/download", requireRole("admin"), (req,res)=>{
   const name=path.basename(String(req.params.name||""));
   if(!/^minya-.*\.json$/.test(name)) return res.status(400).json({ok:false,message:"اسم النسخة غير صالح"});
   const file=path.join(backupsDir,name);
   if(!fs.existsSync(file)) return res.status(404).json({ok:false,message:"النسخة غير موجودة"});
-  audit(req.user,"DOWNLOAD_SAVED_BACKUP","system","backup",name);
+  audit(req.user,"DOWNLOAD_SAVED_BACKUP","system",name);
   res.download(file,name);
 });
+
+app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
+  const sqliteIntegrity=db.pragma("integrity_check", { simple:true });
+  const attachmentRows=db.prepare(`SELECT id,report_id,original_name,stored_name FROM attachments ORDER BY id`).all();
+  const missingAttachments=attachmentRows.filter(a=>!fs.existsSync(path.join(uploadsDir,a.stored_name))).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name,stored_name:a.stored_name}));
+  const knownNames=new Set(attachmentRows.map(a=>a.stored_name));
+  const orphanFiles=fs.readdirSync(uploadsDir).filter(name=>{try{return fs.statSync(path.join(uploadsDir,name)).isFile()&&!knownNames.has(name);}catch{return false;}});
+  const reportsWithoutOperations=db.prepare(`SELECT id,report_no,report_date FROM daily_reports r WHERE NOT EXISTS (SELECT 1 FROM operations o WHERE o.report_id=r.id) ORDER BY report_date DESC`).all();
+  const reportsWithoutEquipment=db.prepare(`SELECT id,report_no,report_date FROM daily_reports r WHERE NOT EXISTS (SELECT 1 FROM equipment e WHERE e.report_id=r.id) ORDER BY report_date DESC`).all();
+  const duplicateDates=db.prepare(`SELECT report_date,COUNT(*) AS count FROM daily_reports GROUP BY report_date HAVING COUNT(*)>1`).all();
+  const duplicateNumbers=db.prepare(`SELECT report_no,COUNT(*) AS count FROM daily_reports GROUP BY report_no HAVING COUNT(*)>1`).all();
+  const nowIso=new Date().toISOString();
+  const expiredSessions=db.prepare(`SELECT COUNT(*) AS count FROM sessions WHERE expires_at < ?`).get(nowIso).count;
+  const backupFiles=fs.readdirSync(backupsDir).filter(name=>/^minya-.*\.json$/.test(name)).map(name=>{const stat=fs.statSync(path.join(backupsDir,name));return {name,mtime:stat.mtime};}).sort((a,b)=>b.mtime-a.mtime);
+  const latestBackup=backupFiles[0]||null;
+  const latestBackupAgeHours=latestBackup?Number(((Date.now()-latestBackup.mtime.getTime())/3600000).toFixed(1)):null;
+  const issues=[];
+  if(sqliteIntegrity!=="ok") issues.push({level:"danger",code:"sqlite",message:`فحص SQLite: ${sqliteIntegrity}`});
+  if(missingAttachments.length) issues.push({level:"danger",code:"missing_attachments",message:`يوجد ${missingAttachments.length} مرفق مسجل وملفه غير موجود`});
+  if(orphanFiles.length) issues.push({level:"warning",code:"orphan_files",message:`يوجد ${orphanFiles.length} ملف مرفق غير مرتبط بقاعدة البيانات`});
+  if(reportsWithoutOperations.length) issues.push({level:"warning",code:"no_operations",message:`يوجد ${reportsWithoutOperations.length} تقرير بدون سجلات عمليات`});
+  if(reportsWithoutEquipment.length) issues.push({level:"warning",code:"no_equipment",message:`يوجد ${reportsWithoutEquipment.length} تقرير بدون سجلات معدات`});
+  if(duplicateDates.length||duplicateNumbers.length) issues.push({level:"danger",code:"duplicates",message:"تم العثور على تكرار في تاريخ أو رقم التقرير"});
+  if(expiredSessions) issues.push({level:"warning",code:"expired_sessions",message:`يوجد ${expiredSessions} جلسة منتهية يمكن تنظيفها`});
+  if(!latestBackup) issues.push({level:"warning",code:"no_backup",message:"لا توجد نسخة احتياطية محفوظة"});
+  else if(latestBackupAgeHours>72) issues.push({level:"warning",code:"old_backup",message:`آخر نسخة احتياطية منذ ${latestBackupAgeHours} ساعة`});
+  const level=issues.some(x=>x.level==="danger")?"danger":issues.length?"warning":"ok";
+  res.json({ok:true,level,sqlite_integrity:sqliteIntegrity,missing_attachments:missingAttachments,orphan_files:orphanFiles,reports_without_operations:reportsWithoutOperations,reports_without_equipment:reportsWithoutEquipment,duplicate_dates:duplicateDates,duplicate_numbers:duplicateNumbers,expired_sessions:expiredSessions,latest_backup:latestBackup?latestBackup.name:null,latest_backup_age_hours:latestBackupAgeHours,issues});
+});
+
 app.post("/api/backup/validate", requireRole("admin"), (req,res)=>{
-  try {
+  try{
     const backup=req.body;
-    if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,message:"ملف النسخة غير صالح"});
+    if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,valid:false,message:"ملف النسخة غير صالح: قائمة التقارير مفقودة"});
     const dates=[]; const numbers=[]; let attachments_count=0; let attachments_bytes=0; let invalid_reports=0;
     for(const item of backup.reports){
       const r=item&&item.report?item.report:{};
-      if(!r.report_date){invalid_reports++; continue;}
-      dates.push(String(r.report_date)); numbers.push(String(r.report_no||generateReportNo(r.report_date)));
-      for(const a of item.attachments||[]){ attachments_count++; if(a.data_base64) attachments_bytes+=Math.floor(String(a.data_base64).length*0.75); }
+      if(!r.report_date){invalid_reports++;continue;}
+      dates.push(String(r.report_date));
+      numbers.push(String(r.report_no||generateReportNo(r.report_date)));
+      for(const a of item.attachments||[]){attachments_count++;if(a.data_base64)attachments_bytes+=Math.floor(String(a.data_base64).length*0.75);}
     }
-    const duplicate_dates=[...new Set(dates.filter((v,i,a)=>a.indexOf(v)!==i))];
-    const duplicate_numbers=[...new Set(numbers.filter((v,i,a)=>a.indexOf(v)!==i))];
-    const maintenance_count=Array.isArray(backup.maintenance)?backup.maintenance.length:0;
-    const first_date=dates.length?[...dates].sort()[0]:null; const last_date=dates.length?[...dates].sort().slice(-1)[0]:null;
+    const dupDates=[...new Set(dates.filter((d,i)=>dates.indexOf(d)!==i))];
+    const dupNumbers=[...new Set(numbers.filter((d,i)=>numbers.indexOf(d)!==i))];
     const errors=[];
-    if(invalid_reports) errors.push(`${invalid_reports} تقرير بدون تاريخ صالح`);
-    if(duplicate_dates.length) errors.push(`تكرار في ${duplicate_dates.length} تاريخ تقرير`);
-    if(duplicate_numbers.length) errors.push(`تكرار في ${duplicate_numbers.length} رقم تقرير`);
+    if(invalid_reports)errors.push(`${invalid_reports} تقرير بدون تاريخ`);
+    if(dupDates.length)errors.push(`تواريخ مكررة: ${dupDates.slice(0,5).join(", ")}`);
+    if(dupNumbers.length)errors.push(`أرقام تقارير مكررة: ${dupNumbers.slice(0,5).join(", ")}`);
     const valid=errors.length===0;
-    res.json({ok:true,valid,errors,summary:{reports_count:backup.reports.length,maintenance_count,attachments_count,attachments_bytes,first_date,last_date,exported_at:backup.exported_at||null,system:backup.system||"",version:backup.version||backup.backup_version||""}});
-  } catch(error){res.status(400).json({ok:false,message:"تعذر فحص النسخة",error:error.message});}
+    const sorted=[...dates].sort();
+    res.status(valid?200:400).json({ok:valid,valid,message:valid?"النسخة صالحة مبدئيًا للاستعادة":"النسخة تحتوي أخطاء تمنع الاستعادة",errors,summary:{reports_count:backup.reports.length,attachments_count,attachments_bytes,maintenance_count:Array.isArray(backup.maintenance)?backup.maintenance.length:0,from_date:sorted[0]||null,to_date:sorted[sorted.length-1]||null,exported_at:backup.exported_at||null,system:backup.system||null,version:backup.version||null}});
+  }catch(error){res.status(400).json({ok:false,valid:false,message:"تعذر فحص النسخة",error:error.message});}
 });
-app.get("/api/backup/download", requireRole("admin"), (req,res)=>{ audit(req.user,"DOWNLOAD_BACKUP","system","backup"); const data=JSON.stringify(buildBackupObject(),null,2); const name=`minya-backup-${localDateString()}-${Date.now()}.json`; res.setHeader("Content-Type","application/json; charset=utf-8"); res.setHeader("Content-Disposition",`attachment; filename=${name}`); res.send(data); });
 app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
-  try { const backup=req.body; if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,message:"ملف النسخة غير صالح"}); writeAutomaticBackup("pre-restore"); const tx=db.transaction(()=>{ db.exec(`DELETE FROM attachments; DELETE FROM crews; DELETE FROM operations; DELETE FROM transfer_stations; DELETE FROM equipment; DELETE FROM daily_reports; DELETE FROM maintenance_logs;`); for(const item of backup.reports){ const r=item.report||{}; const result=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",Number(r.temperature||0),r.start_time||"",r.end_time||"",Number(r.total_trucks||0),Number(r.total_waste_tons||0),Number(r.total_diesel||0),r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||""); insertChildren(result.lastInsertRowid,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const buffer=Buffer.from(a.data_base64,"base64"); const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${result.lastInsertRowid}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_by,created_at) VALUES (?,?,?,?,?,?,?)`).run(result.lastInsertRowid,a.original_name||"مرفق",stored,a.mime_type||"application/octet-stream",buffer.length,req.user.id,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status||"ملاحظة",m.description||"",m.action_taken||"",Number(m.cost||0),req.user.id,m.created_at||new Date().toISOString()); } }); tx();
+  try { const backup=req.body; if(!backup||!Array.isArray(backup.reports)) return res.status(400).json({ok:false,message:"ملف النسخة غير صالح"}); writeAutomaticBackup("pre-restore"); const tx=db.transaction(()=>{ ["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run()); for(const item of backup.reports){ const r=item.report; const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||""); const newId=rr.lastInsertRowid; insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; const buffer=Buffer.from(a.data_base64,"base64"); fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at); } }); tx();
     const referenced=new Set(db.prepare(`SELECT stored_name FROM attachments`).all().map(x=>x.stored_name));
     for(const name of fs.readdirSync(uploadsDir)){
       const file=path.join(uploadsDir,name);
@@ -597,18 +575,8 @@ app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
   catch(error){res.status(500).json({ok:false,message:"فشل استعادة النسخة",error:error.message});}
 });
 
-app.get("/api/export/managerial.csv", requireAuth, (req,res)=>{
-  const from=req.query.from||"0000-01-01",to=req.query.to||"9999-12-31"; const reports=db.prepare(`SELECT report_date,report_no,total_waste_tons,total_trucks,total_diesel,notes FROM daily_reports WHERE report_date BETWEEN ? AND ? ORDER BY report_date`).all(from,to); const esc=v=>`"${String(v??"").replace(/"/g,'""')}"`; const lines=[["التاريخ","رقم التقرير","النفايات طن","الشاحنات","السولار لتر","الملاحظات"],...reports.map(r=>[r.report_date,r.report_no,r.total_waste_tons,r.total_trucks,r.total_diesel,r.notes])].map(row=>row.map(esc).join(",")); res.setHeader("Content-Type","text/csv; charset=utf-8"); res.setHeader("Content-Disposition",`attachment; filename=minya-managerial-${from}-${to}.csv`); res.send("\uFEFF"+lines.join("\r\n"));
-});
-
-const appPages=["/","/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin"];
+app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+const appPages=["/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin"];
 appPages.forEach(route=>app.get(route,(req,res)=>res.sendFile(path.join(__dirname,"public","index.html"))));
 
-app.listen(PORT,"0.0.0.0",()=>{
-  db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(new Date().toISOString());
-  console.log("======================================");
-  console.log(" Minya Landfill System V3");
-  console.log(` Port: ${PORT}`);
-  console.log(` Database: ${dbPath}`);
-  console.log("======================================");
-});
+app.listen(PORT, () => console.log(`Minya Landfill V3 running on http://localhost:${PORT}`));
