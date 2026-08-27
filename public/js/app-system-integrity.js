@@ -79,3 +79,9 @@
     loadIntegrityDiagnostics();
   });
 })();
+
+if (!document.querySelector('script[src="js/app-system-restore.js"]')) {
+  const restoreScript = document.createElement("script");
+  restoreScript.src = "js/app-system-restore.js";
+  document.body.appendChild(restoreScript);
+}
