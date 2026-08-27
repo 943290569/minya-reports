@@ -15,21 +15,33 @@
     const labels = {
       LOGIN: "تسجيل دخول",
       LOGOUT: "تسجيل خروج",
+      LOGIN_FAILED: "محاولة دخول فاشلة",
+      LOGIN_LOCKED: "قفل دخول مؤقت",
       SETUP_ADMIN: "إنشاء مدير النظام",
       CREATE_USER: "إضافة مستخدم",
       UPDATE_USER: "تعديل مستخدم",
       CREATE_REPORT: "إنشاء تقرير",
       UPDATE_REPORT: "تعديل تقرير",
       DELETE_REPORT: "حذف تقرير",
+      SUBMIT_REPORT: "إرسال التقرير للمراجعة",
+      APPROVE_REPORT: "اعتماد التقرير",
+      REOPEN_REPORT: "إعادة فتح التقرير كمسودة",
       ADD_ATTACHMENT: "إضافة مرفق",
       DELETE_ATTACHMENT: "حذف مرفق",
       CREATE_MAINTENANCE: "إضافة صيانة",
       DELETE_MAINTENANCE: "حذف صيانة",
       DOWNLOAD_BACKUP: "تنزيل نسخة احتياطية",
       DOWNLOAD_SAVED_BACKUP: "تنزيل نسخة محفوظة",
-      RESTORE_BACKUP: "استعادة نسخة احتياطية"
+      RESTORE_BACKUP: "استعادة نسخة احتياطية",
+      TERMINATE_SESSION: "إنهاء جلسة",
+      LOGOUT_USER_ALL: "تسجيل خروج المستخدم من كل الأجهزة",
+      CLEANUP_SESSIONS: "تنظيف الجلسات المنتهية"
     };
     return labels[action] || action || "-";
+  }
+
+  function isSensitive(action) {
+    return /DELETE|RESTORE|UPDATE_USER|CREATE_USER|SETUP_ADMIN|APPROVE_REPORT|REOPEN_REPORT|TERMINATE_SESSION|LOGOUT_USER_ALL|LOGIN_LOCKED/.test(action || "");
   }
 
   function formatDateTime(value) {
@@ -89,21 +101,34 @@
     `;
     tableWrap.before(tools);
 
+    const userFilter = document.getElementById("auditUserFilter");
+    const actionFilter = document.getElementById("auditActionFilter");
+    const fromFilter = document.getElementById("auditFromFilter");
+    const toFilter = document.getElementById("auditToFilter");
+    const textFilter = document.getElementById("auditTextFilter");
+    const refreshBtn = document.getElementById("auditRefreshBtn");
+    const clearBtn = document.getElementById("auditClearBtn");
+    const filterStatus = document.getElementById("auditFilterStatus");
+    const shownCount = document.getElementById("auditShownCount");
+    const usersCountEl = document.getElementById("auditUsersCount");
+    const reportsCount = document.getElementById("auditReportsCount");
+    const sensitiveCount = document.getElementById("auditSensitiveCount");
+
     let logs = [];
 
     function populateFilters() {
       const users = [...new Set(logs.map(x => x.username).filter(Boolean))].sort();
       const actions = [...new Set(logs.map(x => x.action).filter(Boolean))].sort();
-      auditUserFilter.innerHTML = `<option value="">الكل</option>${users.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}`;
-      auditActionFilter.innerHTML = `<option value="">الكل</option>${actions.map(v => `<option value="${esc(v)}">${esc(actionLabel(v))}</option>`).join("")}`;
+      userFilter.innerHTML = `<option value="">الكل</option>${users.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}`;
+      actionFilter.innerHTML = `<option value="">الكل</option>${actions.map(v => `<option value="${esc(v)}">${esc(actionLabel(v))}</option>`).join("")}`;
     }
 
     function render() {
-      const user = auditUserFilter.value;
-      const action = auditActionFilter.value;
-      const from = auditFromFilter.value;
-      const to = auditToFilter.value;
-      const text = auditTextFilter.value.trim().toLowerCase();
+      const user = userFilter.value;
+      const action = actionFilter.value;
+      const from = fromFilter.value;
+      const to = toFilter.value;
+      const text = textFilter.value.trim().toLowerCase();
 
       const filtered = logs.filter((row) => {
         const day = dateOnly(row.created_at);
@@ -119,17 +144,17 @@
       });
 
       const reportActions = filtered.filter(x => x.entity_type === "report" || /REPORT/.test(x.action || "")).length;
-      const sensitiveActions = filtered.filter(x => /DELETE|RESTORE|UPDATE_USER|CREATE_USER|SETUP_ADMIN/.test(x.action || "")).length;
+      const sensitiveActions = filtered.filter(x => isSensitive(x.action)).length;
       const usersCount = new Set(filtered.map(x => x.username).filter(Boolean)).size;
 
-      auditShownCount.textContent = filtered.length;
-      auditUsersCount.textContent = usersCount;
-      auditReportsCount.textContent = reportActions;
-      auditSensitiveCount.textContent = sensitiveActions;
-      auditFilterStatus.textContent = `عرض ${filtered.length} من أصل ${logs.length} عملية محفوظة ضمن آخر 200 سجل.`;
+      shownCount.textContent = filtered.length;
+      usersCountEl.textContent = usersCount;
+      reportsCount.textContent = reportActions;
+      sensitiveCount.textContent = sensitiveActions;
+      filterStatus.textContent = `عرض ${filtered.length} من أصل ${logs.length} عملية محفوظة ضمن آخر 200 سجل.`;
 
       body.innerHTML = filtered.length ? filtered.map((x) => `
-        <tr class="audit-row ${/DELETE|RESTORE/.test(x.action || "") ? "sensitive" : ""}">
+        <tr class="audit-row ${isSensitive(x.action) ? "sensitive" : ""}">
           <td>${esc(formatDateTime(x.created_at))}</td>
           <td>${esc(x.username || "system")}</td>
           <td><span class="audit-action-pill">${esc(actionLabel(x.action))}</span><small>${esc(x.action || "")}</small></td>
@@ -141,31 +166,31 @@
     }
 
     async function load() {
-      auditRefreshBtn.disabled = true;
-      auditFilterStatus.textContent = "جاري تحديث سجل النشاط...";
+      refreshBtn.disabled = true;
+      filterStatus.textContent = "جاري تحديث سجل النشاط...";
       try {
         logs = await fetchLogs();
         populateFilters();
         render();
       } catch (error) {
-        auditFilterStatus.textContent = error.message || "تعذر تحميل السجل";
+        filterStatus.textContent = error.message || "تعذر تحميل السجل";
         body.innerHTML = `<tr><td colspan="6">${esc(error.message || "تعذر تحميل سجل النشاط")}</td></tr>`;
       } finally {
-        auditRefreshBtn.disabled = false;
+        refreshBtn.disabled = false;
       }
     }
 
-    [auditUserFilter, auditActionFilter, auditFromFilter, auditToFilter, auditTextFilter].forEach((element) => {
+    [userFilter, actionFilter, fromFilter, toFilter, textFilter].forEach((element) => {
       element.addEventListener(element.tagName === "INPUT" && element.type === "search" ? "input" : "change", render);
     });
 
-    auditRefreshBtn.addEventListener("click", load);
-    auditClearBtn.addEventListener("click", () => {
-      auditUserFilter.value = "";
-      auditActionFilter.value = "";
-      auditFromFilter.value = "";
-      auditToFilter.value = "";
-      auditTextFilter.value = "";
+    refreshBtn.addEventListener("click", load);
+    clearBtn.addEventListener("click", () => {
+      userFilter.value = "";
+      actionFilter.value = "";
+      fromFilter.value = "";
+      toFilter.value = "";
+      textFilter.value = "";
       render();
     });
 
