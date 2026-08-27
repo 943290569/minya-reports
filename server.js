@@ -203,23 +203,27 @@ function insertChildren(reportId, crews, operations, stations, equipmentRows) {
   const equipmentInsert = db.prepare(`INSERT INTO equipment (report_id, equipment_name, operating_status, status_description, working_hours, diesel_liters, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`);
   for (const item of equipmentRows) equipmentInsert.run(reportId, item.equipment_name || "", item.operating_status || "", item.status_description || "", Number(item.working_hours || 0), Number(item.diesel_liters || 0), item.notes || "");
 }
-function getFullReport(reportId) {
+function getFullReport(reportId, includeAttachmentData = false) {
   const report = db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(reportId);
   if (!report) return null;
+  const attachmentRows = db.prepare(`SELECT id,report_id,original_name,stored_name,mime_type,size_bytes,created_at FROM attachments WHERE report_id=? ORDER BY id`).all(reportId);
+  const attachments = includeAttachmentData
+    ? attachmentRows.map((a) => {
+        const file = path.join(uploadsDir, a.stored_name);
+        return { ...a, data_base64: fs.existsSync(file) ? fs.readFileSync(file).toString("base64") : "" };
+      })
+    : attachmentRows.map(({ stored_name, ...a }) => a);
   return {
     report,
     crews: db.prepare(`SELECT * FROM crews WHERE report_id=? ORDER BY id`).all(reportId),
     operations: db.prepare(`SELECT * FROM operations WHERE report_id=? ORDER BY id`).all(reportId),
     stations: db.prepare(`SELECT * FROM transfer_stations WHERE report_id=? ORDER BY id`).all(reportId),
     equipment: db.prepare(`SELECT * FROM equipment WHERE report_id=? ORDER BY id`).all(reportId),
-    attachments: db.prepare(`SELECT id,report_id,original_name,stored_name,mime_type,size_bytes,created_at FROM attachments WHERE report_id=? ORDER BY id`).all(reportId).map((a) => {
-      const file = path.join(uploadsDir, a.stored_name);
-      return { ...a, data_base64: fs.existsSync(file) ? fs.readFileSync(file).toString("base64") : "" };
-    }),
+    attachments,
   };
 }
 function buildBackupObject() {
-  const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id));
+  const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id, true));
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
   return { system: "Minya Landfill System", version: "3.0.0", exported_at: new Date().toISOString(), reports, maintenance };
 }
