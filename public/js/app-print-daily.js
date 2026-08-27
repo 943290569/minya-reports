@@ -32,7 +32,7 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .report { width: 202mm; height: 289mm; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; }
 .official-header { width: 210mm; height: 30mm; margin-right: -4mm; margin-left: -4mm; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .official-header img { width: 210mm; height: 30mm; display: block; object-fit: fill; }
-.report-content { width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.report-content { width: 100%; flex: 1 1 auto; min-height: 0; overflow: visible; display: flex; flex-direction: column; transform-origin: top center; }
 .report-title { text-align: center; border-top: 1px solid #444; border-bottom: 1px solid #444; padding: 1.5mm 1mm; margin-bottom: 1mm; }
 .report-title h1 { margin: 0; font-size: 13px; }
 .report-number { direction: ltr; margin-top: 1mm; font-size: 9px; font-weight: bold; }
@@ -86,7 +86,33 @@ th { background: #f5f5f5; font-weight: bold; }
   </div>
   <div class="official-footer"><img src="/assets/footer.png" alt="التذييل الرسمي"></div>
 </div>
-${autoPrint ? `<script>window.onload=function(){const images=Array.from(document.images);Promise.all(images.map(function(img){if(img.complete){return Promise.resolve();}return new Promise(function(resolve){img.onload=resolve;img.onerror=resolve;});})).then(function(){setTimeout(function(){window.print();},300);});};<\/script>` : ""}
+<script>
+function fitDailyReport(){
+  const report=document.querySelector('.report');
+  const header=document.querySelector('.official-header');
+  const footer=document.querySelector('.official-footer');
+  const content=document.querySelector('.report-content');
+  if(!report||!header||!footer||!content)return;
+  content.style.transform='none';
+  content.style.width='100%';
+  const available=Math.max(1,report.clientHeight-header.offsetHeight-footer.offsetHeight);
+  const needed=Math.max(1,content.scrollHeight);
+  const scale=Math.min(1,available/needed);
+  if(scale<0.999){
+    content.style.width=(100/scale)+'%';
+    content.style.transform='scale('+scale+')';
+  }
+}
+window.onload=function(){
+  const images=Array.from(document.images);
+  Promise.all(images.map(function(img){if(img.complete){return Promise.resolve();}return new Promise(function(resolve){img.onload=resolve;img.onerror=resolve;});})).then(function(){
+    requestAnimationFrame(function(){
+      fitDailyReport();
+      ${autoPrint ? "setTimeout(function(){window.print();},300);" : ""}
+    });
+  });
+};
+<\/script>
 </body>
 </html>`;
 }
