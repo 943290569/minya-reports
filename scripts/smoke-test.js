@@ -18,12 +18,13 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
  x=await json('/api/reports',auth(admin,'POST',report));assert(x.r.status===200,'create report failed');const id=x.data.report.id;
  const payload=Buffer.from('attachment survives backup').toString('base64');
  x=await json(`/api/reports/${id}/attachments`,auth(admin,'POST',{name:'evidence.txt',mime_type:'text/plain',data_base64:payload}));assert(x.r.status===200,'attachment add failed');assert(uploadFiles().length===1,'physical attachment file missing');
+ x=await json(`/api/reports/${id}`,auth(admin));assert(x.r.status===200&&x.data.attachments.length===1,'normal report attachment metadata missing');assert(!('data_base64' in x.data.attachments[0]),'normal report leaked attachment base64');assert(!('stored_name' in x.data.attachments[0]),'normal report exposed stored attachment name');
  x=await json(`/api/reports/${id}/submit`,auth(admin,'POST',{}));assert(x.r.status===200,'submit failed');
  x=await json(`/api/reports/${id}/approve`,auth(admin,'POST',{}));assert(x.r.status===200,'approve failed');
  const approvedAt=x.data.approved_at;
  const backupRes=await fetch(base+'/api/backup/download',{headers:{cookie:admin}});assert(backupRes.status===200,'backup download failed');const backup=await backupRes.json();
  assert(Array.isArray(backup.reports)&&backup.reports.length===1,'backup report count wrong');
- const backed=backup.reports[0];assert(backed.report.workflow_status==='approved','backup lost workflow status');assert(backed.attachments.length===1&&backed.attachments[0].data_base64,'backup lost attachment bytes');
+ const backed=backup.reports[0];assert(backed.report.workflow_status==='approved','backup lost workflow status');assert(backed.attachments.length===1&&backed.attachments[0].data_base64,'backup lost attachment bytes');assert(backed.attachments[0].stored_name,'backup lost stored attachment name');
  x=await json('/api/backup/validate',auth(admin,'POST',backup));assert(x.r.status===200&&x.data.valid,'backup validation failed');
  x=await json(`/api/reports/${id}/reopen`,auth(admin,'POST',{reason:'prepare restore test'}));assert(x.r.status===200,'reopen failed');
  x=await json(`/api/reports/${id}`,auth(admin,'DELETE'));assert(x.r.status===200,'delete before restore failed');assert(uploadFiles().length===0,'report delete left orphan attachment file');
@@ -35,5 +36,5 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
  x=await json(`/api/reports/${restored.id}/attachments`,auth(admin));assert(x.r.status===200&&x.data.attachments.length===1,'restored attachment missing');const aid=x.data.attachments[0].id;
  const dl=await fetch(base+`/api/attachments/${aid}/download`,{headers:{cookie:admin}});assert(dl.status===200,'restored attachment download failed');assert((await dl.text())==='attachment survives backup','restored attachment content changed');assert(uploadFiles().length===1,'unexpected physical files after restore cleanup');
  x=await json('/api/system/integrity',auth(admin));assert(x.r.status===200,'integrity endpoint failed');assert(x.data.sqlite_integrity==='ok','SQLite integrity failed');assert(x.data.missing_attachments.length===0,'missing attachment after restore');assert(x.data.orphan_files.length===0,'orphan attachment after restore');assert(x.data.duplicate_dates.length===0&&x.data.duplicate_numbers.length===0,'duplicates after restore');
- console.log('Runtime smoke test passed: backup + restore + physical attachment cleanup + integrity.');
+ console.log('Runtime smoke test passed: lightweight reports + full backups + restore cleanup + integrity.');
 }catch(e){console.error(e.stack||e.message);console.error(output);process.exitCode=1}finally{child.kill('SIGTERM')}})();
