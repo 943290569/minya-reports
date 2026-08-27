@@ -136,6 +136,18 @@ db.exec(`
   );
 `);
 
+const reportColumns = new Set(db.pragma("table_info(daily_reports)").map((c) => c.name));
+[
+  ["workflow_status", "TEXT NOT NULL DEFAULT 'draft'"],
+  ["submitted_at", "TEXT"],
+  ["submitted_by", "INTEGER"],
+  ["approved_at", "TEXT"],
+  ["approved_by", "INTEGER"],
+  ["approved_by_name", "TEXT DEFAULT ''"]
+].forEach(([name, definition]) => {
+  if (!reportColumns.has(name)) db.exec(`ALTER TABLE daily_reports ADD COLUMN ${name} ${definition}`);
+});
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -370,6 +382,7 @@ app.post("/api/reports", requireRole("admin","editor"), (req,res)=>{
 app.put("/api/reports/:id", requireRole("admin","editor"), (req,res)=>{
   try {
     const id=Number(req.params.id); const current=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id); if(!current) return res.status(404).json({ok:false,message:"التقرير غير موجود"});
+    if((current.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"التقرير مقفل للمراجعة أو الاعتماد. يجب إعادة فتحه كمسودة أولًا"});
     const {report_date,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,crews=[],operations=[],stations=[],equipment=[]}=req.body;
     if(!report_date) return res.status(400).json({ok:false,message:"تاريخ التقرير مطلوب"});
     if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=? AND id<>?`).get(report_date,id)) return res.status(409).json({ok:false,message:"يوجد تقرير آخر محفوظ بنفس التاريخ"});
@@ -379,17 +392,44 @@ app.put("/api/reports/:id", requireRole("admin","editor"), (req,res)=>{
   } catch(error){res.status(500).json({ok:false,message:"فشل تعديل التقرير",error:error.message});}
 });
 app.delete("/api/reports/:id", requireRole("admin"), (req,res)=>{
-  try { const id=Number(req.params.id); const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id); if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"}); writeAutomaticBackup("pre-delete"); db.prepare(`DELETE FROM daily_reports WHERE id=?`).run(id); audit(req.user,"DELETE_REPORT","report",id,report.report_no); res.json({ok:true,message:"تم حذف التقرير بنجاح"}); }
+  try { const id=Number(req.params.id); const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id); if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"}); if((report.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف تقرير مرسل للمراجعة أو معتمد. أعد فتحه كمسودة أولًا"}); writeAutomaticBackup("pre-delete"); db.prepare(`DELETE FROM daily_reports WHERE id=?`).run(id); audit(req.user,"DELETE_REPORT","report",id,report.report_no); res.json({ok:true,message:"تم حذف التقرير بنجاح"}); }
   catch(error){res.status(500).json({ok:false,message:"فشل حذف التقرير",error:error.message});}
+});
+
+app.post("/api/reports/:id/submit", requireRole("admin","editor"), (req,res)=>{
+  const id=Number(req.params.id); const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id);
+  if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"});
+  if((report.workflow_status || "draft") !== "draft") return res.status(409).json({ok:false,message:"التقرير ليس في حالة مسودة"});
+  const now=new Date().toISOString();
+  db.prepare(`UPDATE daily_reports SET workflow_status='pending',submitted_at=?,submitted_by=?,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,id);
+  audit(req.user,"SUBMIT_REPORT","report",id,report.report_no); writeAutomaticBackup("report-submit");
+  res.json({ok:true,message:"تم إرسال التقرير للمراجعة",workflow_status:"pending"});
+});
+app.post("/api/reports/:id/approve", requireRole("admin"), (req,res)=>{
+  const id=Number(req.params.id); const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id);
+  if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"});
+  if((report.workflow_status || "draft") !== "pending") return res.status(409).json({ok:false,message:"يجب أن يكون التقرير مرسلًا للمراجعة قبل اعتماده"});
+  const now=new Date().toISOString();
+  db.prepare(`UPDATE daily_reports SET workflow_status='approved',approved_at=?,approved_by=?,approved_by_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,req.user.display_name || req.user.username,id);
+  audit(req.user,"APPROVE_REPORT","report",id,report.report_no); writeAutomaticBackup("report-approve");
+  res.json({ok:true,message:"تم اعتماد التقرير",workflow_status:"approved",approved_at:now,approved_by_name:req.user.display_name || req.user.username});
+});
+app.post("/api/reports/:id/reopen", requireRole("admin"), (req,res)=>{
+  const id=Number(req.params.id); const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id);
+  if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"});
+  if((report.workflow_status || "draft") === "draft") return res.status(409).json({ok:false,message:"التقرير مسودة بالفعل"});
+  db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(id);
+  audit(req.user,"REOPEN_REPORT","report",id,report.report_no); writeAutomaticBackup("report-reopen");
+  res.json({ok:true,message:"تمت إعادة فتح التقرير كمسودة",workflow_status:"draft"});
 });
 
 app.get("/api/reports/:id/attachments", requireAuth, (req,res)=>res.json({ok:true,attachments:db.prepare(`SELECT id,report_id,original_name,mime_type,size_bytes,created_at FROM attachments WHERE report_id=? ORDER BY id DESC`).all(Number(req.params.id))}));
 app.post("/api/reports/:id/attachments", requireRole("admin","editor"), (req,res)=>{
-  try { const reportId=Number(req.params.id); if(!db.prepare(`SELECT id FROM daily_reports WHERE id=?`).get(reportId)) return res.status(404).json({ok:false,message:"التقرير غير موجود"}); const {name,mime_type,data_base64}=req.body; if(!name||!data_base64) return res.status(400).json({ok:false,message:"الملف مطلوب"}); const buffer=Buffer.from(String(data_base64).replace(/^data:[^;]+;base64,/,""),"base64"); if(buffer.length>8*1024*1024) return res.status(413).json({ok:false,message:"الحد الأقصى للملف 8MB"}); const ext=path.extname(name).replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${reportId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; fs.writeFileSync(path.join(uploadsDir,stored),buffer); const r=db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_by) VALUES (?,?,?,?,?,?)`).run(reportId,name,stored,mime_type||"application/octet-stream",buffer.length,req.user.id); audit(req.user,"ADD_ATTACHMENT","report",reportId,name); writeAutomaticBackup("attachment-add"); res.json({ok:true,id:r.lastInsertRowid}); }
+  try { const reportId=Number(req.params.id); const report=db.prepare(`SELECT id,workflow_status FROM daily_reports WHERE id=?`).get(reportId); if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"}); if((report.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن إضافة مرفقات بعد إرسال التقرير للمراجعة أو اعتماده"}); const {name,mime_type,data_base64}=req.body; if(!name||!data_base64) return res.status(400).json({ok:false,message:"الملف مطلوب"}); const buffer=Buffer.from(String(data_base64).replace(/^data:[^;]+;base64,/,""),"base64"); if(buffer.length>8*1024*1024) return res.status(413).json({ok:false,message:"الحد الأقصى للملف 8MB"}); const ext=path.extname(name).replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${reportId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; fs.writeFileSync(path.join(uploadsDir,stored),buffer); const r=db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_by) VALUES (?,?,?,?,?,?)`).run(reportId,name,stored,mime_type||"application/octet-stream",buffer.length,req.user.id); audit(req.user,"ADD_ATTACHMENT","report",reportId,name); writeAutomaticBackup("attachment-add"); res.json({ok:true,id:r.lastInsertRowid}); }
   catch(error){res.status(500).json({ok:false,message:"فشل رفع المرفق",error:error.message});}
 });
 app.get("/api/attachments/:id/download", requireAuth, (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).end(); const file=path.join(uploadsDir,a.stored_name); if(!fs.existsSync(file)) return res.status(404).end(); res.type(a.mime_type); res.setHeader("Content-Disposition",`inline; filename*=UTF-8''${encodeURIComponent(a.original_name)}`); res.sendFile(file); });
-app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); writeAutomaticBackup("pre-attachment-delete"); try{fs.unlinkSync(path.join(uploadsDir,a.stored_name));}catch{} db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
+app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT a.*,r.workflow_status FROM attachments a JOIN daily_reports r ON r.id=a.report_id WHERE a.id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); if((a.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف مرفقات تقرير مرسل للمراجعة أو معتمد"}); writeAutomaticBackup("pre-attachment-delete"); try{fs.unlinkSync(path.join(uploadsDir,a.stored_name));}catch{} db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
 
 app.get("/api/maintenance", requireAuth, (req,res)=>{ const {equipment_name="",from="",to=""}=req.query; let sql=`SELECT m.*,u.display_name AS created_by_name FROM maintenance_logs m LEFT JOIN users u ON u.id=m.created_by WHERE 1=1`; const p=[]; if(equipment_name){sql+=` AND m.equipment_name LIKE ?`;p.push(`%${equipment_name}%`);} if(from){sql+=` AND m.log_date>=?`;p.push(from);} if(to){sql+=` AND m.log_date<=?`;p.push(to);} sql+=` ORDER BY m.log_date DESC,m.id DESC`; res.json({ok:true,logs:db.prepare(sql).all(...p)}); });
 app.post("/api/maintenance", requireRole("admin","editor"), (req,res)=>{ const {equipment_name,log_date,status,description,action_taken,cost}=req.body; if(!equipment_name||!log_date||!description) return res.status(400).json({ok:false,message:"اسم الآلية والتاريخ والوصف مطلوبة"}); const r=db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by) VALUES (?,?,?,?,?,?,?)`).run(equipment_name,log_date,status||"ملاحظة",description,action_taken||"",Number(cost||0),req.user.id); audit(req.user,"CREATE_MAINTENANCE","maintenance",r.lastInsertRowid,equipment_name); res.json({ok:true,id:r.lastInsertRowid}); });
