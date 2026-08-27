@@ -24,7 +24,8 @@
   "js/app-report-attachments.js",
   "js/app-permissions-ui.js",
   "js/app-admin-audit.js",
-  "js/app-admin-security.js"
+  "js/app-admin-security.js",
+  "js/app-admin-users.js"
 ].forEach((src) => {
   document.write(`<script src="${src}"><\/script>`);
 });
@@ -36,7 +37,8 @@
   "report-attachments.css",
   "edit-flow.css",
   "admin-audit.css",
-  "admin-security.css"
+  "admin-security.css",
+  "admin-users.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href="${href}"]`)) {
     const link = document.createElement("link");
