@@ -1,0 +1,22 @@
+name: Patch Restore Finalize
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-restore-finalize.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 .github/patch-restore-finalize.py
+      - run: node --check server.js
+      - run: node --check public/js/app-system-restore.js
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server.js public/js/app-system-restore.js
+          git commit -m "Finalize safe backup restore flow" || exit 0
+          git push
