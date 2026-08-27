@@ -1,0 +1,22 @@
+name: Patch Test Isolation
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-test-isolation.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 .github/patch-test-isolation.py
+      - run: npm install
+      - run: npm test
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server.js
+          git commit -m "Isolate runtime smoke test data directory" || exit 0
+          git push
