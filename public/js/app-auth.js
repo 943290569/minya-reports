@@ -1,6 +1,18 @@
 /* Authentication guard */
 (function(){
   const publicPages=["/login.html","/setup.html"];
+
+  function applyRoleNavigation(user){
+    if(!user) return;
+    const adminOnlyHrefs=["/admin","/admin.html","/reviews","/system.html"];
+    document.querySelectorAll("a[href]").forEach(link=>{
+      const href=link.getAttribute("href");
+      if(adminOnlyHrefs.includes(href) && user.role!=="admin"){
+        link.remove();
+      }
+    });
+  }
+
   async function check(){
     try{
       const r=await fetch("/api/auth/status");
@@ -12,6 +24,11 @@
         window.MINYA_USER=d.user;
         document.documentElement.dataset.userRole=d.user.role;
         document.addEventListener("DOMContentLoaded",()=>{
+          applyRoleNavigation(d.user);
+
+          const observer=new MutationObserver(()=>applyRoleNavigation(d.user));
+          observer.observe(document.body,{childList:true,subtree:true});
+
           const header=document.querySelector(".top-header");
           if(!header || document.getElementById("minyaUserBox")) return;
           const box=document.createElement("div");
