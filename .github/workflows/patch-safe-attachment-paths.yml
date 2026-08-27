@@ -1,0 +1,30 @@
+name: Patch Safe Attachment Paths
+on:
+  push:
+    paths:
+      - '.github/patch-safe-attachment-paths.py'
+      - '.github/workflows/patch-safe-attachment-paths.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Patch server
+        run: python .github/patch-safe-attachment-paths.py
+      - name: Commit patch
+        run: |
+          if git diff --quiet -- server.js; then
+            echo "No server changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server.js
+          git commit -m "Harden attachment storage paths"
+          git push
