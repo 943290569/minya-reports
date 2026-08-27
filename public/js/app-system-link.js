@@ -3,7 +3,16 @@
 ========================================================= */
 
 (function () {
+  function isAdmin() {
+    return window.MINYA_USER?.role === "admin" || document.documentElement.dataset.userRole === "admin";
+  }
+
+  function removeSystemAccess() {
+    document.querySelectorAll('a[href="/system.html"]').forEach(link => link.remove());
+  }
+
   function addSystemNavigation() {
+    if (!isAdmin()) { removeSystemAccess(); return; }
     const nav = document.querySelector(".top-header nav");
     if (!nav || nav.querySelector('a[href="/system.html"]')) return;
 
@@ -15,6 +24,7 @@
   }
 
   function addDashboardSystemCard() {
+    if (!isAdmin()) { removeSystemAccess(); return; }
     const grid = document.querySelector(".dashboard-grid");
     if (!grid || grid.querySelector('a[href="/system.html"]')) return;
 
@@ -31,6 +41,9 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     addSystemNavigation();
-    setTimeout(addDashboardSystemCard, 160);
+    setTimeout(() => {
+      addSystemNavigation();
+      addDashboardSystemCard();
+    }, 220);
   });
 })();
