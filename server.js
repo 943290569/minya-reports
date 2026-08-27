@@ -94,6 +94,14 @@ db.exec(`
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS login_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    success INTEGER NOT NULL DEFAULT 0,
+    ip_address TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_login_attempts_user_time ON login_attempts(username, created_at);
   CREATE TABLE IF NOT EXISTS audit_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -234,13 +242,27 @@ app.post("/api/auth/setup", (req, res) => {
 });
 app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare(`SELECT * FROM users WHERE username=? AND is_active=1`).get(String(username || "").trim());
-  if (!user || hashPassword(password || "", user.salt) !== user.password_hash) return res.status(401).json({ ok:false,message:"بيانات الدخول غير صحيحة" });
+  const normalized=String(username || "").trim();
+  const ip=String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim().slice(0,120);
+  const windowStart=new Date(Date.now()-15*60*1000).toISOString();
+  const failed=db.prepare(`SELECT COUNT(*) AS c FROM login_attempts WHERE username=? AND success=0 AND created_at>=?`).get(normalized,windowStart).c;
+  if(failed>=5){
+    audit(null,"LOGIN_LOCKED","user",normalized,`Too many failed attempts from ${ip}`);
+    return res.status(429).json({ok:false,message:"تم إيقاف محاولات الدخول مؤقتًا لمدة 15 دقيقة بسبب تكرار المحاولات الفاشلة"});
+  }
+  const user = db.prepare(`SELECT * FROM users WHERE username=? AND is_active=1`).get(normalized);
+  if (!user || hashPassword(password || "", user.salt) !== user.password_hash) {
+    db.prepare(`INSERT INTO login_attempts (username,success,ip_address) VALUES (?,0,?)`).run(normalized,ip);
+    audit(null,"LOGIN_FAILED","user",normalized,`Failed login from ${ip}`);
+    return res.status(401).json({ok:false,message:"بيانات الدخول غير صحيحة"});
+  }
+  db.prepare(`INSERT INTO login_attempts (username,success,ip_address) VALUES (?,1,?)`).run(normalized,ip);
+  db.prepare(`DELETE FROM login_attempts WHERE username=? AND success=0`).run(normalized);
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 7*24*60*60*1000).toISOString();
   db.prepare(`INSERT INTO sessions (user_id,token_hash,expires_at) VALUES (?,?,?)`).run(user.id, tokenHash(token), expires);
   res.setHeader("Set-Cookie", `minya_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${process.env.RAILWAY_ENVIRONMENT ? "; Secure" : ""}`);
-  audit(user, "LOGIN", "user", user.id);
+  audit(user, "LOGIN", "user", user.id, `Login from ${ip}`);
   res.json({ ok:true,user:{ id:user.id,username:user.username,display_name:user.display_name,role:user.role } });
 });
 app.post("/api/auth/logout", requireAuth, (req,res)=>{
@@ -271,6 +293,38 @@ app.put("/api/users/:id", requireRole("admin"), (req,res)=>{
   db.prepare(`UPDATE users SET display_name=?,role=?,is_active=? WHERE id=?`).run(display_name ?? target.display_name, role ?? target.role, is_active===undefined?target.is_active:Number(Boolean(is_active)), id);
   if(password){ if(String(password).length<8) return res.status(400).json({ok:false,message:"كلمة المرور قصيرة"}); const salt=newSalt(); db.prepare(`UPDATE users SET password_hash=?,salt=? WHERE id=?`).run(hashPassword(password,salt),salt,id); db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id); }
   audit(req.user,"UPDATE_USER","user",id,JSON.stringify({role,is_active})); res.json({ok:true});
+});
+
+app.get("/api/security/sessions", requireRole("admin"), (req,res)=>{
+  db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(new Date().toISOString());
+  const sessions=db.prepare(`SELECT s.id,s.user_id,s.expires_at,s.created_at,u.username,u.display_name,u.role FROM sessions s JOIN users u ON u.id=s.user_id ORDER BY s.created_at DESC`).all();
+  const users=db.prepare(`SELECT u.id,u.username,u.display_name,u.role,u.is_active,
+    (SELECT MAX(created_at) FROM login_attempts la WHERE la.username=u.username AND la.success=1) AS last_success_login,
+    (SELECT MAX(created_at) FROM login_attempts la WHERE la.username=u.username AND la.success=0) AS last_failed_login,
+    (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.expires_at>=?) AS active_sessions
+    FROM users u ORDER BY u.id`).all(new Date().toISOString());
+  res.json({ok:true,sessions,users});
+});
+app.delete("/api/security/sessions/:id", requireRole("admin"), (req,res)=>{
+  const id=Number(req.params.id);
+  const row=db.prepare(`SELECT s.id,s.user_id,u.username FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id=?`).get(id);
+  if(!row) return res.status(404).json({ok:false,message:"الجلسة غير موجودة"});
+  db.prepare(`DELETE FROM sessions WHERE id=?`).run(id);
+  audit(req.user,"REVOKE_SESSION","user",row.user_id,row.username);
+  res.json({ok:true});
+});
+app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>{
+  const id=Number(req.params.id); const user=db.prepare(`SELECT id,username FROM users WHERE id=?`).get(id);
+  if(!user) return res.status(404).json({ok:false,message:"المستخدم غير موجود"});
+  const result=db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id);
+  audit(req.user,"LOGOUT_ALL_SESSIONS","user",id,`${user.username}: ${result.changes} sessions`);
+  res.json({ok:true,count:result.changes});
+});
+app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{
+  const sessions=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(new Date().toISOString()).changes;
+  const attempts=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(new Date(Date.now()-30*24*60*60*1000).toISOString()).changes;
+  audit(req.user,"SECURITY_CLEANUP","system","security",`${sessions} sessions, ${attempts} login attempts`);
+  res.json({ok:true,sessions_removed:sessions,attempts_removed:attempts});
 });
 
 app.get("/api/reports", requireAuth, (req, res) => {
