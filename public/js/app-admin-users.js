@@ -11,8 +11,19 @@
     const section=document.createElement('section');
     section.id='fullUserManagement'; section.className='v3-panel user-management-panel';
     section.innerHTML=`
-      <div class="user-management-head"><div><span>USERS</span><h3>إدارة المستخدمين</h3><p>تعديل الصلاحيات، تفعيل الحسابات، وتغيير كلمات المرور بأمان.</p></div><button id="usersManageRefresh" type="button">تحديث</button></div>
+      <div class="user-management-head"><div><span>USERS</span><h3>إدارة المستخدمين</h3><p>إنشاء المستخدمين، تعديل الصلاحيات، تفعيل الحسابات، وتغيير كلمات المرور بأمان.</p></div><div class="user-management-actions"><button id="addUserBtn" class="v3-primary" type="button">إضافة مستخدم</button><button id="usersManageRefresh" type="button">تحديث</button></div></div>
       <div id="usersManageMsg" class="users-manage-msg"></div>
+      <div id="userCreateDialog" class="user-edit-card hidden">
+        <div class="user-edit-head"><div><span>مستخدم جديد</span><strong>إنشاء حساب جديد</strong></div><button id="closeUserCreate" type="button">إغلاق</button></div>
+        <div class="user-edit-grid">
+          <label>اسم المستخدم<input id="createUsername" type="text" autocomplete="off" placeholder="مثال: testadmin"></label>
+          <label>الاسم الظاهر<input id="createDisplayName" type="text" autocomplete="off" placeholder="مثال: حساب اختبار"></label>
+          <label>الصلاحية<select id="createRole"><option value="viewer">قراءة فقط</option><option value="editor">محرر</option><option value="admin">مدير</option></select></label>
+          <label>كلمة المرور<input id="createPassword" type="password" autocomplete="new-password" placeholder="8 أحرف على الأقل"></label>
+        </div>
+        <small>يمكن تعديل الصلاحية أو إيقاف الحساب لاحقًا من زر «إدارة».</small>
+        <div class="user-edit-actions"><button id="saveNewUser" class="v3-primary" type="button">إنشاء المستخدم</button></div>
+      </div>
       <div class="v3-table-wrap"><table class="v3-table users-manage-table"><thead><tr><th>المستخدم</th><th>الصلاحية</th><th>الحالة</th><th>الجلسات</th><th>آخر دخول</th><th>إجراءات</th></tr></thead><tbody id="usersManageBody"><tr><td colspan="6">جاري التحميل...</td></tr></tbody></table></div>
       <div id="userEditDialog" class="user-edit-card hidden">
         <div class="user-edit-head"><div><span>تعديل المستخدم</span><strong id="editUserTitle">-</strong></div><button id="closeUserEdit" type="button">إغلاق</button></div>
@@ -37,9 +48,23 @@
       msg:document.getElementById('usersManageMsg'), save:document.getElementById('saveUserEdit')
     };
   }
+  function createRefs(){
+    return {
+      username:document.getElementById('createUsername'), display:document.getElementById('createDisplayName'), role:document.getElementById('createRole'),
+      password:document.getElementById('createPassword'), dialog:document.getElementById('userCreateDialog'), save:document.getElementById('saveNewUser'), msg:document.getElementById('usersManageMsg')
+    };
+  }
+  function openCreate(){
+    const e=createRefs(); if(!e.username||!e.display||!e.role||!e.password||!e.dialog||!e.msg)return;
+    e.username.value=''; e.display.value=''; e.role.value='viewer'; e.password.value=''; e.msg.textContent='';
+    document.getElementById('userEditDialog')?.classList.add('hidden');
+    e.dialog.classList.remove('hidden');
+    e.username.focus();
+  }
   function openEdit(user){
     if(!user)return;
     const e=refs(); if(!e.id||!e.title||!e.display||!e.role||!e.active||!e.password||!e.dialog||!e.logout||!e.msg)return;
+    document.getElementById('userCreateDialog')?.classList.add('hidden');
     e.id.value=user.id; e.title.textContent=`${user.display_name} (${user.username})`;
     e.display.value=user.display_name||''; e.role.value=user.role; e.active.value=String(Number(Boolean(user.is_active))); e.password.value='';
     e.dialog.classList.remove('hidden');
@@ -57,6 +82,18 @@
       body.innerHTML=users.length?users.map(u=>`<tr data-user="${u.id}"><td><strong>${esc(u.display_name)}</strong><small>${esc(u.username)}${Number(u.id)===Number(currentUser.id)?' · حسابك':''}</small></td><td><span class="user-role role-${esc(u.role)}">${esc(roleLabel[u.role]||u.role)}</span></td><td><span class="user-state ${u.is_active?'active':'inactive'}">${u.is_active?'نشط':'موقوف'}</span></td><td>${Number(u.active_sessions||0)}</td><td>${dt(u.last_success_login)}</td><td><button class="manage-user-btn" type="button" data-user="${u.id}">إدارة</button></td></tr>`).join(''):`<tr><td colspan="6">لا توجد حسابات</td></tr>`;
       document.querySelectorAll('.manage-user-btn').forEach(btn=>btn.onclick=()=>openEdit(users.find(u=>String(u.id)===btn.dataset.user)));
     }catch(err){body.innerHTML=`<tr><td colspan="6">${esc(err.message)}</td></tr>`;}
+  }
+  async function createUser(){
+    const e=createRefs(); if(!e.username||!e.display||!e.role||!e.password||!e.dialog||!e.save||!e.msg)return;
+    const username=e.username.value.trim(); const display_name=e.display.value.trim(); const password=e.password.value; const role=e.role.value;
+    if(!username){e.msg.textContent='اسم المستخدم مطلوب.';return;}
+    if(password.length<8){e.msg.textContent='كلمة المرور يجب أن تكون 8 أحرف على الأقل.';return;}
+    if(role==='admin'&&!confirm('سيتم إنشاء مستخدم بصلاحية مدير كاملة. هل تريد المتابعة؟'))return;
+    e.save.disabled=true; e.msg.textContent='جاري إنشاء المستخدم...';
+    try{
+      await api('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,display_name:display_name||username,password,role})});
+      e.msg.textContent='تم إنشاء المستخدم بنجاح'; e.dialog.classList.add('hidden'); await load();
+    }catch(err){e.msg.textContent=err.message;}finally{e.save.disabled=false;}
   }
   async function save(){
     const e=refs(); if(!e.id||!e.display||!e.role||!e.active||!e.password||!e.msg||!e.save||!e.dialog)return;
@@ -86,6 +123,9 @@
   function init(){
     setTimeout(()=>{
       build(); load();
+      document.getElementById('addUserBtn')?.addEventListener('click',openCreate);
+      document.getElementById('closeUserCreate')?.addEventListener('click',()=>document.getElementById('userCreateDialog')?.classList.add('hidden'));
+      document.getElementById('saveNewUser')?.addEventListener('click',createUser);
       document.getElementById('usersManageRefresh')?.addEventListener('click',load);
       document.getElementById('closeUserEdit')?.addEventListener('click',()=>document.getElementById('userEditDialog')?.classList.add('hidden'));
       document.getElementById('saveUserEdit')?.addEventListener('click',save);
