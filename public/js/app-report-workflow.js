@@ -12,23 +12,14 @@
   };
 
   function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;");
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   }
 
   function formatDateTime(value) {
     if (!value) return "-";
     try {
-      return new Date(value).toLocaleString("ar-EG", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit",
-      });
-    } catch {
-      return String(value);
-    }
+      return new Date(value).toLocaleString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    } catch { return String(value); }
   }
 
   async function api(url, options) {
@@ -41,10 +32,22 @@
   function getCurrentReportId() {
     const queryId = Number(new URLSearchParams(location.search).get("edit") || 0);
     if (queryId) return queryId;
-    try {
-      if (typeof editingId !== "undefined" && editingId) return Number(editingId);
-    } catch {}
+    try { if (typeof editingId !== "undefined" && editingId) return Number(editingId); } catch {}
     return 0;
+  }
+
+  function setControlLocked(element, locked) {
+    if (!element) return;
+    if (locked) {
+      if (!element.dataset.workflowWasDisabled) element.dataset.workflowWasDisabled = element.disabled ? "1" : "0";
+      element.disabled = true;
+      element.setAttribute("aria-disabled", "true");
+    } else {
+      const wasDisabled = element.dataset.workflowWasDisabled === "1";
+      element.disabled = wasDisabled;
+      delete element.dataset.workflowWasDisabled;
+      element.removeAttribute("aria-disabled");
+    }
   }
 
   function applyReportLock(status) {
@@ -53,155 +56,80 @@
     const locked = status !== "draft";
     main.classList.toggle("workflow-locked", locked);
 
-    const save = document.getElementById("saveBtn");
-    if (save) {
-      save.disabled = locked;
-      if (locked) save.dataset.workflowLocked = "1";
-      else delete save.dataset.workflowLocked;
+    const editableSelectors = [
+      "#reportFormSection input", "#reportFormSection select", "#reportFormSection textarea",
+      "#crewsTable input", "#crewsTable select", "#crewsTable textarea",
+      "#operationsTable input", "#operationsTable select", "#operationsTable textarea",
+      "#stationsTable input", "#stationsTable select", "#stationsTable textarea",
+      "#equipmentTable input", "#equipmentTable select", "#equipmentTable textarea",
+      "#notes", "#saveBtn", "#attachmentFile", "#attachmentUploadBtn"
+    ];
+    main.querySelectorAll(editableSelectors.join(",")).forEach((element) => setControlLocked(element, locked));
+
+    if (locked) {
+      main.querySelectorAll("#reportAttachmentsPanel button[data-delete], #reportAttachmentsPanel .attachment-delete").forEach((element) => setControlLocked(element, true));
     }
 
-    ["attachmentFile", "attachmentUploadBtn"].forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) element.disabled = locked;
-    });
+    let notice = document.getElementById("workflowReadOnlyNotice");
+    if (locked && !notice) {
+      notice = document.createElement("div");
+      notice.id = "workflowReadOnlyNotice";
+      notice.className = "workflow-readonly-notice no-print";
+      notice.textContent = "التقرير للقراءة فقط. لإجراء تعديل يجب على المدير إعادة فتحه كمسودة.";
+      const panel = document.getElementById("reportWorkflowPanel");
+      panel?.after(notice);
+    } else if (!locked && notice) notice.remove();
   }
 
   function buildWorkflowPanel(report) {
     let panel = document.getElementById("reportWorkflowPanel");
     if (!panel) {
-      panel = document.createElement("section");
-      panel.id = "reportWorkflowPanel";
-      panel.className = "report-workflow-panel no-print";
-      const main = document.querySelector("main.container");
-      const banner = document.getElementById("reportEditBanner");
-      const firstPanel = main?.querySelector("section.panel");
-      if (main && banner) banner.after(panel);
-      else if (main && firstPanel) main.insertBefore(panel, firstPanel);
-      else main?.prepend(panel);
+      panel = document.createElement("section"); panel.id = "reportWorkflowPanel"; panel.className = "report-workflow-panel no-print";
+      const main = document.querySelector("main.container"); const banner = document.getElementById("reportEditBanner"); const firstPanel = main?.querySelector("section.panel");
+      if (main && banner) banner.after(panel); else if (main && firstPanel) main.insertBefore(panel, firstPanel); else main?.prepend(panel);
     }
 
-    const status = report.workflow_status || "draft";
-    const info = statusInfo[status] || statusInfo.draft;
-    const role = window.MINYA_USER?.role || "viewer";
-    const canSubmit = status === "draft" && (role === "admin" || role === "editor");
-    const canApprove = status === "pending" && role === "admin";
-    const canReopen = status !== "draft" && role === "admin";
-
+    const status = report.workflow_status || "draft"; const info = statusInfo[status] || statusInfo.draft; const role = window.MINYA_USER?.role || "viewer";
+    const canSubmit = status === "draft" && (role === "admin" || role === "editor"); const canApprove = status === "pending" && role === "admin"; const canReopen = status !== "draft" && role === "admin";
     let detail = "التقرير قابل للتعديل والحفظ.";
     if (status === "pending") detail = "التقرير مقفل حاليًا بانتظار مراجعة المدير واعتماده.";
     if (status === "approved") detail = `تم اعتماد التقرير${report.approved_by_name ? ` بواسطة ${escapeHtml(report.approved_by_name)}` : ""}${report.approved_at ? ` بتاريخ ${formatDateTime(report.approved_at)}` : ""}.`;
 
-    panel.innerHTML = `
-      <div class="workflow-summary">
-        <div>
-          <span class="workflow-kicker">حالة التقرير</span>
-          <div class="workflow-status-line">
-            <strong>${escapeHtml(report.report_no || "تقرير محفوظ")}</strong>
-            <span class="workflow-badge ${info.className}">${info.label}</span>
-          </div>
-          <small>${detail}</small>
-        </div>
-        <div class="workflow-actions">
-          ${canSubmit ? `<button type="button" data-workflow-action="submit" class="workflow-primary">إرسال للمراجعة</button>` : ""}
-          ${canApprove ? `<button type="button" data-workflow-action="approve" class="workflow-approve">اعتماد التقرير</button>` : ""}
-          ${canReopen ? `<button type="button" data-workflow-action="reopen" class="workflow-secondary">إعادة فتح كمسودة</button>` : ""}
-        </div>
-      </div>
-      <div class="workflow-steps">
-        <div class="${status === "draft" ? "active" : "done"}"><i>1</i><span>مسودة</span></div>
-        <b></b>
-        <div class="${status === "pending" ? "active" : status === "approved" ? "done" : ""}"><i>2</i><span>مراجعة</span></div>
-        <b></b>
-        <div class="${status === "approved" ? "active done" : ""}"><i>3</i><span>معتمد</span></div>
-      </div>
-    `;
-
-    panel.querySelectorAll("[data-workflow-action]").forEach((button) => {
-      button.addEventListener("click", () => runWorkflowAction(button.dataset.workflowAction, report));
-    });
-
+    panel.innerHTML = `<div class="workflow-summary"><div><span class="workflow-kicker">حالة التقرير</span><div class="workflow-status-line"><strong>${escapeHtml(report.report_no || "تقرير محفوظ")}</strong><span class="workflow-badge ${info.className}">${info.label}</span></div><small>${detail}</small></div><div class="workflow-actions">${canSubmit ? `<button type="button" data-workflow-action="submit" class="workflow-primary">إرسال للمراجعة</button>` : ""}${canApprove ? `<button type="button" data-workflow-action="approve" class="workflow-approve">اعتماد التقرير</button>` : ""}${canReopen ? `<button type="button" data-workflow-action="reopen" class="workflow-secondary">إعادة فتح كمسودة</button>` : ""}</div></div><div class="workflow-steps"><div class="${status === "draft" ? "active" : "done"}"><i>1</i><span>مسودة</span></div><b></b><div class="${status === "pending" ? "active" : status === "approved" ? "done" : ""}"><i>2</i><span>مراجعة</span></div><b></b><div class="${status === "approved" ? "active done" : ""}"><i>3</i><span>معتمد</span></div></div>`;
+    panel.querySelectorAll("[data-workflow-action]").forEach((button) => button.addEventListener("click", () => runWorkflowAction(button.dataset.workflowAction, report)));
     applyReportLock(status);
   }
 
   async function runWorkflowAction(action, report) {
-    const messages = {
-      submit: "إرسال التقرير للمراجعة؟ بعد الإرسال سيتوقف التعديل حتى يعيد المدير فتحه.",
-      approve: "اعتماد هذا التقرير نهائيًا؟ سيصبح مقفلًا بعد الاعتماد.",
-      reopen: "إعادة فتح التقرير كمسودة؟ سيتم إلغاء حالة المراجعة/الاعتماد الحالية.",
-    };
+    const messages = { submit: "إرسال التقرير للمراجعة؟ بعد الإرسال سيتوقف التعديل حتى يعيد المدير فتحه.", approve: "اعتماد هذا التقرير نهائيًا؟ سيصبح مقفلًا بعد الاعتماد.", reopen: "إعادة فتح التقرير كمسودة؟ سيتم إلغاء حالة المراجعة/الاعتماد الحالية." };
     if (!confirm(messages[action] || "متابعة؟")) return;
-
     try {
       const data = await api(`/api/reports/${report.id}/${action}`, { method: "POST" });
       if (typeof showMessage === "function") showMessage(data.message || "تم تحديث حالة التقرير");
       setTimeout(() => location.reload(), 250);
-    } catch (error) {
-      if (typeof showMessage === "function") showMessage(error.message);
-      else alert(error.message);
-    }
+    } catch (error) { if (typeof showMessage === "function") showMessage(error.message); else alert(error.message); }
   }
 
   async function refreshReportWorkflow(force = false) {
-    if (pathName !== "/report") return;
-    const id = getCurrentReportId();
-    if (!id) return;
+    if (pathName !== "/report") return; const id = getCurrentReportId(); if (!id) return;
     if (!force && workflowReportId === id && document.getElementById("reportWorkflowPanel")) return;
-
-    try {
-      const data = await api(`/api/reports/${id}`);
-      workflowReportId = id;
-      buildWorkflowPanel(data.report || data);
-    } catch (error) {
-      console.error("Report workflow load failed", error);
-    }
+    try { const data = await api(`/api/reports/${id}`); workflowReportId = id; buildWorkflowPanel(data.report || data); } catch (error) { console.error("Report workflow load failed", error); }
   }
 
   async function decorateArchiveStatuses() {
     if (pathName !== "/archive") return;
     try {
-      const data = await api("/api/reports");
-      const reports = Array.isArray(data.reports) ? data.reports : [];
-      const byNumber = new Map(reports.map((r) => [String(r.report_no || ""), r]));
-
-      const decorate = () => {
-        const tbody = document.querySelector("#archiveTable tbody");
-        if (!tbody) return;
-        Array.from(tbody.rows).forEach((row) => {
-          const firstCell = row.cells?.[0];
-          if (!firstCell || firstCell.querySelector(".archive-workflow-badge")) return;
-          const number = String(firstCell.textContent || "").trim();
-          const report = byNumber.get(number);
-          if (!report) return;
-          const info = statusInfo[report.workflow_status || "draft"] || statusInfo.draft;
-          const badge = document.createElement("span");
-          badge.className = `archive-workflow-badge ${info.className}`;
-          badge.textContent = info.label;
-          firstCell.appendChild(badge);
-        });
-      };
-
-      decorate();
-      const observer = new MutationObserver(decorate);
-      const body = document.querySelector("#archiveTable tbody");
-      if (body) observer.observe(body, { childList: true, subtree: true });
-      setTimeout(decorate, 500);
-      setTimeout(decorate, 1500);
-    } catch (error) {
-      console.error("Archive workflow status failed", error);
-    }
+      const data = await api("/api/reports"); const reports = Array.isArray(data.reports) ? data.reports : []; const byNumber = new Map(reports.map((r) => [String(r.report_no || ""), r]));
+      const decorate = () => { const tbody = document.querySelector("#archiveTable tbody"); if (!tbody) return; Array.from(tbody.rows).forEach((row) => { const firstCell = row.cells?.[0]; if (!firstCell || firstCell.querySelector(".archive-workflow-badge")) return; const report = byNumber.get(String(firstCell.textContent || "").trim()); if (!report) return; const info = statusInfo[report.workflow_status || "draft"] || statusInfo.draft; const badge = document.createElement("span"); badge.className = `archive-workflow-badge ${info.className}`; badge.textContent = info.label; firstCell.appendChild(badge); }); };
+      decorate(); const observer = new MutationObserver(decorate); const body = document.querySelector("#archiveTable tbody"); if (body) observer.observe(body, { childList: true, subtree: true }); setTimeout(decorate, 500); setTimeout(decorate, 1500);
+    } catch (error) { console.error("Archive workflow status failed", error); }
   }
 
   function init() {
-    if (pathName === "/report") {
-      setTimeout(() => refreshReportWorkflow(true), 250);
-      const timer = setInterval(() => refreshReportWorkflow(false), 700);
-      setTimeout(() => clearInterval(timer), 30000);
-    } else if (pathName === "/archive") {
-      setTimeout(decorateArchiveStatuses, 450);
-    }
+    if (pathName === "/report") { setTimeout(() => refreshReportWorkflow(true), 250); const timer = setInterval(() => refreshReportWorkflow(false), 700); setTimeout(() => clearInterval(timer), 30000); }
+    else if (pathName === "/archive") setTimeout(decorateArchiveStatuses, 450);
   }
 
   window.refreshReportWorkflow = refreshReportWorkflow;
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();
