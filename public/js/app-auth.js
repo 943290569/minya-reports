@@ -15,12 +15,31 @@
           const header=document.querySelector(".top-header");
           if(!header || document.getElementById("minyaUserBox")) return;
           const box=document.createElement("div");
-          box.id="minyaUserBox"; box.className="minya-user-box";
-          box.innerHTML=`<span>${d.user.display_name}</span><small>${d.user.role==="admin"?"مدير":d.user.role==="editor"?"محرر":"قراءة فقط"}</small><button type="button" id="minyaLogoutBtn">خروج</button>`;
+          box.id="minyaUserBox";
+          box.className="minya-user-box";
+
+          const name=document.createElement("span");
+          name.textContent=d.user.display_name || d.user.username || "مستخدم";
+
+          const role=document.createElement("small");
+          role.textContent=d.user.role==="admin"?"مدير":d.user.role==="editor"?"محرر":"قراءة فقط";
+
+          const logout=document.createElement("button");
+          logout.type="button";
+          logout.id="minyaLogoutBtn";
+          logout.textContent="خروج";
+
+          box.append(name,role,logout);
           header.appendChild(box);
-          document.getElementById("minyaLogoutBtn").onclick=async()=>{ await fetch("/api/auth/logout",{method:"POST"}); location.replace("/login.html"); };
+
+          logout.onclick=async()=>{
+            await fetch("/api/auth/logout",{method:"POST"});
+            location.replace("/login.html");
+          };
+
           if(d.user.role==="viewer"){
-            const save=document.getElementById("saveBtn"); if(save){save.disabled=true;save.title="حساب قراءة فقط";}
+            const save=document.getElementById("saveBtn");
+            if(save){save.disabled=true;save.title="حساب قراءة فقط";}
           }
         });
       }
