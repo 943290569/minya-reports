@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node scripts/check-js.js"
+    "test": "node scripts/check-js.js && node scripts/smoke-test.js"
   },
   "keywords": [],
   "author": "",
