@@ -19,41 +19,48 @@
     }
   }
 
-  function ensureGlobalLogout(user){
-    if(!user || !document.body) return;
-    if(publicPages.includes(location.pathname)) return;
+  function ensureLogoutInNav(user){
+    if(!user || publicPages.includes(location.pathname)) return;
+    const header=document.querySelector(".top-header");
+    if(!header) return;
 
-    let btn=document.getElementById("minyaGlobalLogoutBtn");
+    let nav=header.querySelector("nav");
+    if(!nav){
+      nav=document.createElement("nav");
+      header.appendChild(nav);
+    }
+
+    let btn=document.getElementById("minyaLogoutBtn");
     if(!btn){
       btn=document.createElement("button");
       btn.type="button";
-      btn.id="minyaGlobalLogoutBtn";
+      btn.id="minyaLogoutBtn";
       btn.textContent="خروج";
       btn.setAttribute("aria-label","تسجيل الخروج");
       btn.onclick=doLogout;
-      document.body.appendChild(btn);
     }
 
     Object.assign(btn.style,{
-      position:"fixed",
-      top:"12px",
-      left:"12px",
-      zIndex:"2147483647",
-      display:"block",
-      visibility:"visible",
-      opacity:"1",
-      minWidth:"88px",
-      minHeight:"42px",
-      padding:"9px 16px",
+      position:"static",
+      display:"inline-flex",
+      alignItems:"center",
+      justifyContent:"center",
+      minWidth:"auto",
+      minHeight:"34px",
+      padding:"6px 10px",
+      margin:"0",
       color:"#ffffff",
-      background:"#b42318",
-      border:"1px solid rgba(255,255,255,.45)",
-      borderRadius:"10px",
-      fontSize:"14px",
-      fontWeight:"700",
+      background:"rgba(255,255,255,.08)",
+      border:"1px solid rgba(255,255,255,.20)",
+      borderRadius:"8px",
+      fontSize:"13px",
+      fontWeight:"600",
+      lineHeight:"1",
       cursor:"pointer",
-      boxShadow:"0 5px 14px rgba(0,0,0,.22)"
+      boxShadow:"none"
     });
+
+    if(btn.parentElement!==nav) nav.appendChild(btn);
   }
 
   function ensureUserBox(user){
@@ -79,13 +86,13 @@
     if(!user) return;
 
     applyRoleNavigation(user);
-    ensureGlobalLogout(user);
+    ensureLogoutInNav(user);
     ensureUserBox(user);
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       const observer=new MutationObserver(()=>{
         applyRoleNavigation(user);
-        ensureGlobalLogout(user);
+        ensureLogoutInNav(user);
       });
       observer.observe(document.body,{childList:true,subtree:true});
       window.__MINYA_ROLE_OBSERVER__=observer;
