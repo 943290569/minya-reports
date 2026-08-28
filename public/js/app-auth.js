@@ -11,49 +11,15 @@
     });
   }
 
-  function ensureUserBox(user){
-    if(!user) return;
-    const header=document.querySelector(".top-header");
-    if(!header) return;
-
-    let box=document.getElementById("minyaUserBox");
-    if(!box){
-      box=document.createElement("div");
-      box.id="minyaUserBox";
-      box.className="minya-user-box";
-
-      const avatar=document.createElement("span");
-      avatar.className="minya-user-avatar";
-
-      const meta=document.createElement("span");
-      meta.className="minya-user-meta";
-
-      const name=document.createElement("strong");
-      name.className="minya-user-name";
-
-      const role=document.createElement("small");
-      role.className="minya-user-role";
-
-      meta.append(name,role);
-      box.append(avatar,meta);
-      header.appendChild(box);
-    }
-
-    const displayName=user.display_name || user.username || "مستخدم";
-    const avatar=box.querySelector(".minya-user-avatar");
-    const name=box.querySelector(".minya-user-name");
-    const role=box.querySelector(".minya-user-role");
-    if(avatar) avatar.textContent=String(displayName).trim().charAt(0) || "م";
-    if(name) name.textContent=displayName;
-    if(role) role.textContent=user.role==="admin"?"مدير النظام":user.role==="editor"?"محرر":"قراءة فقط";
-    box.title=`${displayName} — ${role?.textContent || ""}`;
+  function removeUserBox(){
+    document.getElementById("minyaUserBox")?.remove();
   }
 
   function setupAuthenticatedUI(user){
     if(!user) return;
 
     applyRoleNavigation(user);
-    ensureUserBox(user);
+    removeUserBox();
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
@@ -63,7 +29,7 @@
         requestAnimationFrame(()=>{
           scheduled=false;
           applyRoleNavigation(user);
-          ensureUserBox(user);
+          removeUserBox();
         });
       });
       observer.observe(document.body,{childList:true,subtree:true});
