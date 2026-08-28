@@ -23,7 +23,7 @@
 
   function formatDashboardNumber(value) {
     const number = Number(value || 0);
-    return new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(number);
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(number);
   }
 
   function getLocalDateParts() {
@@ -152,7 +152,7 @@
 
       if (status) {
         status.textContent =
-          `آخر تحديث: ${new Date().toLocaleTimeString("ar-EG", {
+          `آخر تحديث: ${new Date().toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit"
           })}`;
