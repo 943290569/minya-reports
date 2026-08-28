@@ -1,8 +1,9 @@
 (function(){
   if((location.pathname.replace(/\/+$/,'')||'/')!=='/admin') return;
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-  const dt=v=>v?new Date(v).toLocaleString('ar-EG',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+  const dt=v=>v?new Date(v).toLocaleString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
   const roleLabel={admin:'مدير',editor:'محرر',viewer:'قراءة فقط'};
+  const emailOk=v=>!v||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   let currentUser=null;
   async function api(url,options){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error(d.message||'فشل الطلب');return d;}
   function build(){
@@ -11,25 +12,27 @@
     const section=document.createElement('section');
     section.id='fullUserManagement'; section.className='v3-panel user-management-panel';
     section.innerHTML=`
-      <div class="user-management-head"><div><span>USERS</span><h3>إدارة المستخدمين</h3><p>إنشاء المستخدمين، تعديل الصلاحيات، تفعيل الحسابات، وتغيير كلمات المرور بأمان.</p></div><div class="user-management-actions"><button id="addUserBtn" class="v3-primary" type="button">إضافة مستخدم</button><button id="usersManageRefresh" type="button">تحديث</button></div></div>
+      <div class="user-management-head"><div><span>USERS</span><h3>إدارة المستخدمين</h3><p>إنشاء المستخدمين، إدارة البريد الإلكتروني والصلاحيات، تفعيل الحسابات، وتغيير كلمات المرور بأمان.</p></div><div class="user-management-actions"><button id="addUserBtn" class="v3-primary" type="button">إضافة مستخدم</button><button id="usersManageRefresh" type="button">تحديث</button></div></div>
       <div id="usersManageMsg" class="users-manage-msg"></div>
       <div id="userCreateDialog" class="user-edit-card hidden">
         <div class="user-edit-head"><div><span>مستخدم جديد</span><strong>إنشاء حساب جديد</strong></div><button id="closeUserCreate" type="button">إغلاق</button></div>
         <div class="user-edit-grid">
           <label>اسم المستخدم<input id="createUsername" type="text" autocomplete="off" placeholder="مثال: testadmin"></label>
+          <label>البريد الإلكتروني<input id="createEmail" type="email" autocomplete="off" placeholder="name@example.com" dir="ltr"></label>
           <label>الاسم الظاهر<input id="createDisplayName" type="text" autocomplete="off" placeholder="مثال: حساب اختبار"></label>
           <label>الصلاحية<select id="createRole"><option value="viewer">قراءة فقط</option><option value="editor">محرر</option><option value="admin">مدير</option></select></label>
           <label>كلمة المرور<input id="createPassword" type="password" autocomplete="new-password" placeholder="8 أحرف على الأقل"></label>
         </div>
-        <small>يمكن تعديل الصلاحية أو إيقاف الحساب لاحقًا من زر «إدارة».</small>
+        <small>البريد الإلكتروني اختياري، وإذا تمت إضافته يمكن استخدامه لتسجيل الدخول بدل اسم المستخدم.</small>
         <div class="user-edit-actions"><button id="saveNewUser" class="v3-primary" type="button">إنشاء المستخدم</button></div>
       </div>
-      <div class="v3-table-wrap"><table class="v3-table users-manage-table"><thead><tr><th>المستخدم</th><th>الصلاحية</th><th>الحالة</th><th>الجلسات</th><th>آخر دخول</th><th>إجراءات</th></tr></thead><tbody id="usersManageBody"><tr><td colspan="6">جاري التحميل...</td></tr></tbody></table></div>
+      <div class="v3-table-wrap"><table class="v3-table users-manage-table"><thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الصلاحية</th><th>الحالة</th><th>الجلسات</th><th>آخر دخول</th><th>إجراءات</th></tr></thead><tbody id="usersManageBody"><tr><td colspan="7">جاري التحميل...</td></tr></tbody></table></div>
       <div id="userEditDialog" class="user-edit-card hidden">
         <div class="user-edit-head"><div><span>تعديل المستخدم</span><strong id="editUserTitle">-</strong></div><button id="closeUserEdit" type="button">إغلاق</button></div>
         <input id="editUserId" type="hidden">
         <div class="user-edit-grid">
           <label>الاسم الظاهر<input id="editDisplayName" type="text"></label>
+          <label>البريد الإلكتروني<input id="editEmail" type="email" placeholder="name@example.com" dir="ltr"></label>
           <label>الصلاحية<select id="editRole"><option value="viewer">قراءة فقط</option><option value="editor">محرر</option><option value="admin">مدير</option></select></label>
           <label>الحالة<select id="editActive"><option value="1">نشط</option><option value="0">موقوف</option></select></label>
           <label>كلمة مرور جديدة<input id="editPassword" type="password" placeholder="اتركها فارغة دون تغيير"></label>
@@ -42,7 +45,7 @@
   }
   function refs(){
     return {
-      id:document.getElementById('editUserId'), title:document.getElementById('editUserTitle'), display:document.getElementById('editDisplayName'),
+      id:document.getElementById('editUserId'), title:document.getElementById('editUserTitle'), display:document.getElementById('editDisplayName'), email:document.getElementById('editEmail'),
       role:document.getElementById('editRole'), active:document.getElementById('editActive'), password:document.getElementById('editPassword'),
       dialog:document.getElementById('userEditDialog'), logout:document.getElementById('logoutUserEverywhere'),
       msg:document.getElementById('usersManageMsg'), save:document.getElementById('saveUserEdit')
@@ -50,23 +53,23 @@
   }
   function createRefs(){
     return {
-      username:document.getElementById('createUsername'), display:document.getElementById('createDisplayName'), role:document.getElementById('createRole'),
+      username:document.getElementById('createUsername'), email:document.getElementById('createEmail'), display:document.getElementById('createDisplayName'), role:document.getElementById('createRole'),
       password:document.getElementById('createPassword'), dialog:document.getElementById('userCreateDialog'), save:document.getElementById('saveNewUser'), msg:document.getElementById('usersManageMsg')
     };
   }
   function openCreate(){
-    const e=createRefs(); if(!e.username||!e.display||!e.role||!e.password||!e.dialog||!e.msg)return;
-    e.username.value=''; e.display.value=''; e.role.value='viewer'; e.password.value=''; e.msg.textContent='';
+    const e=createRefs(); if(!e.username||!e.email||!e.display||!e.role||!e.password||!e.dialog||!e.msg)return;
+    e.username.value=''; e.email.value=''; e.display.value=''; e.role.value='viewer'; e.password.value=''; e.msg.textContent='';
     document.getElementById('userEditDialog')?.classList.add('hidden');
     e.dialog.classList.remove('hidden');
     e.username.focus();
   }
   function openEdit(user){
     if(!user)return;
-    const e=refs(); if(!e.id||!e.title||!e.display||!e.role||!e.active||!e.password||!e.dialog||!e.logout||!e.msg)return;
+    const e=refs(); if(!e.id||!e.title||!e.display||!e.email||!e.role||!e.active||!e.password||!e.dialog||!e.logout||!e.msg)return;
     document.getElementById('userCreateDialog')?.classList.add('hidden');
     e.id.value=user.id; e.title.textContent=`${user.display_name} (${user.username})`;
-    e.display.value=user.display_name||''; e.role.value=user.role; e.active.value=String(Number(Boolean(user.is_active))); e.password.value='';
+    e.display.value=user.display_name||''; e.email.value=user.email||''; e.role.value=user.role; e.active.value=String(Number(Boolean(user.is_active))); e.password.value='';
     e.dialog.classList.remove('hidden');
     const self=Number(user.id)===Number(currentUser?.id);
     e.active.disabled=self;
@@ -79,26 +82,29 @@
     try{
       const [me,sec]=await Promise.all([api('/api/auth/me'),api('/api/security/sessions')]);
       currentUser=me.user; const users=sec.users||[];
-      body.innerHTML=users.length?users.map(u=>`<tr data-user="${u.id}"><td><strong>${esc(u.display_name)}</strong><small>${esc(u.username)}${Number(u.id)===Number(currentUser.id)?' · حسابك':''}</small></td><td><span class="user-role role-${esc(u.role)}">${esc(roleLabel[u.role]||u.role)}</span></td><td><span class="user-state ${u.is_active?'active':'inactive'}">${u.is_active?'نشط':'موقوف'}</span></td><td>${Number(u.active_sessions||0)}</td><td>${dt(u.last_success_login)}</td><td><button class="manage-user-btn" type="button" data-user="${u.id}">إدارة</button></td></tr>`).join(''):`<tr><td colspan="6">لا توجد حسابات</td></tr>`;
+      body.innerHTML=users.length?users.map(u=>`<tr data-user="${u.id}"><td><strong>${esc(u.display_name)}</strong><small>${esc(u.username)}${Number(u.id)===Number(currentUser.id)?' · حسابك':''}</small></td><td><span dir="ltr">${u.email?esc(u.email):'<span class="user-email-empty">—</span>'}</span></td><td><span class="user-role role-${esc(u.role)}">${esc(roleLabel[u.role]||u.role)}</span></td><td><span class="user-state ${u.is_active?'active':'inactive'}">${u.is_active?'نشط':'موقوف'}</span></td><td>${Number(u.active_sessions||0)}</td><td>${dt(u.last_success_login)}</td><td><button class="manage-user-btn" type="button" data-user="${u.id}">إدارة</button></td></tr>`).join(''):`<tr><td colspan="7">لا توجد حسابات</td></tr>`;
       document.querySelectorAll('.manage-user-btn').forEach(btn=>btn.onclick=()=>openEdit(users.find(u=>String(u.id)===btn.dataset.user)));
-    }catch(err){body.innerHTML=`<tr><td colspan="6">${esc(err.message)}</td></tr>`;}
+    }catch(err){body.innerHTML=`<tr><td colspan="7">${esc(err.message)}</td></tr>`;}
   }
   async function createUser(){
-    const e=createRefs(); if(!e.username||!e.display||!e.role||!e.password||!e.dialog||!e.save||!e.msg)return;
-    const username=e.username.value.trim(); const display_name=e.display.value.trim(); const password=e.password.value; const role=e.role.value;
+    const e=createRefs(); if(!e.username||!e.email||!e.display||!e.role||!e.password||!e.dialog||!e.save||!e.msg)return;
+    const username=e.username.value.trim(); const email=e.email.value.trim().toLowerCase(); const display_name=e.display.value.trim(); const password=e.password.value; const role=e.role.value;
     if(!username){e.msg.textContent='اسم المستخدم مطلوب.';return;}
+    if(email&&!emailOk(email)){e.msg.textContent='البريد الإلكتروني غير صالح.';return;}
     if(password.length<8){e.msg.textContent='كلمة المرور يجب أن تكون 8 أحرف على الأقل.';return;}
     if(role==='admin'&&!confirm('سيتم إنشاء مستخدم بصلاحية مدير كاملة. هل تريد المتابعة؟'))return;
     e.save.disabled=true; e.msg.textContent='جاري إنشاء المستخدم...';
     try{
-      await api('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,display_name:display_name||username,password,role})});
+      await api('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,email,display_name:display_name||username,password,role})});
       e.msg.textContent='تم إنشاء المستخدم بنجاح'; e.dialog.classList.add('hidden'); await load();
     }catch(err){e.msg.textContent=err.message;}finally{e.save.disabled=false;}
   }
   async function save(){
-    const e=refs(); if(!e.id||!e.display||!e.role||!e.active||!e.password||!e.msg||!e.save||!e.dialog)return;
+    const e=refs(); if(!e.id||!e.display||!e.email||!e.role||!e.active||!e.password||!e.msg||!e.save||!e.dialog)return;
     const id=Number(e.id.value); if(!id)return;
-    const payload={display_name:e.display.value.trim(),role:e.role.value,is_active:Number(e.active.value)};
+    const email=e.email.value.trim().toLowerCase();
+    if(email&&!emailOk(email)){e.msg.textContent='البريد الإلكتروني غير صالح.';return;}
+    const payload={display_name:e.display.value.trim(),email,role:e.role.value,is_active:Number(e.active.value)};
     if(e.password.value) payload.password=e.password.value;
     if(payload.password&&payload.password.length<8){e.msg.textContent='كلمة المرور يجب أن تكون 8 أحرف على الأقل.';return;}
     const sensitive=payload.role==='admin'||payload.is_active===0||Boolean(payload.password);
