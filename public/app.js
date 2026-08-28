@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-premium-ui-v2-compact";
+const MINYA_ASSET_VERSION = "3.2.0-premium-ui-v3-archive-stable";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
