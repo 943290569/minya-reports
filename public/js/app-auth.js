@@ -20,9 +20,9 @@
   }
 
   function ensureLogoutInNav(user){
-    if(!user || publicPages.includes(location.pathname)) return;
+    if(!user || publicPages.includes(location.pathname)) return false;
     const header=document.querySelector(".top-header");
-    if(!header) return;
+    if(!header) return false;
 
     let nav=header.querySelector("nav");
     if(!nav){
@@ -73,6 +73,7 @@
     };
 
     if(btn.parentElement!==nav) nav.appendChild(btn);
+    return true;
   }
 
   function ensureUserBox(user){
@@ -102,13 +103,22 @@
     ensureUserBox(user);
 
     if(!window.__MINYA_ROLE_OBSERVER__){
+      let scheduled=false;
       const observer=new MutationObserver(()=>{
-        applyRoleNavigation(user);
-        ensureLogoutInNav(user);
+        if(scheduled) return;
+        scheduled=true;
+        requestAnimationFrame(()=>{
+          scheduled=false;
+          applyRoleNavigation(user);
+          ensureLogoutInNav(user);
+        });
       });
       observer.observe(document.body,{childList:true,subtree:true});
       window.__MINYA_ROLE_OBSERVER__=observer;
     }
+
+    // page-mode may rebuild nav during DOMContentLoaded; re-mount after it settles.
+    [0,100,300,800,1500].forEach(delay=>setTimeout(()=>ensureLogoutInNav(user),delay));
 
     if(user.role==="viewer"){
       const save=document.getElementById("saveBtn");
