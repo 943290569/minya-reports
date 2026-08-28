@@ -19,72 +19,76 @@
     }
   }
 
-  function ensureHomeLogout(){
-    const path=location.pathname.replace(/\/+$/,"") || "/";
-    if(path!=="/" || document.getElementById("minyaHomeLogoutBtn")) return;
-    const btn=document.createElement("button");
-    btn.type="button";
-    btn.id="minyaHomeLogoutBtn";
-    btn.textContent="خروج";
-    btn.setAttribute("aria-label","تسجيل الخروج");
+  function ensureGlobalLogout(user){
+    if(!user || !document.body) return;
+    if(publicPages.includes(location.pathname)) return;
+
+    let btn=document.getElementById("minyaGlobalLogoutBtn");
+    if(!btn){
+      btn=document.createElement("button");
+      btn.type="button";
+      btn.id="minyaGlobalLogoutBtn";
+      btn.textContent="خروج";
+      btn.setAttribute("aria-label","تسجيل الخروج");
+      btn.onclick=doLogout;
+      document.body.appendChild(btn);
+    }
+
     Object.assign(btn.style,{
       position:"fixed",
-      top:"14px",
-      left:"18px",
-      zIndex:"99999",
+      top:"12px",
+      left:"12px",
+      zIndex:"2147483647",
       display:"block",
       visibility:"visible",
       opacity:"1",
-      minWidth:"86px",
+      minWidth:"88px",
       minHeight:"42px",
       padding:"9px 16px",
       color:"#ffffff",
       background:"#b42318",
       border:"1px solid rgba(255,255,255,.45)",
       borderRadius:"10px",
+      fontSize:"14px",
       fontWeight:"700",
       cursor:"pointer",
       boxShadow:"0 5px 14px rgba(0,0,0,.22)"
     });
-    btn.onclick=doLogout;
-    document.body.appendChild(btn);
+  }
+
+  function ensureUserBox(user){
+    if(!user) return;
+    const header=document.querySelector(".top-header");
+    if(!header || document.getElementById("minyaUserBox")) return;
+
+    const box=document.createElement("div");
+    box.id="minyaUserBox";
+    box.className="minya-user-box";
+
+    const name=document.createElement("span");
+    name.textContent=user.display_name || user.username || "مستخدم";
+
+    const role=document.createElement("small");
+    role.textContent=user.role==="admin"?"مدير":user.role==="editor"?"محرر":"قراءة فقط";
+
+    box.append(name,role);
+    header.appendChild(box);
   }
 
   function setupAuthenticatedUI(user){
     if(!user) return;
+
     applyRoleNavigation(user);
-    ensureHomeLogout();
+    ensureGlobalLogout(user);
+    ensureUserBox(user);
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       const observer=new MutationObserver(()=>{
         applyRoleNavigation(user);
-        ensureHomeLogout();
+        ensureGlobalLogout(user);
       });
       observer.observe(document.body,{childList:true,subtree:true});
       window.__MINYA_ROLE_OBSERVER__=observer;
-    }
-
-    const path=location.pathname.replace(/\/+$/,"") || "/";
-    const header=document.querySelector(".top-header");
-    if(path!=="/" && header && !document.getElementById("minyaUserBox")){
-      const box=document.createElement("div");
-      box.id="minyaUserBox";
-      box.className="minya-user-box";
-
-      const name=document.createElement("span");
-      name.textContent=user.display_name || user.username || "مستخدم";
-
-      const role=document.createElement("small");
-      role.textContent=user.role==="admin"?"مدير":user.role==="editor"?"محرر":"قراءة فقط";
-
-      const logout=document.createElement("button");
-      logout.type="button";
-      logout.id="minyaLogoutBtn";
-      logout.textContent="خروج";
-      logout.onclick=doLogout;
-
-      box.append(name,role,logout);
-      header.appendChild(box);
     }
 
     if(user.role==="viewer"){
@@ -95,7 +99,7 @@
 
   async function check(){
     try{
-      const r=await fetch("/api/auth/status");
+      const r=await fetch("/api/auth/status",{cache:"no-store"});
       const d=await r.json();
       const path=location.pathname;
       if(d.setupRequired && path!=="/setup.html"){ location.replace("/setup.html"); return; }
