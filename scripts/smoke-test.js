@@ -5,7 +5,7 @@ const {spawn}=require('child_process');
 
 const port=5099;
 const base=`http://127.0.0.1:${port}`;
-const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'minya-v31-final-'));
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'minya-v32-final-'));
 const uploadsDir=path.join(tmp,'uploads');
 const child=spawn(process.execPath,['server.js'],{
   cwd:process.cwd(),
@@ -29,7 +29,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
 
   let x=await json('/api/health');
   assert(x.r.status===200&&x.data.ok,'health failed');
-  assert(x.data.version==='3.1.0','health version is not 3.1.0');
+  assert(x.data.version==='3.2.0','health version is not 3.2.0');
   assert(x.data.integrity==='ok','initial sqlite integrity failed');
 
   x=await json('/api/auth/setup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:'smokeadmin',display_name:'Smoke Admin',password:'SmokePass123'})});
@@ -47,7 +47,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
 
   const report={
     report_date:'2099-02-01',weather:'صحو',temperature:21,start_time:'04:00',end_time:'19:00',
-    total_trucks:12,total_waste_tons:150,total_diesel:55,notes:'V3.1 final smoke',
+    total_trucks:12,total_waste_tons:150,total_diesel:55,notes:'V3.2 final smoke',
     crews:[{crew_name:'فريق التشغيل',crew_count:3,notes:''}],
     operations:[{operation_name:'مكب نفايات المنيا',vehicle_count:12,quantity:150,unit:'طن',notes:''}],
     stations:[],
@@ -65,7 +65,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.data.operations.length===1,'operation missing');
   assert(x.data.operations[0].start_time===''&&x.data.operations[0].end_time==='','operation times should be empty');
 
-  const payload=Buffer.from('attachment survives V3.1 final backup').toString('base64');
+  const payload=Buffer.from('attachment survives V3.2 final backup').toString('base64');
   x=await json(`/api/reports/${id}/attachments`,auth(editor,'POST',{name:'evidence.txt',mime_type:'text/plain',data_base64:payload}));
   assert(x.r.status===200,'editor attachment add failed');
   const attachmentId=x.data.id;
@@ -112,7 +112,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   const backupRes=await fetch(base+'/api/backup/download',{headers:{cookie:admin}});
   assert(backupRes.status===200,'backup download failed');
   const backup=await backupRes.json();
-  assert(backup.version==='3.1.0','backup version is not 3.1.0');
+  assert(backup.version==='3.2.0','backup version is not 3.2.0');
   assert(Array.isArray(backup.reports)&&backup.reports.length===1,'backup report count wrong');
   const backed=backup.reports[0];
   assert(backed.report.workflow_status==='approved','backup lost workflow status');
@@ -121,7 +121,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   x=await json('/api/backup/validate',auth(admin,'POST',backup));
   assert(x.r.status===200&&x.data.valid,'backup validation failed');
 
-  x=await json(`/api/reports/${id}/reopen`,auth(admin,'POST',{reason:'V3.1 restore verification'}));
+  x=await json(`/api/reports/${id}/reopen`,auth(admin,'POST',{reason:'V3.2 restore verification'}));
   assert(x.r.status===200,'reopen failed');
   x=await json(`/api/reports/${id}`,auth(admin,'DELETE'));
   assert(x.r.status===200,'delete before restore failed');
@@ -144,7 +144,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   const restoredAid=x.data.attachments[0].id;
   const dl=await fetch(base+`/api/attachments/${restoredAid}/download`,{headers:{cookie:admin}});
   assert(dl.status===200,'restored attachment download failed');
-  assert((await dl.text())==='attachment survives V3.1 final backup','restored attachment content changed');
+  assert((await dl.text())==='attachment survives V3.2 final backup','restored attachment content changed');
   assert(uploadFiles().length===1,'unexpected physical files after restore cleanup');
 
   x=await json('/api/security/sessions',auth(admin));
@@ -167,7 +167,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.data.orphan_files.length===0,'orphan attachment after restore');
   assert(x.data.duplicate_dates.length===0&&x.data.duplicate_numbers.length===0,'duplicates after restore');
 
-  console.log('V3.1 FINAL smoke test passed: roles + workflow + attachments + maintenance + backups + restore + security + audit + integrity.');
+  console.log('V3.2 FINAL smoke test passed: roles + workflow + attachments + maintenance + backups + restore + security + audit + integrity.');
 }catch(e){
   console.error(e.stack||e.message);
   console.error(output);
