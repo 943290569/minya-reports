@@ -2,15 +2,15 @@
 @media screen {
   .top-header {
     background:
-      linear-gradient(115deg, #162838 0%, #1d3448 50%, #23445f 100%) !important;
+      linear-gradient(118deg, #103f31 0%, #17634c 48%, #23805f 100%) !important;
     border-bottom: 1px solid rgba(255,255,255,.10) !important;
-    box-shadow: 0 8px 24px rgba(14,31,45,.18) !important;
+    box-shadow: 0 8px 24px rgba(14,50,38,.18) !important;
   }
 
   .top-header::after {
     background:
-      radial-gradient(circle at 18% 0%, rgba(255,255,255,.075), transparent 28%),
-      linear-gradient(90deg, transparent 0 72%, rgba(255,255,255,.024)) !important;
+      radial-gradient(circle at 18% 0%, rgba(255,255,255,.08), transparent 28%),
+      linear-gradient(90deg, transparent 0 72%, rgba(255,255,255,.025)) !important;
   }
 
   .top-header nav {
@@ -21,19 +21,19 @@
   .top-header nav a,
   .top-header nav button,
   .app-nav-link {
-    color: rgba(255,255,255,.88) !important;
+    color: rgba(255,255,255,.89) !important;
   }
 
   .app-nav-link.active {
     background: rgba(255,255,255,.97) !important;
-    color: #1d3448 !important;
+    color: #17634c !important;
     border-color: rgba(255,255,255,.97) !important;
     box-shadow: 0 4px 12px rgba(0,0,0,.12) !important;
   }
 
   #minyaLogoutBtn,
   .minya-user-box {
-    background: rgba(255,255,255,.07) !important;
+    background: rgba(255,255,255,.075) !important;
     border-color: rgba(255,255,255,.14) !important;
   }
 
@@ -42,7 +42,7 @@
   }
 
   .minya-user-avatar {
-    color: #1d3448 !important;
-    background: linear-gradient(145deg,#ffffff,#e7eef4) !important;
+    color: #17634c !important;
+    background: linear-gradient(145deg,#ffffff,#e7f2ed) !important;
   }
 }
