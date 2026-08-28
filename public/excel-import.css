@@ -1,0 +1,27 @@
+/* Excel import preview — screen only */
+.excel-import-panel{margin-bottom:16px;border-color:#cfe1d8!important;background:linear-gradient(180deg,#fff,#fbfdfc)!important}
+.excel-import-head{display:flex;justify-content:space-between;gap:16px;margin-bottom:14px}
+.excel-import-head span{display:block;color:#23805f;font-size:10px;font-weight:900;letter-spacing:1px;margin-bottom:4px}
+.excel-import-head h3{margin:0 0 5px;color:#183d31}
+.excel-import-head p{margin:0;color:#6b7b74;font-size:12px;line-height:1.7}
+.excel-import-picker{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding:12px;border:1px solid #e0ebe6;background:#f8fbf9;border-radius:12px}
+.excel-import-picker input[type=file]{flex:1;min-width:260px;min-height:42px;padding:8px;background:#fff;border:1px solid #d8e4df;border-radius:9px}
+.excel-import-picker .v3-primary{min-width:130px}
+.excel-import-message{margin:10px 0;color:#486158;font-size:12px;font-weight:700}
+.excel-import-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
+.excel-import-summary>div{padding:12px;border:1px solid #e0e9e5;border-radius:11px;background:#fff;text-align:center}
+.excel-import-summary span{display:block;color:#74847d;font-size:11px;margin-bottom:5px}
+.excel-import-summary strong{display:block;color:#173e31;font-size:21px;font-weight:900}
+.excel-import-table-wrap{overflow:auto;border:1px solid #e2e9e6;border-radius:12px}
+.excel-import-table{margin:0!important;min-width:760px}
+.excel-import-table th,.excel-import-table td{padding:9px 10px!important;font-size:11px!important}
+.excel-import-status{display:inline-flex;align-items:center;justify-content:center;min-width:84px;padding:5px 8px;border-radius:999px;font-weight:900;font-size:10px}
+.excel-import-status.ready{background:#e7f7ee;color:#167348}
+.excel-import-status.duplicate{background:#f2f4f3;color:#5b6963}
+.excel-import-status.invalid{background:#fdeceb;color:#a83b32}
+.excel-row-invalid td{background:#fffafa}
+.excel-import-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:12px;flex-wrap:wrap}
+.excel-import-cancel{min-height:40px;padding:8px 18px;border:1px solid #cfd9d5;border-radius:9px;background:#fff;color:#475c54;font-weight:900;cursor:pointer}
+.excel-import-note{margin:9px 0 0;color:#738078;font-size:11px}
+@media(max-width:760px){.excel-import-summary{grid-template-columns:1fr 1fr}.excel-import-picker{align-items:stretch}.excel-import-picker input[type=file],.excel-import-picker .v3-primary{width:100%;min-width:0}.excel-import-actions>*{width:100%}}
+@media(max-width:460px){.excel-import-summary{grid-template-columns:1fr}.excel-import-head h3{font-size:17px}}
