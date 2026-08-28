@@ -1,4 +1,4 @@
-/* Stable header logout button — always mounted on authenticated app pages */
+/* Stable header logout button — always visible inside top header */
 (function () {
   const publicPages = ['/login.html', '/setup.html'];
   if (publicPages.includes(location.pathname)) return;
@@ -13,45 +13,42 @@
 
   function styleButton(btn) {
     Object.assign(btn.style, {
-      position: 'static',
+      position: 'absolute',
+      left: '16px',
+      top: '16px',
+      zIndex: '80',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
       minWidth: '64px',
-      minHeight: '36px',
+      minHeight: '34px',
       padding: '7px 12px',
       margin: '0',
-      color: 'rgba(255,255,255,.94)',
-      background: 'rgba(255,255,255,.08)',
-      border: '1px solid rgba(255,255,255,.20)',
+      color: 'rgba(255,255,255,.96)',
+      background: 'rgba(255,255,255,.10)',
+      border: '1px solid rgba(255,255,255,.24)',
       borderRadius: '9px',
       fontSize: '13px',
-      fontWeight: '600',
+      fontWeight: '700',
       lineHeight: '1',
       cursor: 'pointer',
-      boxShadow: 'none',
+      boxShadow: '0 1px 3px rgba(0,0,0,.08)',
       transition: 'background .15s ease,border-color .15s ease'
     });
 
     btn.onmouseenter = () => {
-      btn.style.background = 'rgba(255,255,255,.15)';
-      btn.style.borderColor = 'rgba(255,255,255,.32)';
+      btn.style.background = 'rgba(255,255,255,.17)';
+      btn.style.borderColor = 'rgba(255,255,255,.34)';
     };
     btn.onmouseleave = () => {
-      btn.style.background = 'rgba(255,255,255,.08)';
-      btn.style.borderColor = 'rgba(255,255,255,.20)';
+      btn.style.background = 'rgba(255,255,255,.10)';
+      btn.style.borderColor = 'rgba(255,255,255,.24)';
     };
   }
 
   function ensureButton() {
     const header = document.querySelector('.top-header');
     if (!header) return false;
-
-    let nav = header.querySelector('nav');
-    if (!nav) {
-      nav = document.createElement('nav');
-      header.appendChild(nav);
-    }
 
     let btn = document.getElementById('minyaLogoutBtn');
     if (!btn) {
@@ -64,7 +61,8 @@
 
     btn.onclick = logout;
     styleButton(btn);
-    if (btn.parentElement !== nav) nav.appendChild(btn);
+
+    if (btn.parentElement !== header) header.appendChild(btn);
     return true;
   }
 
