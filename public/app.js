@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-header-compact-v1";
+const MINYA_ASSET_VERSION = "3.2.0-hero-clarity-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -132,7 +132,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "compact-theme.css",
   "header-tone.css",
   "account-position.css",
-  "header-compact.css"
+  "header-compact.css",
+  "hero-clarity.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
