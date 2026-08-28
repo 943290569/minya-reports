@@ -1,0 +1,311 @@
+/* Minya Landfill — compact refinement layer, screen only */
+@media screen {
+  /* Shorter overall pages */
+  .container {
+    margin-top: 16px !important;
+    margin-bottom: 26px !important;
+  }
+
+  .panel,
+  .v3-panel,
+  .reviews-panel,
+  .admin-audit-panel,
+  .admin-security-panel,
+  .dashboard-recent-panel,
+  .executive-dashboard {
+    margin-bottom: 12px !important;
+  }
+
+  .panel,
+  .v3-panel,
+  .reviews-panel,
+  .admin-audit-panel,
+  .admin-security-panel {
+    padding: 14px 16px !important;
+  }
+
+  .panel > h2,
+  .v3-panel > h3,
+  .reviews-panel h3 {
+    margin-bottom: 10px !important;
+  }
+
+  .form-grid,
+  .v3-form-grid,
+  .v3-search-grid,
+  .daily-summary,
+  .archive-summary,
+  .monthly-summary,
+  .dashboard-metrics,
+  .v3-kpis {
+    gap: 9px !important;
+  }
+
+  input,
+  select {
+    min-height: 37px !important;
+  }
+
+  textarea {
+    min-height: 78px !important;
+  }
+
+  table th,
+  table td,
+  .v3-table th,
+  .v3-table td,
+  .reviews-table th,
+  .reviews-table td {
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+  }
+
+  /* Home */
+  .dashboard-hero {
+    min-height: 188px !important;
+    padding: 22px 26px !important;
+    border-radius: 20px !important;
+  }
+
+  .dashboard-hero h2 {
+    font-size: clamp(24px, 2.8vw, 34px) !important;
+    margin-bottom: 5px !important;
+  }
+
+  .dashboard-hero p {
+    margin: 5px 0 !important;
+    line-height: 1.55 !important;
+  }
+
+  .dashboard-today-state {
+    margin-top: 9px !important;
+  }
+
+  .dashboard-section-head {
+    margin-top: 16px !important;
+    margin-bottom: 9px !important;
+  }
+
+  .dashboard-metric-card {
+    min-height: 72px !important;
+    padding: 10px 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .dashboard-grid {
+    gap: 10px !important;
+  }
+
+  .dashboard-card {
+    min-height: 116px !important;
+    padding: 13px 15px !important;
+    border-radius: 17px !important;
+  }
+
+  .dashboard-card .dashboard-icon {
+    min-width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+  }
+
+  .dashboard-card h3 {
+    margin-top: 8px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .dashboard-card p {
+    margin: 3px 0 0 !important;
+    line-height: 1.45 !important;
+  }
+
+  /* Executive dashboard */
+  .executive-dashboard {
+    margin: 12px 0 !important;
+    padding: 14px !important;
+  }
+
+  .executive-head {
+    margin-bottom: 9px !important;
+  }
+
+  .executive-card,
+  .executive-highlight {
+    min-height: 76px !important;
+    padding: 10px 12px !important;
+  }
+
+  .executive-card strong,
+  .executive-highlight strong {
+    font-size: 18px !important;
+  }
+
+  .executive-year-grid {
+    margin-top: 8px !important;
+  }
+
+  .executive-trend-panel {
+    margin-top: 8px !important;
+    padding: 10px !important;
+  }
+
+  .executive-trend-bars {
+    height: 84px !important;
+  }
+
+  .executive-trend-column {
+    height: 64px !important;
+  }
+
+  /* V3 / management pages */
+  .v3-hero,
+  .reviews-hero {
+    min-height: 0 !important;
+    padding: 16px 20px !important;
+    margin-bottom: 12px !important;
+    border-radius: 17px !important;
+  }
+
+  .v3-hero h2,
+  .reviews-hero h2 {
+    margin: 3px 0 4px !important;
+    font-size: 22px !important;
+  }
+
+  .v3-hero p,
+  .reviews-hero p {
+    margin: 0 !important;
+    line-height: 1.45 !important;
+  }
+
+  .v3-filter,
+  .reviews-toolbar {
+    margin-bottom: 10px !important;
+    gap: 8px !important;
+  }
+
+  .v3-kpis > div {
+    min-height: 70px !important;
+    padding: 10px 12px !important;
+  }
+
+  /* Report editor */
+  body[data-page="report"] .panel {
+    padding: 13px 15px !important;
+    margin-bottom: 10px !important;
+  }
+
+  body[data-page="report"] table th,
+  body[data-page="report"] table td {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+
+  body[data-page="report"] table input,
+  body[data-page="report"] table select {
+    min-height: 32px !important;
+    padding: 4px 7px !important;
+  }
+
+  body[data-page="report"] .daily-summary > div {
+    min-height: 62px !important;
+    padding: 8px 10px !important;
+  }
+
+  body[data-page="report"] textarea {
+    min-height: 70px !important;
+  }
+
+  /* Header account: logout on top, account directly below it */
+  .top-header {
+    min-height: 94px !important;
+    padding-left: 166px !important;
+  }
+
+  #minyaLogoutBtn {
+    left: 16px !important;
+    top: 11px !important;
+    width: 132px !important;
+    min-width: 132px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+  }
+
+  .minya-user-box {
+    left: 16px !important;
+    top: 50px !important;
+    width: 132px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 4px 7px !important;
+    border-radius: 10px !important;
+    gap: 6px !important;
+  }
+
+  .minya-user-avatar {
+    width: 26px !important;
+    height: 26px !important;
+    flex-basis: 26px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+  }
+
+  .minya-user-name {
+    max-width: 86px !important;
+    font-size: 10.5px !important;
+  }
+
+  .minya-user-role {
+    font-size: 8.5px !important;
+  }
+
+  @media (max-width: 1100px) {
+    .top-header {
+      padding: 92px 16px 12px !important;
+    }
+
+    #minyaLogoutBtn,
+    .minya-user-box {
+      left: 14px !important;
+      width: 128px !important;
+    }
+
+    #minyaLogoutBtn { top: 10px !important; }
+    .minya-user-box { top: 49px !important; }
+
+    .dashboard-hero {
+      min-height: 170px !important;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .container {
+      margin-top: 10px !important;
+      margin-bottom: 18px !important;
+    }
+
+    .top-header {
+      padding: 88px 12px 10px !important;
+    }
+
+    #minyaLogoutBtn,
+    .minya-user-box {
+      left: 10px !important;
+      width: 122px !important;
+    }
+
+    .dashboard-hero {
+      min-height: 168px !important;
+      padding: 18px !important;
+    }
+
+    .dashboard-card {
+      min-height: 102px !important;
+    }
+
+    .v3-hero,
+    .reviews-hero {
+      padding: 13px 15px !important;
+    }
+  }
+}
