@@ -1,0 +1,112 @@
+/* Mobile vertical navigation — screen only */
+@media screen and (max-width: 760px) {
+  .top-header {
+    position: sticky !important;
+    overflow: visible !important;
+    padding-left: 148px !important;
+  }
+
+  .top-header nav,
+  .top-header nav.minya-legacy-nav-hidden {
+    display: none !important;
+  }
+
+  .minya-header-menu-wrap {
+    display: block !important;
+    position: absolute !important;
+    left: 74px !important;
+    top: 10px !important;
+    z-index: 120 !important;
+  }
+
+  #minyaMenuButton {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    min-width: 64px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 4px 8px !important;
+    border-radius: 9px !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    background: rgba(255,255,255,.07) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+  }
+
+  #minyaMenuButton > span {
+    font-size: 17px !important;
+    line-height: 1 !important;
+  }
+
+  #minyaMenuButton > small {
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    color: rgba(255,255,255,.88) !important;
+  }
+
+  #minyaHeaderMenu {
+    position: absolute !important;
+    top: 38px !important;
+    left: 0 !important;
+    width: min(290px, calc(100vw - 22px)) !important;
+    max-height: 72vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 7px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    direction: rtl !important;
+    background: rgba(255,255,255,.985) !important;
+    border: 1px solid #dbe6e0 !important;
+    border-radius: 13px !important;
+    box-shadow: 0 16px 38px rgba(14,53,40,.20) !important;
+  }
+
+  #minyaHeaderMenu[hidden] {
+    display: none !important;
+  }
+
+  .minya-menu-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 42px !important;
+    padding: 9px 11px !important;
+    border-radius: 9px !important;
+    color: #284238 !important;
+    background: transparent !important;
+    text-decoration: none !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border: 1px solid transparent !important;
+  }
+
+  .minya-menu-item b {
+    color: #8a9b93 !important;
+    font-size: 18px !important;
+    font-weight: 400 !important;
+  }
+
+  .minya-menu-item.active {
+    color: #15543f !important;
+    background: #eaf4ef !important;
+    border-color: #d2e5dc !important;
+  }
+
+  .minya-menu-item:active {
+    background: #edf5f1 !important;
+  }
+}
+
+@media screen and (min-width: 761px) {
+  .minya-header-menu-wrap,
+  #minyaMenuButton,
+  #minyaHeaderMenu {
+    display: none !important;
+  }
+}
