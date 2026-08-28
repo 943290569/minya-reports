@@ -1,18 +1,18 @@
 /* Mobile-only vertical header menu */
 (function(){
   const items = [
-    {label:"الرئيسية", href:"/"},
-    {label:"تقرير جديد", href:"/report", hideFor:["viewer"]},
-    {label:"أرشيف التقارير", href:"/archive"},
-    {label:"التقرير الشهري", href:"/monthly"},
-    {label:"التقرير السنوي", href:"/annual"},
-    {label:"المعدات والصيانة", href:"/equipment"},
-    {label:"التقرير الأسبوعي", href:"/weekly"},
-    {label:"البحث المتقدم", href:"/search"},
-    {label:"التقرير الإداري", href:"/managerial"},
-    {label:"الإدارة والصلاحيات", href:"/admin", adminOnly:true},
-    {label:"إدارة النظام", href:"/system.html", adminOnly:true},
-    {label:"المراجعة والاعتماد", href:"/reviews", adminOnly:true}
+    {label:"الرئيسية", href:"/", icon:"⌂"},
+    {label:"تقرير جديد", href:"/report", icon:"✎", hideFor:["viewer"]},
+    {label:"أرشيف التقارير", href:"/archive", icon:"▤"},
+    {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
+    {label:"التقرير السنوي", href:"/annual", icon:"◔"},
+    {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
+    {label:"التقرير الأسبوعي", href:"/weekly", icon:"≋"},
+    {label:"البحث المتقدم", href:"/search", icon:"⌕"},
+    {label:"التقرير الإداري", href:"/managerial", icon:"▧"},
+    {label:"الإدارة والصلاحيات", href:"/admin", icon:"◇", adminOnly:true},
+    {label:"إدارة النظام", href:"/system.html", icon:"⚙", adminOnly:true},
+    {label:"المراجعة والاعتماد", href:"/reviews", icon:"✓", adminOnly:true}
   ];
 
   function currentPath(){
@@ -49,7 +49,7 @@
       return true;
     }).map(item=>{
       const active=(path===item.href || (item.href!=="/" && path.startsWith(item.href))) ? " active" : "";
-      return `<a class="minya-menu-item${active}" href="${item.href}"><span>${item.label}</span><b aria-hidden="true">‹</b></a>`;
+      return `<a class="minya-menu-item${active}" href="${item.href}"><span class="minya-menu-label"><i class="minya-menu-symbol" aria-hidden="true">${item.icon}</i><span>${item.label}</span></span><b aria-hidden="true">‹</b></a>`;
     }).join("");
 
     wrap.append(btn,menu);
