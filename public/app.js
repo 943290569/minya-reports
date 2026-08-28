@@ -1,58 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-logout-polish";
-
-(function ensureUniversalLogoutButton(){
-  function mount(){
-    if(document.getElementById("minyaUniversalLogoutBtn")) return;
-    const btn=document.createElement("button");
-    btn.type="button";
-    btn.id="minyaUniversalLogoutBtn";
-    btn.textContent="خروج";
-    btn.setAttribute("aria-label","تسجيل الخروج");
-    Object.assign(btn.style,{
-      position:"fixed",
-      top:"16px",
-      left:"22px",
-      zIndex:"2147483647",
-      display:"inline-flex",
-      alignItems:"center",
-      justifyContent:"center",
-      gap:"6px",
-      minWidth:"74px",
-      minHeight:"38px",
-      padding:"7px 14px",
-      color:"#fff",
-      background:"rgba(255,255,255,.10)",
-      border:"1px solid rgba(255,255,255,.28)",
-      borderRadius:"9px",
-      fontSize:"14px",
-      fontWeight:"700",
-      lineHeight:"1",
-      cursor:"pointer",
-      boxShadow:"0 2px 8px rgba(0,0,0,.12)",
-      backdropFilter:"blur(4px)",
-      transition:"background .18s ease,border-color .18s ease,transform .18s ease"
-    });
-    btn.onmouseenter=()=>{
-      btn.style.background="rgba(255,255,255,.18)";
-      btn.style.borderColor="rgba(255,255,255,.38)";
-    };
-    btn.onmouseleave=()=>{
-      btn.style.background="rgba(255,255,255,.10)";
-      btn.style.borderColor="rgba(255,255,255,.28)";
-      btn.style.transform="translateY(0)";
-    };
-    btn.onmousedown=()=>{ btn.style.transform="translateY(1px)"; };
-    btn.onmouseup=()=>{ btn.style.transform="translateY(0)"; };
-    btn.onclick=async()=>{
-      try{ await fetch("/api/auth/logout",{method:"POST"}); }
-      finally{ location.replace("/login.html"); }
-    };
-    (document.body||document.documentElement).appendChild(btn);
-  }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",mount,{once:true});
-  else mount();
-})();
+const MINYA_ASSET_VERSION = "3.2.0-logout-nav";
 
 [
   "js/app-auth.js",
