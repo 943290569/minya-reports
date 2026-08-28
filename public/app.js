@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-logout-nav";
+const MINYA_ASSET_VERSION = "3.2.0-viewer-fix";
 
 [
   "js/app-auth.js",
