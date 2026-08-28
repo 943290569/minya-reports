@@ -340,7 +340,7 @@ function getFullReport(reportId, includeAttachmentData = false) {
 function buildBackupObject() {
   const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id, true));
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
-  return { system: "Minya Landfill System", version: "3.1.0", exported_at: new Date().toISOString(), reports, maintenance };
+  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance };
 }
 let lastAutomaticBackupAt = 0;
 const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;
@@ -374,7 +374,7 @@ function writeAutomaticBackup(reason = "auto", force = false) {
 
 app.get("/api/health", (req, res) => {
   const integrity = db.pragma("integrity_check", { simple: true });
-  res.json({ ok: true, system: "Minya Landfill System V3.1 Stable", database: "SQLite", version: "3.1.0", integrity });
+  res.json({ ok: true, system: "Minya Landfill System V3.2 Stable", database: "SQLite", version: "3.2.0", integrity });
 });
 
 app.get("/api/auth/status", (req, res) => {
@@ -385,11 +385,11 @@ app.get("/api/auth/status", (req, res) => {
 app.post("/api/auth/setup", (req, res) => {
   if (db.prepare(`SELECT COUNT(*) AS count FROM users`).get().count > 0) return res.status(409).json({ ok:false,message:"تم إعداد النظام مسبقًا" });
   const { username, display_name, password } = req.body;
-  if (!username || !password || String(password).length < 8) return res.status(400).json({ ok:false,message:"اسم المستخدم وكلمة مرور من 8 أحرف على الأقل مطلوبة" });
+  if (!username || !password || String(password).length < 8) return res.status(400).json({ok:false,message:"اسم المستخدم وكلمة مرور من 8 أحرف على الأقل مطلوبة"});
   const salt = newSalt();
   const result = db.prepare(`INSERT INTO users (username,display_name,password_hash,salt,role) VALUES (?,?,?,?, 'admin')`).run(String(username).trim(), String(display_name || username).trim(), hashPassword(password,salt), salt);
   audit({ id: result.lastInsertRowid, username }, "SETUP_ADMIN", "user", result.lastInsertRowid, "Initial administrator created");
-  res.json({ ok:true,message:"تم إنشاء حساب المدير" });
+  res.json({ok:true,message:"تم إنشاء حساب المدير"});
 });
 app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body;
