@@ -1,7 +1,77 @@
 // Minya Landfill app loader
-// Hide the raw single-page report markup until page-mode finishes selecting the requested view.
-document.documentElement.style.visibility = "hidden";
-const MINYA_ASSET_VERSION = "3.2.0-no-route-flash";
+const MINYA_ASSET_VERSION = "3.2.0-loading-message";
+
+(function mountMinyaLoadingScreen(){
+  const messages = [
+    "لا تنسَ ذكر الله",
+    "صلِّ على النبي ﷺ",
+    "سبحان الله وبحمده",
+    "الحمد لله",
+    "لا إله إلا الله"
+  ];
+
+  const chosen = messages[Math.floor(Math.random() * messages.length)];
+
+  if (document.body) {
+    document.body.style.opacity = "0";
+  }
+
+  const style = document.createElement("style");
+  style.id = "minyaLoadingStyle";
+  style.textContent = `
+    #minyaLoadingScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #f7fbf9 0%, #eef6f2 100%);
+      direction: rtl;
+      font-family: Tahoma, Arial, sans-serif;
+    }
+    #minyaLoadingScreen .minya-loading-card {
+      text-align: center;
+      padding: 28px 36px;
+    }
+    #minyaLoadingScreen .minya-loading-message {
+      margin: 0;
+      color: #176b4f;
+      font-size: clamp(30px, 5vw, 54px);
+      font-weight: 800;
+      line-height: 1.45;
+      letter-spacing: -.4px;
+    }
+    #minyaLoadingScreen .minya-loading-dot {
+      width: 8px;
+      height: 8px;
+      margin: 20px auto 0;
+      border-radius: 50%;
+      background: #176b4f;
+      animation: minyaLoadingPulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes minyaLoadingPulse {
+      from { opacity: .25; transform: scale(.85); }
+      to { opacity: .85; transform: scale(1.15); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #minyaLoadingScreen .minya-loading-dot { animation: none; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const screen = document.createElement("div");
+  screen.id = "minyaLoadingScreen";
+  screen.innerHTML = `
+    <div class="minya-loading-card">
+      <p class="minya-loading-message">${chosen}</p>
+      <div class="minya-loading-dot" aria-hidden="true"></div>
+    </div>
+  `;
+
+  (document.body || document.documentElement).appendChild(screen);
+})();
 
 [
   "js/app-auth.js",
@@ -62,16 +132,24 @@ const MINYA_ASSET_VERSION = "3.2.0-no-route-flash";
 });
 
 function revealMinyaApp(){
-  document.documentElement.style.visibility = "visible";
+  const body = document.body;
+  if (body) {
+    body.style.transition = "opacity .16s ease";
+    body.style.opacity = "1";
+  }
+
+  const screen = document.getElementById("minyaLoadingScreen");
+  if (screen) screen.remove();
+
+  const style = document.getElementById("minyaLoadingStyle");
+  if (style) style.remove();
 }
 
-// page-mode registers its DOMContentLoaded handler while the scripts above are loaded,
-// so this listener runs afterwards and reveals only the already-selected page.
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", revealMinyaApp, { once: true });
 } else {
   revealMinyaApp();
 }
 
-// Safety fallback: never leave the application hidden if another script fails unexpectedly.
+// Safety fallback: never leave the application blocked if another script fails unexpectedly.
 setTimeout(revealMinyaApp, 1800);
