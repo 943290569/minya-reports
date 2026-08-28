@@ -45,20 +45,32 @@
       display:"inline-flex",
       alignItems:"center",
       justifyContent:"center",
-      minWidth:"auto",
-      minHeight:"34px",
-      padding:"6px 10px",
+      minWidth:"68px",
+      minHeight:"36px",
+      padding:"7px 13px",
       margin:"0",
-      color:"#ffffff",
-      background:"rgba(255,255,255,.08)",
-      border:"1px solid rgba(255,255,255,.20)",
-      borderRadius:"8px",
+      color:"rgba(255,255,255,.94)",
+      background:"rgba(255,255,255,.07)",
+      border:"1px solid rgba(255,255,255,.18)",
+      borderRadius:"9px",
       fontSize:"13px",
       fontWeight:"600",
       lineHeight:"1",
+      letterSpacing:"0",
       cursor:"pointer",
-      boxShadow:"none"
+      boxShadow:"0 1px 3px rgba(0,0,0,.08)",
+      transition:"background .18s ease,border-color .18s ease,box-shadow .18s ease"
     });
+    btn.onmouseenter=()=>{
+      btn.style.background="rgba(255,255,255,.13)";
+      btn.style.borderColor="rgba(255,255,255,.28)";
+      btn.style.boxShadow="0 2px 6px rgba(0,0,0,.10)";
+    };
+    btn.onmouseleave=()=>{
+      btn.style.background="rgba(255,255,255,.07)";
+      btn.style.borderColor="rgba(255,255,255,.18)";
+      btn.style.boxShadow="0 1px 3px rgba(0,0,0,.08)";
+    };
 
     if(btn.parentElement!==nav) nav.appendChild(btn);
   }
