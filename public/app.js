@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-mobile-vertical-menu-v1";
+const MINYA_ASSET_VERSION = "3.2.0-professional-polish-v2";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -137,7 +137,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "hero-clarity.css",
   "desktop-nav-hero.css",
   "final-ui-stabilize.css",
-  "mobile-vertical-menu.css"
+  "mobile-vertical-menu.css",
+  "ui-polish-v2.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
