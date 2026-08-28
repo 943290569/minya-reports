@@ -19,7 +19,12 @@
     applyRoleNavigation(user);
 
     if(!window.__MINYA_ROLE_OBSERVER__){
-      const observer=new MutationObserver(()=>applyRoleNavigation(user));
+      const observer=new MutationObserver(()=>{
+        applyRoleNavigation(user);
+        if(!document.getElementById("minyaUserBox")){
+          setupAuthenticatedUI(user);
+        }
+      });
       observer.observe(document.body,{childList:true,subtree:true});
       window.__MINYA_ROLE_OBSERVER__=observer;
     }
