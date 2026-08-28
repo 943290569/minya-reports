@@ -1,0 +1,63 @@
+/* Dashboard metrics value fix — screen only */
+@media screen {
+  .dashboard-metrics .dashboard-metric-card strong {
+    display: block !important;
+    position: relative !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 7px 0 3px !important;
+    padding: 0 !important;
+    color: #20372d !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: clamp(23px, 2vw, 30px) !important;
+    font-weight: 900 !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0 !important;
+    text-indent: 0 !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-metrics .dashboard-metric-card strong::before,
+  .dashboard-metrics .dashboard-metric-card strong::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .dashboard-metrics .dashboard-metric-card > span {
+    display: block !important;
+    color: #66766e !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1.35 !important;
+  }
+
+  .dashboard-metrics .dashboard-metric-card > small {
+    display: block !important;
+    margin-top: 1px !important;
+    color: #8a9891 !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  .dashboard-metrics .dashboard-metric-card {
+    min-height: 104px !important;
+    padding: 14px 16px !important;
+    overflow: hidden !important;
+  }
+
+  @media (max-width: 760px) {
+    .dashboard-metrics .dashboard-metric-card strong {
+      font-size: 22px !important;
+    }
+    .dashboard-metrics .dashboard-metric-card {
+      min-height: 94px !important;
+      padding: 12px !important;
+    }
+  }
+}
