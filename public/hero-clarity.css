@@ -1,0 +1,51 @@
+/* Home hero text clarity — screen only */
+@media screen {
+  .dashboard-hero {
+    background-image:
+      linear-gradient(90deg, rgba(7,38,28,.97) 0%, rgba(12,52,39,.93) 48%, rgba(16,63,47,.76) 100%),
+      url('https://images.unsplash.com/photo-1770068511770-827727c2e433?auto=format&fit=crop&fm=jpg&q=72&w=1800') !important;
+    background-blend-mode: normal !important;
+  }
+
+  .dashboard-hero::after {
+    background:
+      linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.18)),
+      radial-gradient(circle at 70% 40%, transparent 0 24%, rgba(0,0,0,.10) 70%) !important;
+  }
+
+  .dashboard-hero h2 {
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,.42) !important;
+  }
+
+  .dashboard-hero p {
+    color: rgba(255,255,255,.92) !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,.36) !important;
+  }
+
+  .dashboard-kicker,
+  .dashboard-today-state {
+    color: rgba(236,248,242,.95) !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,.32) !important;
+  }
+
+  .dashboard-today-state {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 7px 12px !important;
+    border-radius: 999px !important;
+    background: rgba(8,35,27,.38) !important;
+    border: 1px solid rgba(255,255,255,.18) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  @media (max-width: 700px) {
+    .dashboard-hero {
+      background-image:
+        linear-gradient(90deg, rgba(7,38,28,.98), rgba(12,52,39,.90)),
+        url('https://images.unsplash.com/photo-1770068511770-827727c2e433?auto=format&fit=crop&fm=jpg&q=68&w=1000') !important;
+    }
+  }
+}
