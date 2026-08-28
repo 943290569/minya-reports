@@ -485,6 +485,92 @@ app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{ const now=n
 
 
 
+
+app.get("/api/annual-summary", requireAuth, (req, res) => {
+  try {
+    const year = String(req.query.year || "").trim();
+
+    if (!/^\d{4}$/.test(year)) {
+      return res.status(400).json({
+        ok: false,
+        message: "السنة غير صالحة"
+      });
+    }
+
+    const reports = db.prepare(`
+      SELECT
+        id,
+        report_date,
+        report_no,
+        total_waste_tons,
+        total_trucks,
+        total_diesel
+      FROM daily_reports
+      WHERE report_date >= ?
+        AND report_date <= ?
+      ORDER BY report_date ASC
+    `).all(`${year}-01-01`, `${year}-12-31`);
+
+    const years = db.prepare(`
+      SELECT DISTINCT substr(report_date, 1, 4) AS year
+      FROM daily_reports
+      WHERE length(report_date) >= 4
+      ORDER BY year DESC
+    `).all()
+      .map(row => String(row.year || ""))
+      .filter(value => /^\d{4}$/.test(value));
+
+    const months = Array.from({ length: 12 }, (_, index) => {
+      const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+
+      const rows = reports.filter(report =>
+        String(report.report_date || "").startsWith(`${month}-`)
+      );
+
+      return {
+        month,
+        days: rows.length,
+        waste: rows.reduce(
+          (sum, report) => sum + Number(report.total_waste_tons || 0), 0
+        ),
+        trucks: rows.reduce(
+          (sum, report) => sum + Number(report.total_trucks || 0), 0
+        ),
+        diesel: rows.reduce(
+          (sum, report) => sum + Number(report.total_diesel || 0), 0
+        )
+      };
+    });
+
+    const summary = months.reduce(
+      (out, month) => {
+        out.days += month.days;
+        out.waste += month.waste;
+        out.trucks += month.trucks;
+        out.diesel += month.diesel;
+        return out;
+      },
+      { days: 0, waste: 0, trucks: 0, diesel: 0 }
+    );
+
+    res.json({
+      ok: true,
+      year,
+      years,
+      reports,
+      months,
+      summary
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "تعذر تحميل التقرير السنوي",
+      error: error.message
+    });
+  }
+});
+
 app.get("/api/monthly-summary", requireAuth, (req, res) => {
   try {
     const month = String(req.query.month || "").trim();

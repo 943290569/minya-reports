@@ -12,6 +12,7 @@
   "js/app-print-annual.js",
   "js/app-annual-comparison.js",
   "js/app-annual-insights.js",
+  "js/app-annual-loader.js",
   "js/app-archive-search.js",
   "js/app-archive-pagination.js",
   "js/page-mode.js",

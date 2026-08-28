@@ -74,7 +74,9 @@
     const archive = document.getElementById("archiveSection");
     if (archive) archive.classList.remove("hidden");
 
-    if (page === "monthly" && typeof window.loadMonthlyArchiveData === "function") {
+    if (page === "annual" && typeof window.loadAnnualArchiveData === "function") {
+      setTimeout(() => window.loadAnnualArchiveData(), 50);
+    } else if (page === "monthly" && typeof window.loadMonthlyArchiveData === "function") {
       setTimeout(() => window.loadMonthlyArchiveData(false), 50);
     } else if (typeof loadArchive === "function") {
       setTimeout(() => loadArchive(false), 50);

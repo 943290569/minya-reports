@@ -326,6 +326,10 @@ setupMonthlyExportButton();
 ========================================================= */
 
 function getArchiveYears() {
+  if (Array.isArray(window.annualAvailableYears) && window.annualAvailableYears.length) {
+    return [...window.annualAvailableYears];
+  }
+
   return [...new Set(
     archiveReports
       .map((report) => String(report.report_date || "").slice(0, 4))
