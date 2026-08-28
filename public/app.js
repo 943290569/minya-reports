@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-calm-theme-v1";
+const MINYA_ASSET_VERSION = "3.2.0-modern-ui-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -158,5 +158,4 @@ if (document.readyState === "loading") {
   revealMinyaApp();
 }
 
-// Safety fallback: never leave the application blocked if another script fails unexpectedly.
 setTimeout(revealMinyaApp, 1200);
