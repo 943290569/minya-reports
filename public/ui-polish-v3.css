@@ -17,7 +17,6 @@
       font-size: 12px !important;
     }
 
-    /* Remove decorative symbols from desktop tabs only */
     .top-header nav a::before,
     .top-header nav .app-nav-link::before {
       content: none !important;
@@ -25,16 +24,17 @@
     }
   }
 
-  /* Hero: one continuous surface, no visual block on the left */
+  /* Hero: continuous professional surface with no pseudo-element artifacts */
   .dashboard-hero {
     isolation: isolate !important;
-    min-height: 184px !important;
-    padding: 20px 24px !important;
+    min-height: 170px !important;
+    padding: 18px 26px !important;
     border-radius: 20px !important;
+    overflow: hidden !important;
     background:
-      radial-gradient(circle at 83% 22%, rgba(255,255,255,.075), transparent 24%),
-      radial-gradient(circle at 18% 80%, rgba(255,255,255,.035), transparent 23%),
-      linear-gradient(122deg, #103f31 0%, #17634c 52%, #258262 100%) !important;
+      radial-gradient(circle at 88% 16%, rgba(255,255,255,.085), transparent 24%),
+      radial-gradient(circle at 12% 88%, rgba(255,255,255,.04), transparent 22%),
+      linear-gradient(118deg, #103f31 0%, #17634c 52%, #278768 100%) !important;
     box-shadow: 0 14px 32px rgba(16,63,49,.13) !important;
   }
 
@@ -45,35 +45,15 @@
     backdrop-filter: none !important;
   }
 
-  .dashboard-hero::before {
-    content: "" !important;
-    position: absolute !important;
-    inset: 0 !important;
-    border-radius: inherit !important;
-    background:
-      linear-gradient(90deg, rgba(6,37,28,.08), transparent 36%, rgba(255,255,255,.025)) !important;
-    opacity: 1 !important;
-    pointer-events: none !important;
-    z-index: -1 !important;
-  }
-
+  /* Disable older decorative layers completely */
+  .dashboard-hero::before,
   .dashboard-hero::after {
-    content: "♻" !important;
-    position: absolute !important;
-    left: 54px !important;
-    bottom: -24px !important;
-    width: auto !important;
-    height: auto !important;
-    border-radius: 0 !important;
-    background: none !important;
-    color: rgba(255,255,255,.045) !important;
-    font: 400 118px/1 Arial, sans-serif !important;
-    pointer-events: none !important;
-    z-index: -1 !important;
+    content: none !important;
+    display: none !important;
   }
 
   .dashboard-hero h2 {
-    font-size: clamp(27px, 2.55vw, 35px) !important;
+    font-size: clamp(27px, 2.5vw, 34px) !important;
     margin-bottom: 4px !important;
   }
 
@@ -83,29 +63,26 @@
   }
 
   .dashboard-primary-action {
-    min-height: 44px !important;
-    padding: 9px 16px !important;
+    min-height: 42px !important;
+    padding: 8px 15px !important;
     border-radius: 11px !important;
     font-size: 13.5px !important;
+    margin-left: 18px !important;
   }
 
   .dashboard-today-state {
-    margin-top: 8px !important;
+    margin-top: 7px !important;
     padding: 6px 11px !important;
   }
 
   /* Mobile keeps the vertical menu and its useful symbols */
   @media (max-width: 760px) {
     .dashboard-hero {
-      min-height: 184px !important;
+      min-height: 176px !important;
       padding: 17px !important;
-    }
-
-    .dashboard-hero::after {
-      left: 10px !important;
-      bottom: -16px !important;
-      font-size: 84px !important;
-      color: rgba(255,255,255,.04) !important;
+      background:
+        radial-gradient(circle at 86% 12%, rgba(255,255,255,.075), transparent 26%),
+        linear-gradient(130deg, #103f31 0%, #17634c 58%, #278768 100%) !important;
     }
 
     .dashboard-hero h2 {
@@ -116,6 +93,7 @@
       min-height: 42px !important;
       padding: 8px 13px !important;
       font-size: 13px !important;
+      margin-left: 0 !important;
     }
   }
 }
