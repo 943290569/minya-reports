@@ -6,6 +6,7 @@ const crypto = require("crypto");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5001);
+const HOST = process.env.HOST || "0.0.0.0";
 
 const dataDir = process.env.MINYA_DATA_DIR ? path.resolve(process.env.MINYA_DATA_DIR) : (process.env.RAILWAY_ENVIRONMENT ? "/data" : __dirname);
 const uploadsDir = path.join(dataDir, "uploads");
@@ -669,4 +670,4 @@ app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html"))
 const appPages=["/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin"];
 appPages.forEach(route=>app.get(route,(req,res)=>res.sendFile(path.join(__dirname,"public","index.html"))));
 
-app.listen(PORT, () => console.log(`Minya Landfill V3 running on http://localhost:${PORT}`));
+app.listen(PORT, HOST, () => console.log(`Minya Landfill V3 running on http://${HOST}:${PORT}`));
