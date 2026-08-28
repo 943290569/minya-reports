@@ -5,6 +5,16 @@ const fs = require("fs");
 const crypto = require("crypto");
 
 const app = express();
+
+app.disable("x-powered-by");
+
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
 const PORT = Number(process.env.PORT || 5001);
 const HOST = process.env.HOST || "0.0.0.0";
 const COOKIE_SECURE =
