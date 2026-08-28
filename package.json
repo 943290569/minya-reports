@@ -1,6 +1,6 @@
 {
   "name": "minya-landfill-system",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Minya Landfill daily, monthly, annual and management reporting system",
   "main": "server.js",
   "scripts": {
