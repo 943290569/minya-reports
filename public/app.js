@@ -1,5 +1,7 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-loading-message";
+const MINYA_ASSET_VERSION = "3.2.0-loading-message-v2";
+const MINYA_LOADING_STARTED_AT = Date.now();
+const MINYA_LOADING_MIN_MS = 700;
 
 (function mountMinyaLoadingScreen(){
   const messages = [
@@ -11,10 +13,6 @@ const MINYA_ASSET_VERSION = "3.2.0-loading-message";
   ];
 
   const chosen = messages[Math.floor(Math.random() * messages.length)];
-
-  if (document.body) {
-    document.body.style.opacity = "0";
-  }
 
   const style = document.createElement("style");
   style.id = "minyaLoadingStyle";
@@ -30,6 +28,8 @@ const MINYA_ASSET_VERSION = "3.2.0-loading-message";
       background: linear-gradient(135deg, #f7fbf9 0%, #eef6f2 100%);
       direction: rtl;
       font-family: Tahoma, Arial, sans-serif;
+      opacity: 1;
+      visibility: visible;
     }
     #minyaLoadingScreen .minya-loading-card {
       text-align: center;
@@ -63,6 +63,8 @@ const MINYA_ASSET_VERSION = "3.2.0-loading-message";
 
   const screen = document.createElement("div");
   screen.id = "minyaLoadingScreen";
+  screen.setAttribute("role", "status");
+  screen.setAttribute("aria-live", "polite");
   screen.innerHTML = `
     <div class="minya-loading-card">
       <p class="minya-loading-message">${chosen}</p>
@@ -70,7 +72,8 @@ const MINYA_ASSET_VERSION = "3.2.0-loading-message";
     </div>
   `;
 
-  (document.body || document.documentElement).appendChild(screen);
+  // Keep the loading overlay independent from body content so it can never be hidden with it.
+  document.documentElement.appendChild(screen);
 })();
 
 [
@@ -132,17 +135,20 @@ const MINYA_ASSET_VERSION = "3.2.0-loading-message";
 });
 
 function revealMinyaApp(){
-  const body = document.body;
-  if (body) {
-    body.style.transition = "opacity .16s ease";
-    body.style.opacity = "1";
-  }
+  const elapsed = Date.now() - MINYA_LOADING_STARTED_AT;
+  const delay = Math.max(0, MINYA_LOADING_MIN_MS - elapsed);
 
-  const screen = document.getElementById("minyaLoadingScreen");
-  if (screen) screen.remove();
+  setTimeout(() => {
+    const screen = document.getElementById("minyaLoadingScreen");
+    if (screen) {
+      screen.style.transition = "opacity .18s ease";
+      screen.style.opacity = "0";
+      setTimeout(() => screen.remove(), 190);
+    }
 
-  const style = document.getElementById("minyaLoadingStyle");
-  if (style) style.remove();
+    const style = document.getElementById("minyaLoadingStyle");
+    if (style) setTimeout(() => style.remove(), 200);
+  }, delay);
 }
 
 if (document.readyState === "loading") {
