@@ -1,7 +1,7 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-loading-message-v3";
+const MINYA_ASSET_VERSION = "3.2.0-loading-message-v4";
 const MINYA_LOADING_STARTED_AT = Date.now();
-const MINYA_LOADING_MIN_MS = 300;
+const MINYA_LOADING_MIN_MS = 150;
 
 (function mountMinyaLoadingScreen(){
   const messages = [
@@ -49,7 +49,7 @@ const MINYA_LOADING_MIN_MS = 300;
       margin: 20px auto 0;
       border-radius: 50%;
       background: #176b4f;
-      animation: minyaLoadingPulse .7s ease-in-out infinite alternate;
+      animation: minyaLoadingPulse .5s ease-in-out infinite alternate;
     }
     @keyframes minyaLoadingPulse {
       from { opacity: .25; transform: scale(.85); }
@@ -140,13 +140,13 @@ function revealMinyaApp(){
   setTimeout(() => {
     const screen = document.getElementById("minyaLoadingScreen");
     if (screen) {
-      screen.style.transition = "opacity .12s ease";
+      screen.style.transition = "opacity .08s ease";
       screen.style.opacity = "0";
-      setTimeout(() => screen.remove(), 130);
+      setTimeout(() => screen.remove(), 90);
     }
 
     const style = document.getElementById("minyaLoadingStyle");
-    if (style) setTimeout(() => style.remove(), 140);
+    if (style) setTimeout(() => style.remove(), 100);
   }, delay);
 }
 
@@ -157,4 +157,4 @@ if (document.readyState === "loading") {
 }
 
 // Safety fallback: never leave the application blocked if another script fails unexpectedly.
-setTimeout(revealMinyaApp, 1400);
+setTimeout(revealMinyaApp, 1200);
