@@ -252,6 +252,64 @@ button,
 .monthly-chart-bar { background: linear-gradient(180deg, #5d947b, #347258) !important; box-shadow: none !important; }
 .message:not(:empty) { background: #eef5f2 !important; border-color: #d8e6df !important; color: #355747 !important; box-shadow: none !important; }
 
+/* Report editor density refinements based on the live layout */
+body[data-page="report"] .container {
+  margin-top: 18px !important;
+  margin-bottom: 22px !important;
+}
+
+body[data-page="report"] .panel {
+  padding: 16px 18px !important;
+  margin-bottom: 14px !important;
+  border-radius: 17px !important;
+}
+
+body[data-page="report"] .panel > h2 {
+  margin-bottom: 13px !important;
+}
+
+body[data-page="report"] .form-grid {
+  gap: 11px 13px !important;
+}
+
+body[data-page="report"] table th,
+body[data-page="report"] table td {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+body[data-page="report"] table input,
+body[data-page="report"] table select {
+  min-height: 36px !important;
+  margin-top: 0 !important;
+  padding: 6px 9px !important;
+  border-radius: 9px !important;
+}
+
+body[data-page="report"] textarea {
+  min-height: 92px !important;
+}
+
+body[data-page="report"] .daily-summary {
+  gap: 10px !important;
+}
+
+body[data-page="report"] .daily-summary > div {
+  min-height: 76px !important;
+  padding: 11px 13px !important;
+}
+
+body[data-page="report"] section.actions {
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+body[data-page="report"] #saveBtn {
+  min-height: 42px !important;
+  padding: 9px 22px !important;
+}
+
 /* Keep executive cards compact on tablet widths instead of stacking too early */
 @media (min-width: 701px) and (max-width: 900px) {
   .executive-year-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
@@ -278,4 +336,7 @@ button,
   .executive-year-grid { grid-template-columns: 1fr !important; }
   .executive-comparison-grid { grid-template-columns: 1fr 1fr !important; }
   .executive-trend-bars { height: 100px !important; }
+  body[data-page="report"] .panel { padding: 14px !important; }
+  body[data-page="report"] table input,
+  body[data-page="report"] table select { min-height: 38px !important; }
 }
