@@ -1,5 +1,49 @@
 /* Minya Landfill — compact refinement layer, screen only */
 @media screen {
+  /* Keep page position stable between routes */
+  html {
+    scrollbar-gutter: stable !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .top-header,
+  main.container {
+    max-width: 100% !important;
+  }
+
+  /* Archive must scroll internally instead of widening the whole page */
+  #archiveSection,
+  .monthly-report,
+  #annualSummarySection,
+  .archive-filters,
+  .archive-summary {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #archiveSection table,
+  .monthly-report table,
+  #annualSummarySection table {
+    max-width: 100% !important;
+  }
+
+  #archiveSection .table-wrap,
+  #archiveSection .archive-table-wrap,
+  .monthly-table-wrap,
+  .annual-table-wrap,
+  .v3-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+  }
+
   /* Shorter overall pages */
   .container {
     margin-top: 16px !important;
