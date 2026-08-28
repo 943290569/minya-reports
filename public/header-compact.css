@@ -1,0 +1,38 @@
+/* Compact header height refinement — screen only */
+@media screen {
+  .top-header {
+    min-height: 104px !important;
+    padding-top: 10px !important;
+    padding-bottom: 8px !important;
+  }
+
+  @media (max-width: 1100px) {
+    .top-header {
+      min-height: 112px !important;
+      padding: 10px 16px 8px !important;
+    }
+
+    .top-header nav {
+      margin-top: 6px !important;
+    }
+
+    .minya-user-box {
+      bottom: 48px !important;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .top-header {
+      min-height: 108px !important;
+      padding: 8px 12px 7px !important;
+    }
+
+    .top-header nav {
+      margin-top: 5px !important;
+    }
+
+    .minya-user-box {
+      bottom: 46px !important;
+    }
+  }
+}
