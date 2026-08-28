@@ -42,7 +42,10 @@
       logout.textContent="خروج";
 
       box.append(name,role,logout);
-      header.appendChild(box);
+
+      const path=location.pathname.replace(/\/+$/,"") || "/";
+      const target=path==="/" ? (header.querySelector("nav") || header) : header;
+      target.appendChild(box);
 
       logout.onclick=async()=>{
         try{
