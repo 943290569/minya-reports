@@ -1,4 +1,5 @@
 // Minya Landfill app loader
+const MINYA_ASSET_VERSION = "3.2.0-logout-all";
 [
   "js/app-auth.js",
   "js/app-core.js",
@@ -31,7 +32,8 @@
   "js/app-report-workflow.js",
   "js/app-reviews.js"
 ].forEach((src) => {
-  document.write(`<script src="${src}"><\/script>`);
+  const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
+  document.write(`<script src="${versionedSrc}"><\/script>`);
 });
 
 [
@@ -48,10 +50,10 @@
   "report-responsive.css",
   "archive-mobile.css"
 ].forEach((href) => {
-  if (!document.querySelector(`link[href="${href}"]`)) {
+  if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href;
+    link.href = `${href}?v=${MINYA_ASSET_VERSION}`;
     document.head.appendChild(link);
   }
 });
