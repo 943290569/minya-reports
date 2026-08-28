@@ -3,11 +3,29 @@
   const publicPages = ['/login.html', '/setup.html'];
   if (publicPages.includes(location.pathname)) return;
 
-  async function logout() {
+  async function logout(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const btn = document.getElementById('minyaLogoutBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'جاري الخروج...';
+    }
+
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+    } catch (_) {
+      // Redirect anyway; auth guard will handle any stale session state on reload.
     } finally {
-      window.location.replace('/login.html');
+      window.location.href = '/login.html';
     }
   }
 
@@ -33,7 +51,8 @@
       lineHeight: '1',
       cursor: 'pointer',
       boxShadow: '0 1px 3px rgba(0,0,0,.08)',
-      transition: 'background .15s ease,border-color .15s ease'
+      transition: 'background .15s ease,border-color .15s ease',
+      pointerEvents: 'auto'
     });
 
     btn.onmouseenter = () => {
@@ -50,6 +69,10 @@
     const header = document.querySelector('.top-header');
     if (!header) return false;
 
+    if (getComputedStyle(header).position === 'static') {
+      header.style.position = 'relative';
+    }
+
     let btn = document.getElementById('minyaLogoutBtn');
     if (!btn) {
       btn = document.createElement('button');
@@ -57,11 +80,10 @@
       btn.id = 'minyaLogoutBtn';
       btn.textContent = 'خروج';
       btn.setAttribute('aria-label', 'تسجيل الخروج');
+      btn.addEventListener('click', logout, true);
     }
 
-    btn.onclick = logout;
     styleButton(btn);
-
     if (btn.parentElement !== header) header.appendChild(btn);
     return true;
   }
@@ -71,13 +93,6 @@
     setTimeout(ensureButton, 50);
     setTimeout(ensureButton, 150);
     setTimeout(ensureButton, 400);
-    setTimeout(ensureButton, 900);
-
-    if (!window.__MINYA_LOGOUT_HEADER_OBSERVER__) {
-      const observer = new MutationObserver(() => ensureButton());
-      observer.observe(document.documentElement, { childList: true, subtree: true });
-      window.__MINYA_LOGOUT_HEADER_OBSERVER__ = observer;
-    }
   }
 
   if (document.readyState === 'loading') {
