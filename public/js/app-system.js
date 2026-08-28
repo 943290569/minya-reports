@@ -4,6 +4,7 @@
 
 (function () {
   const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+  const STORAGE_REFERENCE_BYTES = 20 * 1024 * 1024 * 1024;
 
   function formatNumber(value) {
     return numberFormat.format(Number(value || 0));
@@ -19,7 +20,8 @@
     const value = Number(bytes || 0);
     if (value < 1024) return `${formatNumber(value)} B`;
     if (value < 1024 * 1024) return `${formatNumber(value / 1024)} KB`;
-    return `${formatNumber(value / (1024 * 1024))} MB`;
+    if (value < 1024 * 1024 * 1024) return `${formatNumber(value / (1024 * 1024))} MB`;
+    return `${formatNumber(value / (1024 * 1024 * 1024))} GB`;
   }
 
   function formatDateTime(value) {
@@ -115,10 +117,11 @@
   async function loadStorage() {
     try {
       const data = await api("/api/system/storage");
-      const percent = Math.max(0, Number(data.percent ?? data.usage_percent ?? 0));
-      const referenceLimit = Number(data.reference_limit_bytes || 0);
       const totalBytes = Number(data.total_bytes || 0);
+      const referenceLimit = STORAGE_REFERENCE_BYTES;
+      const percent = referenceLimit ? Math.max(0, Number(((totalBytes / referenceLimit) * 100).toFixed(2))) : 0;
       const remaining = Math.max(0, referenceLimit - totalBytes);
+      const level = percent >= 85 ? "danger" : percent >= 70 ? "warning" : "ok";
 
       setText("storageUsed", formatBytes(totalBytes));
       setText("storagePercent", `${formatNumber(percent)}%`);
@@ -132,20 +135,20 @@
       const bar = document.getElementById("storageProgressBar");
       if (bar) {
         bar.style.width = `${Math.min(percent, 100)}%`;
-        bar.dataset.level = data.level || "ok";
+        bar.dataset.level = level;
       }
 
       const state = document.getElementById("storageState");
       if (state) {
-        state.className = `storage-state ${data.level || "ok"}`;
-        state.textContent = data.level === "danger" ? "قريب من الامتلاء" : data.level === "warning" ? "تنبيه مساحة" : "المساحة طبيعية";
+        state.className = `storage-state ${level}`;
+        state.textContent = level === "danger" ? "قريب من الامتلاء" : level === "warning" ? "تنبيه مساحة" : "المساحة طبيعية";
       }
 
       const notice = document.getElementById("storageNotice");
       if (notice) {
-        if (data.level === "danger") notice.textContent = "تنبيه: الاستخدام تجاوز 85% من مرجع 512MB. نزّل نسخة خارجية وراجع المرفقات والنسخ القديمة.";
-        else if (data.level === "warning") notice.textContent = "الاستخدام تجاوز 70% من مرجع 512MB. يفضل متابعة نمو المرفقات والنسخ الاحتياطية.";
-        else notice.textContent = "الاستخدام ضمن المستوى الطبيعي. 512MB هو مرجع مراقبة فقط ولا يتم حذف البيانات تلقائيًا.";
+        if (level === "danger") notice.textContent = "تنبيه: الاستخدام تجاوز 85% من مرجع 20 GB. نزّل نسخة خارجية وراجع المرفقات والنسخ القديمة.";
+        else if (level === "warning") notice.textContent = "الاستخدام تجاوز 70% من مرجع 20 GB. يفضل متابعة نمو المرفقات والنسخ الاحتياطية.";
+        else notice.textContent = "الاستخدام ضمن المستوى الطبيعي. 20 GB هو مرجع مراقبة آمن ضمن القرص الحالي ولا يتم حذف البيانات تلقائيًا.";
       }
     } catch (error) {
       console.error("فشل تحميل مساحة التخزين", error);
