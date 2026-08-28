@@ -78,30 +78,39 @@
 
   async function loadDashboardData() {
     const status = document.getElementById("dashboardDataStatus");
+
     try {
       if (status) status.textContent = "جاري تحميل المؤشرات...";
 
-      const response = await fetch("/api/reports");
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل البيانات");
-
-      const reports = Array.isArray(data.reports) ? data.reports : [];
       const dates = getLocalDateParts();
-      const todayReport = reports.find((report) => String(report.report_date || "") === dates.today) || null;
-      const monthReports = reports.filter((report) => String(report.report_date || "").startsWith(dates.month));
-      const yearReports = reports.filter((report) => String(report.report_date || "").startsWith(`${dates.year}-`));
 
-      const sum = (items, key) => items.reduce((total, item) => total + Number(item[key] || 0), 0);
+      const params = new URLSearchParams({
+        today: dates.today,
+        month: dates.month,
+        year: dates.year,
+      });
+
+      const response = await fetch(`/api/dashboard?${params}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || "فشل تحميل البيانات");
+      }
+
+      const todayReport = data.today || null;
+      const month = data.month || {};
+      const year = data.year || {};
+      const recent = Array.isArray(data.recent) ? data.recent : [];
 
       const values = {
         todayWaste: todayReport ? Number(todayReport.total_waste_tons || 0) : 0,
         todayTrucks: todayReport ? Number(todayReport.total_trucks || 0) : 0,
         todayDiesel: todayReport ? Number(todayReport.total_diesel || 0) : 0,
-        monthWaste: sum(monthReports, "total_waste_tons"),
-        monthTrucks: sum(monthReports, "total_trucks"),
-        monthDays: monthReports.length,
-        yearWaste: sum(yearReports, "total_waste_tons"),
-        yearReports: yearReports.length,
+        monthWaste: Number(month.waste || 0),
+        monthTrucks: Number(month.trucks || 0),
+        monthDays: Number(month.days || 0),
+        yearWaste: Number(year.waste || 0),
+        yearReports: Number(year.reports || 0),
       };
 
       Object.entries(values).forEach(([key, value]) => {
@@ -114,15 +123,13 @@
         todayState.textContent = todayReport
           ? `تم تسجيل تقرير اليوم ${dates.today}`
           : `لا يوجد تقرير محفوظ لليوم ${dates.today}`;
+
         todayState.classList.toggle("has-report", Boolean(todayReport));
       }
 
       const recentBody = document.getElementById("dashboardRecentReports");
-      if (recentBody) {
-        const recent = [...reports]
-          .sort((a, b) => String(b.report_date || "").localeCompare(String(a.report_date || "")))
-          .slice(0, 5);
 
+      if (recentBody) {
         recentBody.innerHTML = recent.length
           ? recent.map((report) => `
               <tr>
@@ -136,7 +143,14 @@
           : '<tr><td colspan="5">لا توجد تقارير محفوظة حتى الآن.</td></tr>';
       }
 
-      if (status) status.textContent = `آخر تحديث: ${new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}`;
+      if (status) {
+        status.textContent =
+          `آخر تحديث: ${new Date().toLocaleTimeString("ar-EG", {
+            hour: "2-digit",
+            minute: "2-digit"
+          })}`;
+      }
+
     } catch (error) {
       console.error("فشل تحميل لوحة المعلومات", error);
       if (status) status.textContent = "تعذر تحميل مؤشرات لوحة المعلومات.";

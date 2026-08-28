@@ -473,6 +473,75 @@ app.delete("/api/security/sessions/:id", requireRole("admin"), (req,res)=>{ cons
 app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); const u=db.prepare(`SELECT username FROM users WHERE id=?`).get(id); if(!u) return res.status(404).json({ok:false,message:"المستخدم غير موجود"}); const r=db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id); audit(req.user,"LOGOUT_USER_ALL","user",id,`${u.username}:${r.changes}`); res.json({ok:true,count:r.changes,message:"تم إنهاء جميع جلسات المستخدم"}); });
 app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{ const now=new Date().toISOString(); const s=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(now); const cutoff=new Date(Date.now()-30*24*60*60*1000).toISOString(); const a=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(cutoff); audit(req.user,"SECURITY_CLEANUP","system","security",`sessions:${s.changes},attempts:${a.changes}`); res.json({ok:true,sessions_removed:s.changes,attempts_removed:a.changes}); });
 
+
+app.get("/api/dashboard", requireAuth, (req, res) => {
+  try {
+    const today = String(req.query.today || "").trim();
+    const month = String(req.query.month || "").trim();
+    const year = String(req.query.year || "").trim();
+
+    const todayReport = today
+      ? db.prepare(`
+          SELECT id, report_date, report_no,
+                 total_waste_tons, total_trucks, total_diesel
+          FROM daily_reports
+          WHERE report_date = ?
+          LIMIT 1
+        `).get(today)
+      : null;
+
+    const monthSummary = month
+      ? db.prepare(`
+          SELECT
+            COUNT(*) AS days,
+            COALESCE(SUM(total_waste_tons),0) AS waste,
+            COALESCE(SUM(total_trucks),0) AS trucks
+          FROM daily_reports
+          WHERE report_date LIKE ?
+        `).get(`${month}-%`)
+      : { days: 0, waste: 0, trucks: 0 };
+
+    const yearSummary = year
+      ? db.prepare(`
+          SELECT
+            COUNT(*) AS reports,
+            COALESCE(SUM(total_waste_tons),0) AS waste
+          FROM daily_reports
+          WHERE report_date LIKE ?
+        `).get(`${year}-%`)
+      : { reports: 0, waste: 0 };
+
+    const recent = db.prepare(`
+      SELECT id, report_date, report_no,
+             total_waste_tons, total_trucks, total_diesel
+      FROM daily_reports
+      ORDER BY report_date DESC
+      LIMIT 5
+    `).all();
+
+    res.json({
+      ok: true,
+      today: todayReport || null,
+      month: {
+        days: Number(monthSummary.days || 0),
+        waste: Number(monthSummary.waste || 0),
+        trucks: Number(monthSummary.trucks || 0)
+      },
+      year: {
+        reports: Number(yearSummary.reports || 0),
+        waste: Number(yearSummary.waste || 0)
+      },
+      recent
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "تعذر تحميل لوحة المعلومات",
+      error: error.message
+    });
+  }
+});
+
 app.get("/api/archive", requireAuth, (req,res) => {
   try {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
