@@ -73,7 +73,12 @@
   function showArchive() {
     const archive = document.getElementById("archiveSection");
     if (archive) archive.classList.remove("hidden");
-    if (typeof loadArchive === "function") setTimeout(() => loadArchive(false), 50);
+
+    if (page === "monthly" && typeof window.loadMonthlyArchiveData === "function") {
+      setTimeout(() => window.loadMonthlyArchiveData(false), 50);
+    } else if (typeof loadArchive === "function") {
+      setTimeout(() => loadArchive(false), 50);
+    }
   }
 
   async function loadDashboardData() {

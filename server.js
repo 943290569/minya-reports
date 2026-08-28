@@ -484,6 +484,82 @@ app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>
 app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{ const now=new Date().toISOString(); const s=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(now); const cutoff=new Date(Date.now()-30*24*60*60*1000).toISOString(); const a=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(cutoff); audit(req.user,"SECURITY_CLEANUP","system","security",`sessions:${s.changes},attempts:${a.changes}`); res.json({ok:true,sessions_removed:s.changes,attempts_removed:a.changes}); });
 
 
+
+app.get("/api/monthly-summary", requireAuth, (req, res) => {
+  try {
+    const month = String(req.query.month || "").trim();
+
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        ok: false,
+        message: "الشهر غير صالح"
+      });
+    }
+
+    const reports = db.prepare(`
+      SELECT
+        id,
+        report_date,
+        report_no,
+        total_waste_tons,
+        total_trucks,
+        total_diesel
+      FROM daily_reports
+      WHERE report_date LIKE ?
+      ORDER BY report_date ASC
+    `).all(`${month}-%`);
+
+    const summary = reports.reduce((out, report) => {
+      out.waste += Number(report.total_waste_tons || 0);
+      out.trucks += Number(report.total_trucks || 0);
+      out.diesel += Number(report.total_diesel || 0);
+      return out;
+    }, {
+      waste: 0,
+      trucks: 0,
+      diesel: 0
+    });
+
+    let maxReport = null;
+    let minReport = null;
+
+    if (reports.length) {
+      maxReport = reports.reduce((a, b) =>
+        Number(b.total_waste_tons || 0) > Number(a.total_waste_tons || 0) ? b : a
+      );
+
+      minReport = reports.reduce((a, b) =>
+        Number(b.total_waste_tons || 0) < Number(a.total_waste_tons || 0) ? b : a
+      );
+    }
+
+    res.json({
+      ok: true,
+      month,
+      days: reports.length,
+      reports,
+      summary: {
+        waste: summary.waste,
+        waste_average: reports.length ? summary.waste / reports.length : 0,
+        trucks: summary.trucks,
+        trucks_average: reports.length ? summary.trucks / reports.length : 0,
+        diesel: summary.diesel,
+        diesel_average: reports.length ? summary.diesel / reports.length : 0,
+        max_waste: maxReport ? Number(maxReport.total_waste_tons || 0) : 0,
+        max_waste_date: maxReport ? maxReport.report_date : null,
+        min_waste: minReport ? Number(minReport.total_waste_tons || 0) : 0,
+        min_waste_date: minReport ? minReport.report_date : null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "تعذر تحميل التقرير الشهري",
+      error: error.message
+    });
+  }
+});
+
 app.get("/api/dashboard", requireAuth, (req, res) => {
   try {
     const today = String(req.query.today || "").trim();

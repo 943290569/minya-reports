@@ -368,3 +368,67 @@ async function loadArchive(showStatus = true) {
     showMessage("حدث خطأ أثناء تحميل الأرشيف");
   }
 }
+
+/* =========================================================
+   V3.2 - تحميل بيانات الشهر فقط
+========================================================= */
+
+async function loadMonthlyArchiveData(showStatus = false) {
+  try {
+    const monthInput = document.getElementById("archiveMonthFilter");
+    if (!monthInput) return;
+
+    if (!monthInput.value) {
+      const now = new Date();
+      monthInput.value =
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    const month = monthInput.value;
+    const previousMonth = getPreviousMonthForArchive(month);
+
+    if (showStatus) showMessage("جاري تحميل التقرير الشهري...");
+
+    const [currentResponse, previousResponse] = await Promise.all([
+      fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(month)}`),
+      fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(previousMonth)}`)
+    ]);
+
+    const current = await currentResponse.json();
+    const previous = await previousResponse.json();
+
+    if (!currentResponse.ok || !current.ok) {
+      throw new Error(current.message || "فشل تحميل الشهر");
+    }
+
+    archiveReports = [
+      ...(current.reports || []),
+      ...((previousResponse.ok && previous.ok) ? (previous.reports || []) : [])
+    ];
+
+    renderArchiveReports();
+    await updateMonthlySummary();
+
+    if (typeof renderMonthlyMetricChart === "function") {
+      await renderMonthlyMetricChart("waste");
+    }
+
+    document.getElementById("archiveSection")?.classList.remove("hidden");
+
+    if (showStatus) {
+      showMessage(`تم تحميل ${current.days || 0} يومًا من الشهر`);
+    }
+  } catch (error) {
+    console.error(error);
+    showMessage("تعذر تحميل التقرير الشهري");
+  }
+}
+
+document.getElementById("archiveMonthFilter")?.addEventListener("change", () => {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/monthly") {
+    loadMonthlyArchiveData(false);
+  }
+});
+
+window.loadMonthlyArchiveData = loadMonthlyArchiveData;
