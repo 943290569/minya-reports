@@ -1,0 +1,91 @@
+/* =========================================================
+   Final review polish - screen only
+   Applies the visual notes gathered from the full page review.
+========================================================= */
+@media screen {
+  /* Preserve the intentionally compact site width. */
+  body { --review-green:#17634c; --review-line:#dfe8e3; --review-soft:#f7faf8; }
+
+  /* Home: slightly stronger readability without enlarging the layout. */
+  .page-home .dashboard-metric-card small,
+  .page-home .dashboard-card small,
+  .page-home .executive-card small { font-size:11px!important; line-height:1.45!important; }
+  .page-home .dashboard-metric-card strong { font-size:clamp(20px,2vw,27px)!important; }
+  .page-home .executive-dashboard,
+  .page-home .executive-overview { margin-top:10px!important; }
+  .page-home .annual-trend-bar,
+  .page-home .executive-trend-bar { min-height:3px!important; opacity:.95!important; }
+  .page-home .dashboard-grid { gap:11px!important; }
+
+  /* Daily report: compact vertical rhythm while keeping inputs readable. */
+  .page-report main.container > .panel { margin-bottom:9px!important; }
+  .page-report .panel { padding-top:12px!important; padding-bottom:12px!important; }
+  .page-report #equipmentTable th,
+  .page-report #equipmentTable td { padding-top:4px!important; padding-bottom:4px!important; }
+  .page-report #equipmentTable input,
+  .page-report #equipmentTable select { min-height:27px!important; padding-top:3px!important; padding-bottom:3px!important; }
+  .page-report #notes { min-height:82px!important; }
+  .page-report section.actions { gap:10px!important; margin-top:10px!important; }
+  .page-report #reportAttachmentsPanel { margin-top:9px!important; }
+
+  /* Archive: keep the same compact width but improve hierarchy. */
+  .page-archive .archive-summary strong { font-size:22px!important; }
+  .page-archive #annualSummarySection { padding:15px!important; }
+  .page-archive #annualSummarySection h3 { margin-bottom:10px!important; }
+  .page-archive #annualSummaryCards { gap:9px!important; }
+  .page-archive #annualSummaryCards > div { min-height:76px!important; padding:10px!important; }
+  .page-archive #archiveTable th,
+  .page-archive #archiveTable td { padding-top:7px!important; padding-bottom:7px!important; }
+  .page-archive #archiveTable td:last-child { white-space:nowrap; }
+  .page-archive #archiveTable td:last-child button { min-width:43px!important; margin:2px!important; padding:5px 8px!important; }
+  .page-archive .archive-pagination,
+  .page-archive #archivePagination { margin-top:10px!important; font-weight:700!important; }
+
+  /* Monthly: slightly tighter summary and chart, annual block visually secondary. */
+  .page-monthly .monthly-summary { gap:9px!important; }
+  .page-monthly .monthly-summary > div { min-height:78px!important; padding:10px 8px!important; }
+  .page-monthly .monthly-chart { padding:11px!important; }
+  .page-monthly #annualSummarySection { margin-top:14px!important; opacity:.97; }
+  .page-monthly .modern-chart-grid { opacity:.72!important; }
+  .page-monthly .modern-chart-axis-label,
+  .page-monthly .modern-chart-x-label { font-weight:700!important; }
+
+  /* Annual: keep the mature layout; only tighten very large spacing. */
+  .page-annual #annualSummarySection { padding-top:14px!important; }
+  .page-annual #annualSummaryCards { gap:9px!important; }
+
+  /* Equipment: make latest-date and maintenance count easier to scan. */
+  .page-equipment #eqBody td:nth-child(2) small { display:block!important; margin-top:4px!important; font-size:10px!important; color:#6f7d76!important; font-weight:700!important; }
+  .page-equipment #eqBody td:last-child { font-weight:800!important; color:#245f4b!important; }
+  .page-equipment .v3-table td { padding-top:8px!important; padding-bottom:8px!important; }
+
+  /* Weekly: compact, balanced cards and range title. */
+  .page-weekly #weekCards { gap:10px!important; }
+  .page-weekly #weekTitle { font-size:18px!important; }
+
+  /* Search: unify action button with the rest of the system. */
+  .page-search #sBody button { min-width:62px!important; min-height:31px!important; padding:5px 12px!important; border-radius:8px!important; background:var(--review-green)!important; color:#fff!important; border:0!important; font-weight:800!important; }
+
+  /* Managerial: one footer only, clearer report spacing. */
+  .page-managerial .managerial-sign { display:none!important; }
+  .page-managerial .managerial-title { margin:18px 0 14px!important; }
+  .page-managerial #mCards { gap:10px!important; }
+
+  /* Admin: stronger balance and cleaner audit density. */
+  .page-admin .v3-admin-grid { grid-template-columns:1fr!important; }
+  .page-admin .v3-admin-grid > .v3-panel { max-width:none!important; }
+  .page-admin #auditBody td { padding-top:7px!important; padding-bottom:7px!important; }
+  .page-admin .users-manage-table td { padding-top:8px!important; padding-bottom:8px!important; }
+  .page-admin .manage-user-btn { min-width:58px!important; }
+
+  /* General v3 button consistency. */
+  .v3-page .v3-primary,
+  .v3-page .v3-link-btn,
+  .v3-page button { border-radius:8px; }
+
+  @media (max-width:760px) {
+    .page-report #equipmentTable { min-width:720px; }
+    .page-archive #archiveTable td:last-child { white-space:normal; }
+    .page-home .dashboard-grid { gap:9px!important; }
+  }
+}
