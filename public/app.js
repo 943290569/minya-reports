@@ -1,5 +1,43 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-logout-all";
+const MINYA_ASSET_VERSION = "3.2.0-logout-loader";
+
+(function ensureUniversalLogoutButton(){
+  function mount(){
+    if(document.getElementById("minyaUniversalLogoutBtn")) return;
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.id="minyaUniversalLogoutBtn";
+    btn.textContent="خروج";
+    btn.setAttribute("aria-label","تسجيل الخروج");
+    Object.assign(btn.style,{
+      position:"fixed",
+      top:"14px",
+      left:"18px",
+      zIndex:"2147483647",
+      display:"block",
+      visibility:"visible",
+      opacity:"1",
+      minWidth:"86px",
+      minHeight:"42px",
+      padding:"9px 16px",
+      color:"#fff",
+      background:"#b42318",
+      border:"1px solid rgba(255,255,255,.45)",
+      borderRadius:"10px",
+      fontWeight:"700",
+      cursor:"pointer",
+      boxShadow:"0 5px 14px rgba(0,0,0,.22)"
+    });
+    btn.onclick=async()=>{
+      try{ await fetch("/api/auth/logout",{method:"POST"}); }
+      finally{ location.replace("/login.html"); }
+    };
+    (document.body||document.documentElement).appendChild(btn);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",mount,{once:true});
+  else mount();
+})();
+
 [
   "js/app-auth.js",
   "js/app-core.js",
