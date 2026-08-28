@@ -7,6 +7,9 @@ const crypto = require("crypto");
 const app = express();
 const PORT = Number(process.env.PORT || 5001);
 const HOST = process.env.HOST || "0.0.0.0";
+const COOKIE_SECURE =
+  process.env.COOKIE_SECURE === "true" ||
+  Boolean(process.env.RAILWAY_ENVIRONMENT);
 
 const dataDir = process.env.MINYA_DATA_DIR ? path.resolve(process.env.MINYA_DATA_DIR) : (process.env.RAILWAY_ENVIRONMENT ? "/data" : __dirname);
 const uploadsDir = path.join(dataDir, "uploads");
@@ -401,7 +404,7 @@ app.post("/api/auth/login", (req, res) => {
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 7*24*60*60*1000).toISOString();
   db.prepare(`INSERT INTO sessions (user_id,token_hash,expires_at) VALUES (?,?,?)`).run(user.id, tokenHash(token), expires);
-  res.setHeader("Set-Cookie", `minya_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${process.env.RAILWAY_ENVIRONMENT ? "; Secure" : ""}`);
+  res.setHeader("Set-Cookie", `minya_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${COOKIE_SECURE ? "; Secure" : ""}`);
   audit(user, "LOGIN", "user", user.id, `Login from ${ip}`);
   res.json({ ok:true,user:{ id:user.id,username:user.username,display_name:user.display_name,role:user.role } });
 });

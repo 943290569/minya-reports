@@ -1,1 +1,24 @@
 .user-management-panel{margin-top:18px}.user-management-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.user-management-head>div>span{font-size:11px;font-weight:900;letter-spacing:.12em;color:#176b4f}.user-management-head h3{margin:4px 0}.user-management-head p{margin:0;color:#667085}.user-management-head button,.manage-user-btn,.user-edit-head button,.user-edit-actions button{border:1px solid #d0d5dd;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer}.users-manage-msg{min-height:22px;margin:10px 0;color:#7a4f00;font-weight:700}.users-manage-table td small{display:block;color:#667085;margin-top:3px}.user-role,.user-state{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.user-role.role-admin{background:#ecfdf3;color:#176b4f}.user-role.role-editor{background:#eff8ff;color:#175cd3}.user-role.role-viewer{background:#f2f4f7;color:#475467}.user-state.active{background:#ecfdf3;color:#067647}.user-state.inactive{background:#fef3f2;color:#b42318}.user-edit-card{margin-top:16px;padding:16px;border:1px solid #d0d5dd;border-radius:14px;background:#fcfcfd}.user-edit-card.hidden{display:none}.user-edit-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.user-edit-head span{display:block;font-size:12px;color:#667085}.user-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}.user-edit-grid label{display:flex;flex-direction:column;gap:6px;font-weight:800}.user-edit-grid input,.user-edit-grid select{padding:10px;border:1px solid #d0d5dd;border-radius:8px;background:#fff}.user-edit-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.user-edit-actions .v3-primary{background:#176b4f;color:#fff;border-color:#176b4f}.user-edit-actions button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:720px){.user-edit-grid{grid-template-columns:1fr}.users-manage-table{min-width:680px}.user-management-head button,.manage-user-btn{min-height:42px}}@media(max-width:520px){.user-management-head{flex-direction:column}.user-management-head>button{width:100%;min-height:44px}.users-manage-table{min-width:620px}.users-manage-table th,.users-manage-table td{padding:10px 8px}.manage-user-btn{min-height:42px;padding:8px 12px}.user-edit-card{padding:13px}.user-edit-head{align-items:flex-start;flex-direction:column}.user-edit-head button{width:100%;min-height:42px}.user-edit-grid input,.user-edit-grid select{min-height:44px}.user-edit-actions{display:grid;grid-template-columns:1fr}.user-edit-actions button{width:100%;min-height:44px}}@media print{.user-management-panel{display:none!important}}
+/* V3.2 fix - ensure admin action button text is visible */
+.user-management-panel button,
+.user-management-panel .v3-primary,
+.user-management-panel .manage-user-btn,
+.user-management-panel .user-edit-actions button,
+.user-management-panel .user-edit-head button {
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  color: #1f2937 !important;
+  text-indent: 0 !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+  min-width: max-content;
+}
+
+.user-management-panel .v3-primary,
+#addUserBtn,
+#saveNewUser,
+#saveUserEdit {
+  color: #ffffff !important;
+  background: #176b4f !important;
+}
+
