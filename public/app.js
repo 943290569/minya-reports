@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-user-email-v1";
+const MINYA_ASSET_VERSION = "3.2.0-final-review-polish-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -120,7 +120,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "js/app-header-menu.js",
   "js/app-ui-enhancements.js",
   "js/app-english-digits.js",
-  "js/app-date-display.js"
+  "js/app-date-display.js",
+  "js/app-review-polish.js"
 ].forEach((src) => {
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
   document.write(`<script src="${versionedSrc}"><\/script>`);
@@ -152,7 +153,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "ui-polish-v2.css",
   "ui-polish-v3.css",
   "system-polish-final.css",
-  "dashboard-metrics-fix.css"
+  "dashboard-metrics-fix.css",
+  "review-polish.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
