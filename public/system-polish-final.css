@@ -1,0 +1,222 @@
+/* System-wide final polish — screen only */
+@media screen {
+  :root {
+    --ui-green:#17634c;
+    --ui-green-strong:#104a39;
+    --ui-green-soft:#eaf4ef;
+    --ui-text:#263a31;
+    --ui-muted:#74837b;
+    --ui-line:#dfe8e3;
+    --ui-surface:#fff;
+    --ui-warn:#9a6b18;
+    --ui-warn-bg:#fff8e8;
+    --ui-danger:#a83d3d;
+    --ui-danger-bg:#fff0f0;
+    --ui-ok:#216b50;
+    --ui-ok-bg:#ecf7f2;
+  }
+
+  /* Consistent internal page identity */
+  .v3-page,
+  .reviews-page,
+  .admin-page,
+  .system-page { color:var(--ui-text) !important; }
+
+  .v3-hero,
+  .reviews-hero {
+    min-height:118px !important;
+    padding:19px 22px !important;
+    margin-bottom:14px !important;
+    border-radius:18px !important;
+  }
+  .v3-hero > div,
+  .reviews-hero > div { max-width:900px !important; }
+  .v3-hero h2,
+  .reviews-hero h2 { margin:2px 0 5px !important; font-size:clamp(22px,2.2vw,29px) !important; }
+  .v3-hero p,
+  .reviews-hero p { margin:0 !important; line-height:1.55 !important; font-size:12.5px !important; }
+  .v3-hero > div > span,
+  .reviews-hero > div > span { font-size:9.5px !important; letter-spacing:1.1px !important; font-weight:800 !important; }
+
+  /* Panels / cards */
+  .v3-panel,
+  .admin-panel,
+  .reviews-panel,
+  .system-card,
+  .security-card,
+  .audit-card {
+    border:1px solid var(--ui-line) !important;
+    border-radius:16px !important;
+    background:rgba(255,255,255,.99) !important;
+    box-shadow:0 5px 16px rgba(20,48,37,.045) !important;
+  }
+  .v3-panel { padding:16px 18px !important; margin-bottom:13px !important; }
+  .v3-panel h3,
+  .admin-panel h3,
+  .reviews-panel h3 { color:var(--ui-text) !important; margin-top:0 !important; }
+
+  /* KPI language */
+  .v3-kpis { gap:10px !important; }
+  .v3-kpis > div {
+    min-height:82px !important;
+    padding:12px 14px !important;
+    border:1px solid var(--ui-line) !important;
+    border-radius:14px !important;
+    background:linear-gradient(180deg,#fff,#fbfcfc) !important;
+    box-shadow:0 1px 3px rgba(20,48,37,.035) !important;
+    transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease !important;
+  }
+  @media (hover:hover) and (pointer:fine) {
+    .v3-kpis > div:hover,
+    .dashboard-card:hover { transform:translateY(-2px) !important; }
+  }
+  .v3-kpis span { color:var(--ui-muted) !important; font-size:11px !important; }
+  .v3-kpis strong { color:#20372d !important; font-size:23px !important; }
+  .v3-kpis small { color:#8a9891 !important; }
+
+  /* Unified controls */
+  .v3-filter,
+  .v3-search-grid,
+  .v3-form-grid { gap:10px !important; }
+  .v3-filter {
+    padding:12px !important;
+    margin-bottom:13px !important;
+    border:1px solid var(--ui-line) !important;
+    border-radius:14px !important;
+    background:#f8faf9 !important;
+  }
+  .v3-filter input,
+  .v3-filter select,
+  .v3-search-grid input,
+  .v3-search-grid select,
+  .v3-form-grid input,
+  .v3-form-grid select { min-height:39px !important; }
+
+  button,
+  .v3-link-btn,
+  .v3-primary {
+    font-family:inherit !important;
+  }
+  .v3-primary,
+  .v3-filter button,
+  #eqLoad,#weekLoad,#sGo,#mLoad {
+    min-height:39px !important;
+    padding:7px 15px !important;
+    border-radius:10px !important;
+    border:1px solid var(--ui-green) !important;
+    background:var(--ui-green) !important;
+    color:#fff !important;
+    box-shadow:none !important;
+  }
+  .v3-link-btn,
+  #mPrint {
+    min-height:39px !important;
+    padding:7px 14px !important;
+    border-radius:10px !important;
+    border:1px solid #d7e2dc !important;
+    background:#fff !important;
+    color:#365448 !important;
+    box-shadow:none !important;
+  }
+  @media (hover:hover) and (pointer:fine) {
+    .v3-primary:hover,
+    .v3-filter button:hover { background:var(--ui-green-strong) !important; border-color:var(--ui-green-strong) !important; }
+    .v3-link-btn:hover,#mPrint:hover { background:#f3f7f5 !important; }
+  }
+
+  /* Tables */
+  .v3-table-wrap { border-radius:13px !important; overflow:auto !important; }
+  .v3-table { margin:0 !important; border-radius:13px !important; }
+  .v3-table th { padding:9px 10px !important; font-size:10.8px !important; }
+  .v3-table td { padding:9px 10px !important; font-size:11.5px !important; }
+
+  /* Empty-state rows: replaces the visual feel of blank tables */
+  td.minya-empty-state,
+  .minya-empty-state {
+    height:auto !important;
+    min-height:84px !important;
+    padding:24px 16px !important;
+    text-align:center !important;
+    color:#7b8982 !important;
+    background:linear-gradient(180deg,#fbfcfc,#f7faf8) !important;
+    font-weight:700 !important;
+  }
+  td.minya-empty-state::before {
+    content:"○";
+    display:block;
+    margin:0 auto 6px;
+    color:#91aa9e;
+    font-size:25px;
+    line-height:1;
+    font-weight:400;
+  }
+
+  /* Status and feedback language */
+  .minya-ui-message {
+    display:block !important;
+    width:fit-content !important;
+    max-width:100% !important;
+    margin:9px 0 0 !important;
+    padding:7px 10px !important;
+    border-radius:9px !important;
+    border:1px solid transparent !important;
+    font-size:11.5px !important;
+    font-weight:700 !important;
+  }
+  .minya-ui-message.is-success { color:var(--ui-ok) !important; background:var(--ui-ok-bg) !important; border-color:#cee7dc !important; }
+  .minya-ui-message.is-warning { color:var(--ui-warn) !important; background:var(--ui-warn-bg) !important; border-color:#efdfb8 !important; }
+  .minya-ui-message.is-error { color:var(--ui-danger) !important; background:var(--ui-danger-bg) !important; border-color:#efcece !important; }
+
+  .status-pill {
+    display:inline-flex !important;
+    align-items:center !important;
+    min-height:23px !important;
+    padding:3px 8px !important;
+    border-radius:999px !important;
+    border:1px solid #d9e4de !important;
+    background:#f5f8f6 !important;
+    color:#52645b !important;
+    font-size:10.5px !important;
+    font-weight:800 !important;
+  }
+
+  /* Dashboard activity area: cleaner hierarchy */
+  .dashboard-section-head small { color:#89968f !important; }
+  .dashboard-recent-panel,
+  .executive-dashboard { border-color:var(--ui-line) !important; }
+
+  /* Review / alert badges remain meaningful, not decorative */
+  .review-badge,
+  .notification-badge,
+  .pending-badge { box-shadow:none !important; }
+
+  /* Mobile: keep vertical menu and make all content genuinely usable */
+  @media (max-width:760px) {
+    .container { width:calc(100% - 18px) !important; margin-top:12px !important; }
+    .v3-hero,.reviews-hero { min-height:0 !important; padding:15px !important; border-radius:14px !important; }
+    .v3-hero h2,.reviews-hero h2 { font-size:21px !important; }
+    .v3-hero p,.reviews-hero p { font-size:11.5px !important; }
+    .v3-panel { padding:13px !important; border-radius:13px !important; }
+    .v3-filter { display:grid !important; grid-template-columns:1fr !important; padding:10px !important; }
+    .v3-filter > *,
+    .v3-filter label,
+    .v3-filter input,
+    .v3-filter select,
+    .v3-filter button,
+    .v3-link-btn { width:100% !important; min-width:0 !important; }
+    .v3-search-grid,.v3-form-grid { grid-template-columns:1fr !important; }
+    .v3-kpis { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:8px !important; }
+    .v3-kpis > div { min-height:76px !important; padding:10px !important; }
+    .v3-kpis strong { font-size:20px !important; }
+    .v3-table-wrap { width:100% !important; overflow-x:auto !important; -webkit-overflow-scrolling:touch !important; }
+    .v3-table { min-width:620px !important; }
+    td.minya-empty-state { min-height:72px !important; padding:19px 12px !important; }
+    .minya-ui-message { width:100% !important; box-sizing:border-box !important; }
+  }
+
+  @media (max-width:420px) {
+    .v3-kpis { grid-template-columns:1fr 1fr !important; }
+    .v3-kpis span { font-size:10px !important; }
+    .v3-kpis strong { font-size:18px !important; }
+  }
+}
