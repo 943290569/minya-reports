@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-system-polish-v1";
+const MINYA_ASSET_VERSION = "3.2.0-loading-stable-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -14,9 +14,17 @@ const MINYA_LOADING_MIN_MS = 150;
 
   const chosen = messages[Math.floor(Math.random() * messages.length)];
 
+  document.documentElement.classList.add("minya-app-loading");
+
   const style = document.createElement("style");
   style.id = "minyaLoadingStyle";
   style.textContent = `
+    html.minya-app-loading {
+      background: #f3f6f5 !important;
+    }
+    html.minya-app-loading body {
+      visibility: hidden !important;
+    }
     #minyaLoadingScreen {
       position: fixed;
       inset: 0;
@@ -29,7 +37,7 @@ const MINYA_LOADING_MIN_MS = 150;
       direction: rtl;
       font-family: Tahoma, Arial, sans-serif;
       opacity: 1;
-      visibility: visible;
+      visibility: visible !important;
     }
     #minyaLoadingScreen .minya-loading-card {
       text-align: center;
@@ -152,26 +160,36 @@ const MINYA_LOADING_MIN_MS = 150;
 });
 
 function revealMinyaApp(){
+  if (window.__MINYA_APP_REVEALED__) return;
+  window.__MINYA_APP_REVEALED__ = true;
+
   const elapsed = Date.now() - MINYA_LOADING_STARTED_AT;
   const delay = Math.max(0, MINYA_LOADING_MIN_MS - elapsed);
 
   setTimeout(() => {
-    const screen = document.getElementById("minyaLoadingScreen");
-    if (screen) {
-      screen.style.transition = "opacity .08s ease";
-      screen.style.opacity = "0";
-      setTimeout(() => screen.remove(), 90);
-    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove("minya-app-loading");
 
-    const style = document.getElementById("minyaLoadingStyle");
-    if (style) setTimeout(() => style.remove(), 100);
+        const screen = document.getElementById("minyaLoadingScreen");
+        if (screen) {
+          screen.style.transition = "opacity .10s ease";
+          screen.style.opacity = "0";
+          setTimeout(() => screen.remove(), 110);
+        }
+
+        const style = document.getElementById("minyaLoadingStyle");
+        if (style) setTimeout(() => style.remove(), 130);
+      });
+    });
   }, delay);
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", revealMinyaApp, { once: true });
-} else {
+if (document.readyState === "complete") {
   revealMinyaApp();
+} else {
+  window.addEventListener("load", revealMinyaApp, { once: true });
 }
 
-setTimeout(revealMinyaApp, 1200);
+// Safety fallback only if a resource fails to finish loading.
+setTimeout(revealMinyaApp, 3000);
