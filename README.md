@@ -1,15 +1,18 @@
-# Minya Landfill System V3.1 Stable
+# Minya Landfill System V3.2 Stable
 
 Operational and management reporting system for Al-Minya Landfill.
 
 ## Version
 
-Current stable version: **3.1.0**
+Current stable version: **3.2.0**
 
 ## Main features
 
 - Daily operational reports with archive, edit, attachments and official printing.
 - Monthly and annual summaries and printing.
+- Paginated archive with database-backed quick search.
+- Optimized monthly loading for the selected month and comparison month only.
+- Optimized annual loading for the selected year only.
 - Equipment and maintenance tracking.
 - Weekly and managerial reports.
 - Advanced report search and CSV export.
@@ -17,8 +20,10 @@ Current stable version: **3.1.0**
 - User roles: viewer, editor and admin.
 - Admin user management, sessions, audit log and security controls.
 - Full JSON backups including attachment content.
+- Automatic backup throttling to avoid redundant rapid backup files.
 - Backup validation and safe restore with pre/post restore backups.
 - SQLite integrity, storage, missing attachment and orphan-file diagnostics.
+- Security response headers and secure session-cookie support in production.
 
 ## Run
 
