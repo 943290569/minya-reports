@@ -10,12 +10,13 @@
   function formatDateTime(value) {
     if (!value) return "-";
     try {
-      return new Date(value).toLocaleString("ar-EG", {
+      return new Date(value).toLocaleString("en-GB", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     } catch {
       return String(value);
@@ -51,8 +52,8 @@
       setText("integrityNoOperations", Number(data.reports_without_operations?.length || 0));
       setText("integrityNoEquipment", Number(data.reports_without_equipment?.length || 0));
       setText("integrityExpiredSessions", Number(data.expired_sessions || 0));
-      setText("integrityLastBackup", data.latest_backup ? formatDateTime(data.latest_backup.created_at) : "لا توجد نسخة");
-      setText("integrityCheckedAt", formatDateTime(data.checked_at));
+      setText("integrityLastBackup", data.latest_backup ? String(data.latest_backup) : "لا توجد نسخة");
+      setText("integrityCheckedAt", formatDateTime(new Date().toISOString()));
 
       const issues = Array.isArray(data.issues) ? data.issues : [];
       if (!issues.length) {
@@ -62,8 +63,7 @@
 
       list.innerHTML = issues.map((issue) => `
         <div class="integrity-issue ${escapeHtml(issue.level || "warning")}">
-          <div><strong>${escapeHtml(issue.title || "ملاحظة")}</strong><small>${escapeHtml(issue.code || "")}</small></div>
-          <span>${Number(issue.count || 0)}</span>
+          <div><strong>${escapeHtml(issue.message || issue.title || "ملاحظة")}</strong><small>${escapeHtml(issue.code || "")}</small></div>
         </div>
       `).join("");
     } catch (error) {
@@ -80,8 +80,8 @@
   });
 })();
 
-if (!document.querySelector('script[src="js/app-system-restore.js"]')) {
+if (!document.querySelector('script[src^="js/app-system-restore.js"]')) {
   const restoreScript = document.createElement("script");
-  restoreScript.src = "js/app-system-restore.js";
+  restoreScript.src = "js/app-system-restore.js?v=3.2.0-final-review-polish-v1";
   document.body.appendChild(restoreScript);
 }
