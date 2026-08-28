@@ -1,0 +1,157 @@
+/* Desktop navigation + cleaner hero — screen only */
+@media screen {
+  /* Desktop: restore classic navigation as clean tabs */
+  .top-header {
+    min-height: 94px !important;
+    padding: 12px 20px 10px !important;
+  }
+
+  .top-header > div:first-child {
+    margin-inline-end: 150px !important;
+  }
+
+  .top-header h1 {
+    font-size: clamp(21px, 1.8vw, 27px) !important;
+    margin: 0 0 3px !important;
+  }
+
+  .top-header p {
+    font-size: 12px !important;
+    opacity: .72 !important;
+    margin: 0 !important;
+  }
+
+  .top-header nav,
+  .top-header nav.minya-legacy-nav-hidden {
+    display: flex !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    padding: 0 !important;
+    gap: 5px !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    scrollbar-width: none !important;
+  }
+
+  .top-header nav::-webkit-scrollbar { display: none !important; }
+
+  .top-header nav .app-nav-link,
+  .top-header nav a,
+  .top-header nav button {
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 6px 13px !important;
+    border-radius: 10px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: rgba(255,255,255,.88) !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
+  }
+
+  .top-header nav .app-nav-link:hover,
+  .top-header nav a:hover,
+  .top-header nav button:hover {
+    background: rgba(255,255,255,.08) !important;
+  }
+
+  .top-header nav .app-nav-link.active {
+    background: rgba(255,255,255,.96) !important;
+    color: #17634c !important;
+    border-color: rgba(255,255,255,.96) !important;
+  }
+
+  #minyaLogoutBtn {
+    left: 14px !important;
+    top: 13px !important;
+    width: auto !important;
+    min-width: 66px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 5px 12px !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,.065) !important;
+    border: 1px solid rgba(255,255,255,.11) !important;
+    box-shadow: none !important;
+  }
+
+  /* Hamburger menu is not used */
+  .minya-header-menu-wrap,
+  #minyaMenuButton,
+  #minyaHeaderMenu {
+    display: none !important;
+  }
+
+  /* Cleaner hero image with a calmer industrial / recycling aerial */
+  .dashboard-hero {
+    min-height: 245px !important;
+    background-image:
+      linear-gradient(90deg, rgba(7,39,29,.93) 0%, rgba(14,72,53,.80) 48%, rgba(14,72,53,.47) 100%),
+      url('https://images.unsplash.com/photo-1775673301865-11860d27573c?auto=format&fit=crop&fm=jpg&q=82&w=2200') !important;
+    background-size: cover !important;
+    background-position: center 52% !important;
+  }
+
+  .dashboard-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.18)) !important;
+    z-index: 0;
+  }
+
+  .dashboard-hero h2,
+  .dashboard-hero p,
+  .dashboard-today-state,
+  .dashboard-kicker {
+    text-shadow: 0 2px 7px rgba(0,0,0,.35) !important;
+  }
+
+  .dashboard-hero p {
+    color: rgba(255,255,255,.90) !important;
+  }
+
+  @media (max-width: 760px) {
+    .top-header {
+      min-height: 74px !important;
+      padding: 10px 12px !important;
+    }
+
+    .top-header > div:first-child {
+      margin-inline-end: 82px !important;
+    }
+
+    .top-header h1 {
+      font-size: 20px !important;
+    }
+
+    .top-header p {
+      font-size: 10.5px !important;
+    }
+
+    /* Mobile: no navigation menus */
+    .top-header nav,
+    .minya-header-menu-wrap,
+    #minyaMenuButton,
+    #minyaHeaderMenu {
+      display: none !important;
+    }
+
+    #minyaLogoutBtn {
+      left: 10px !important;
+      top: 11px !important;
+      min-width: 58px !important;
+      height: 30px !important;
+      min-height: 30px !important;
+    }
+
+    .dashboard-hero {
+      min-height: 225px !important;
+      background-position: center !important;
+    }
+  }
+}
