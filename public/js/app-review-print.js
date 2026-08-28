@@ -1,6 +1,7 @@
 /* Review-only PDF print for the current report screen. Does not modify official report printing. */
 (function () {
   const BUTTON_ID = "printUiReviewBtn";
+  const FRAME_ID = "minyaUiReviewPrintFrame";
 
   function syncFormValues(root) {
     root.querySelectorAll("input").forEach((input) => {
@@ -47,25 +48,12 @@
     return clone;
   }
 
-  function printReview() {
-    const reviewMain = buildReviewDocument();
-    if (!reviewMain) {
-      alert("تعذر تجهيز أقسام التقرير للمراجعة.");
-      return;
-    }
-
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    if (!popup) {
-      alert("اسمح بفتح النوافذ المنبثقة لطباعة ملف المراجعة.");
-      return;
-    }
-
+  function buildHtml(reviewMain) {
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
       .map((link) => `<link rel="stylesheet" href="${link.href}">`)
       .join("\n");
 
-    popup.document.open();
-    popup.document.write(`<!doctype html>
+    return `<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
@@ -74,23 +62,23 @@
 ${styles}
 <style>
   html,body{margin:0!important;padding:0!important;background:#f3f6f5!important;color:#1f2d27!important;direction:rtl!important;}
-  body{padding:14mm 10mm!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  body{padding:10mm 8mm!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
   .container{width:100%!important;max-width:none!important;margin:0 auto!important;}
-  .review-print-title{margin:0 0 18px;padding:16px 18px;background:#174b3a;color:#fff;border-radius:14px;display:flex;flex-direction:column;gap:4px;break-inside:avoid;}
-  .review-print-title strong{font-size:20px;}
-  .review-print-title span{font-size:11px;color:rgba(255,255,255,.72);}
+  .review-print-title{margin:0 0 14px;padding:14px 16px;background:#174b3a;color:#fff;border-radius:12px;display:flex;flex-direction:column;gap:3px;break-inside:avoid;}
+  .review-print-title strong{font-size:18px;}
+  .review-print-title span{font-size:10px;color:rgba(255,255,255,.72);}
   .top-header,.actions,#archiveSection,#message{display:none!important;}
   .panel,.smart-status-panel,.smart-monitoring,.dashboard-card,.daily-summary>div{break-inside:avoid;page-break-inside:avoid;}
-  .panel{margin-bottom:12px!important;padding:15px!important;border-radius:14px!important;box-shadow:none!important;}
-  .panel>h2{margin-bottom:12px!important;}
+  .panel{margin-bottom:9px!important;padding:12px!important;border-radius:11px!important;box-shadow:none!important;}
+  .panel>h2{margin-bottom:9px!important;font-size:15px!important;}
   table{width:100%!important;table-layout:auto!important;box-shadow:none!important;}
-  th,td{padding:7px 6px!important;font-size:11px!important;}
-  input,select,textarea{min-height:32px!important;padding:5px 7px!important;font-size:11px!important;background:#fff!important;}
-  textarea{min-height:72px!important;}
-  .daily-summary{gap:8px!important;}
-  .daily-summary>div{min-height:68px!important;padding:9px 10px!important;}
+  th,td{padding:5px 5px!important;font-size:10px!important;}
+  input,select,textarea{min-height:28px!important;padding:4px 6px!important;font-size:10px!important;background:#fff!important;}
+  textarea{min-height:58px!important;}
+  .daily-summary{gap:6px!important;}
+  .daily-summary>div{min-height:58px!important;padding:7px 8px!important;}
   button{display:none!important;}
-  @page{size:A4 portrait;margin:8mm;}
+  @page{size:A4 portrait;margin:7mm;}
   @media print{
     html,body{background:#f3f6f5!important;}
     .container{width:100%!important;}
@@ -98,20 +86,64 @@ ${styles}
 </style>
 </head>
 <body>${reviewMain.outerHTML}</body>
-</html>`);
-    popup.document.close();
+</html>`;
+  }
 
+  function printReview() {
+    const reviewMain = buildReviewDocument();
+    if (!reviewMain) {
+      alert("تعذر تجهيز أقسام التقرير للمراجعة.");
+      return;
+    }
+
+    const oldFrame = document.getElementById(FRAME_ID);
+    if (oldFrame) oldFrame.remove();
+
+    const frame = document.createElement("iframe");
+    frame.id = FRAME_ID;
+    frame.setAttribute("aria-hidden", "true");
+    Object.assign(frame.style, {
+      position: "fixed",
+      right: "0",
+      bottom: "0",
+      width: "1px",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none"
+    });
+    document.body.appendChild(frame);
+
+    const frameWindow = frame.contentWindow;
+    const frameDocument = frame.contentDocument || frameWindow?.document;
+    if (!frameWindow || !frameDocument) {
+      frame.remove();
+      alert("تعذر فتح معاينة الطباعة.");
+      return;
+    }
+
+    frameDocument.open();
+    frameDocument.write(buildHtml(reviewMain));
+    frameDocument.close();
+
+    let printed = false;
     const runPrint = () => {
-      try {
-        popup.focus();
-        popup.print();
-      } catch (error) {
-        console.error("Review print failed", error);
-      }
+      if (printed) return;
+      printed = true;
+      setTimeout(() => {
+        try {
+          frameWindow.focus();
+          frameWindow.print();
+        } catch (error) {
+          console.error("Review print failed", error);
+          alert("تعذر تشغيل الطباعة. حاول مرة أخرى.");
+        }
+        setTimeout(() => frame.remove(), 1500);
+      }, 450);
     };
 
-    if (popup.document.readyState === "complete") setTimeout(runPrint, 350);
-    else popup.addEventListener("load", () => setTimeout(runPrint, 350), { once: true });
+    frame.onload = runPrint;
+    setTimeout(runPrint, 900);
   }
 
   function mountButton() {
