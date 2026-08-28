@@ -470,6 +470,84 @@ app.delete("/api/security/sessions/:id", requireRole("admin"), (req,res)=>{ cons
 app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); const u=db.prepare(`SELECT username FROM users WHERE id=?`).get(id); if(!u) return res.status(404).json({ok:false,message:"المستخدم غير موجود"}); const r=db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id); audit(req.user,"LOGOUT_USER_ALL","user",id,`${u.username}:${r.changes}`); res.json({ok:true,count:r.changes,message:"تم إنهاء جميع جلسات المستخدم"}); });
 app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{ const now=new Date().toISOString(); const s=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(now); const cutoff=new Date(Date.now()-30*24*60*60*1000).toISOString(); const a=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(cutoff); audit(req.user,"SECURITY_CLEANUP","system","security",`sessions:${s.changes},attempts:${a.changes}`); res.json({ok:true,sessions_removed:s.changes,attempts_removed:a.changes}); });
 
+app.get("/api/archive", requireAuth, (req,res) => {
+  try {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(10, Number.parseInt(req.query.limit, 10) || 50));
+    const offset = (page - 1) * limit;
+
+    const q = String(req.query.q || "").trim();
+    const from = String(req.query.from || "").trim();
+    const to = String(req.query.to || "").trim();
+    const status = String(req.query.status || "").trim();
+
+    let where = " WHERE 1=1";
+    const params = [];
+
+    if (q) {
+      where += " AND (report_no LIKE ? OR notes LIKE ?)";
+      const like = `%${q}%`;
+      params.push(like, like);
+    }
+
+    if (from) {
+      where += " AND report_date >= ?";
+      params.push(from);
+    }
+
+    if (to) {
+      where += " AND report_date <= ?";
+      params.push(to);
+    }
+
+    if (["draft","pending","approved"].includes(status)) {
+      where += " AND workflow_status = ?";
+      params.push(status);
+    }
+
+    const summary = db.prepare(`
+      SELECT
+        COUNT(*) AS count,
+        COALESCE(SUM(total_waste_tons),0) AS total_waste_tons,
+        COALESCE(SUM(total_trucks),0) AS total_trucks,
+        COALESCE(SUM(total_diesel),0) AS total_diesel
+      FROM daily_reports
+      ${where}
+    `).get(...params);
+
+    const reports = db.prepare(`
+      SELECT *
+      FROM daily_reports
+      ${where}
+      ORDER BY report_date DESC
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    const total = Number(summary.count || 0);
+    const pages = Math.max(1, Math.ceil(total / limit));
+
+    res.json({
+      ok: true,
+      page,
+      limit,
+      pages,
+      count: total,
+      reports,
+      summary: {
+        total_waste_tons: Number(summary.total_waste_tons || 0),
+        total_trucks: Number(summary.total_trucks || 0),
+        total_diesel: Number(summary.total_diesel || 0)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok:false,
+      message:"تعذر تحميل الأرشيف",
+      error:error.message
+    });
+  }
+});
+
 app.get("/api/reports", requireAuth, (req, res) => {
   const reports = db.prepare(`SELECT * FROM daily_reports ORDER BY report_date DESC`).all();
   res.json({ ok: true, count: reports.length, reports });
