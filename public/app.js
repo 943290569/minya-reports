@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-header-green-gradient-v1";
+const MINYA_ASSET_VERSION = "3.2.0-account-lower-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -130,7 +130,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "calm-theme.css",
   "premium-theme.css",
   "compact-theme.css",
-  "header-tone.css"
+  "header-tone.css",
+  "account-position.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
