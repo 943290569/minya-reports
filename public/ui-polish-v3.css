@@ -1,0 +1,121 @@
+/* UI polish v3 — final screen refinements */
+@media screen {
+  /* Desktop navigation: text-first, cleaner and calmer */
+  @media (min-width: 761px) {
+    .top-header nav,
+    .top-header nav.minya-legacy-nav-hidden {
+      gap: 4px !important;
+    }
+
+    .top-header nav .app-nav-link,
+    .top-header nav a,
+    .top-header nav button {
+      min-height: 30px !important;
+      height: 30px !important;
+      padding: 4px 9px !important;
+      gap: 0 !important;
+      font-size: 12px !important;
+    }
+
+    /* Remove decorative symbols from desktop tabs only */
+    .top-header nav a::before,
+    .top-header nav .app-nav-link::before {
+      content: none !important;
+      display: none !important;
+    }
+  }
+
+  /* Hero: one continuous surface, no visual block on the left */
+  .dashboard-hero {
+    isolation: isolate !important;
+    min-height: 184px !important;
+    padding: 20px 24px !important;
+    border-radius: 20px !important;
+    background:
+      radial-gradient(circle at 83% 22%, rgba(255,255,255,.075), transparent 24%),
+      radial-gradient(circle at 18% 80%, rgba(255,255,255,.035), transparent 23%),
+      linear-gradient(122deg, #103f31 0%, #17634c 52%, #258262 100%) !important;
+    box-shadow: 0 14px 32px rgba(16,63,49,.13) !important;
+  }
+
+  .dashboard-hero > div {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .dashboard-hero::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    border-radius: inherit !important;
+    background:
+      linear-gradient(90deg, rgba(6,37,28,.08), transparent 36%, rgba(255,255,255,.025)) !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+  }
+
+  .dashboard-hero::after {
+    content: "♻" !important;
+    position: absolute !important;
+    left: 54px !important;
+    bottom: -24px !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    background: none !important;
+    color: rgba(255,255,255,.045) !important;
+    font: 400 118px/1 Arial, sans-serif !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+  }
+
+  .dashboard-hero h2 {
+    font-size: clamp(27px, 2.55vw, 35px) !important;
+    margin-bottom: 4px !important;
+  }
+
+  .dashboard-hero p {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+
+  .dashboard-primary-action {
+    min-height: 44px !important;
+    padding: 9px 16px !important;
+    border-radius: 11px !important;
+    font-size: 13.5px !important;
+  }
+
+  .dashboard-today-state {
+    margin-top: 8px !important;
+    padding: 6px 11px !important;
+  }
+
+  /* Mobile keeps the vertical menu and its useful symbols */
+  @media (max-width: 760px) {
+    .dashboard-hero {
+      min-height: 184px !important;
+      padding: 17px !important;
+    }
+
+    .dashboard-hero::after {
+      left: 10px !important;
+      bottom: -16px !important;
+      font-size: 84px !important;
+      color: rgba(255,255,255,.04) !important;
+    }
+
+    .dashboard-hero h2 {
+      font-size: 24px !important;
+    }
+
+    .dashboard-primary-action {
+      min-height: 42px !important;
+      padding: 8px 13px !important;
+      font-size: 13px !important;
+    }
+  }
+}
