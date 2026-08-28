@@ -1,5 +1,8 @@
-/* Stable header logout button — loaded after page-mode */
+/* Stable header logout button — always mounted on authenticated app pages */
 (function () {
+  const publicPages = ['/login.html', '/setup.html'];
+  if (publicPages.includes(location.pathname)) return;
+
   async function logout() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -65,21 +68,18 @@
     return true;
   }
 
-  async function init() {
-    if (location.pathname === '/login.html' || location.pathname === '/setup.html') return;
-
-    try {
-      const response = await fetch('/api/auth/status', { cache: 'no-store' });
-      const data = await response.json();
-      if (!data || !data.authenticated) return;
-    } catch (_) {
-      return;
-    }
-
+  function init() {
     ensureButton();
-    setTimeout(ensureButton, 100);
-    setTimeout(ensureButton, 350);
-    setTimeout(ensureButton, 800);
+    setTimeout(ensureButton, 50);
+    setTimeout(ensureButton, 150);
+    setTimeout(ensureButton, 400);
+    setTimeout(ensureButton, 900);
+
+    if (!window.__MINYA_LOGOUT_HEADER_OBSERVER__) {
+      const observer = new MutationObserver(() => ensureButton());
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      window.__MINYA_LOGOUT_HEADER_OBSERVER__ = observer;
+    }
   }
 
   if (document.readyState === 'loading') {
