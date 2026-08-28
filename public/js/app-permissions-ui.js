@@ -3,10 +3,11 @@
 ========================================================= */
 (function () {
   let role = null;
+  let applying = false;
 
   async function resolveRole() {
     try {
-      const response = await fetch("/api/auth/status");
+      const response = await fetch("/api/auth/status", { cache: "no-store" });
       const data = await response.json();
       if (data?.authenticated && data.user?.role) {
         role = data.user.role;
@@ -18,13 +19,13 @@
 
   function hide(el) {
     if (!el) return;
-    el.style.display = "none";
-    el.setAttribute("aria-hidden", "true");
+    if (el.style.display !== "none") el.style.display = "none";
+    if (el.getAttribute("aria-hidden") !== "true") el.setAttribute("aria-hidden", "true");
   }
 
   function disableEditorForm() {
     document.querySelectorAll("#reportFormSection input, #reportFormSection select, #reportFormSection textarea, #crewsTable input, #crewsTable select, #operationsTable input, #operationsTable select, #stationsTable input, #stationsTable select, #equipmentTable input, #equipmentTable select, #notes").forEach(el => {
-      el.disabled = true;
+      if (!el.disabled) el.disabled = true;
       el.title = "حساب قراءة فقط";
     });
     hide(document.getElementById("saveBtn")?.closest("section") || document.getElementById("saveBtn"));
@@ -44,13 +45,9 @@
     document.querySelectorAll('a[href="/admin"], a[href="/admin.html"]').forEach(link => {
       if (role !== "admin") hide(link);
     });
+
     if (role === "viewer") {
-      document.querySelectorAll('a[href="/report"]').forEach(link => {
-        if (link.classList.contains("dashboard-card")) {
-          link.querySelector("h3") && (link.querySelector("h3").textContent = "عرض التقرير اليومي");
-          link.querySelector("p") && (link.querySelector("p").textContent = "عرض بيانات التقرير اليومي دون تعديل.");
-        }
-      });
+      document.querySelectorAll('a[href="/report"]').forEach(hide);
     }
   }
 
@@ -67,18 +64,38 @@
   }
 
   function apply() {
-    if (!role) return;
-    document.documentElement.dataset.userRole = role;
-    applyNavigationPermissions();
-    applyArchivePermissions();
-    applyV3Permissions();
-    if (role === "viewer") disableEditorForm();
+    if (!role || applying) return;
+    applying = true;
+    try {
+      document.documentElement.dataset.userRole = role;
+      applyNavigationPermissions();
+      applyArchivePermissions();
+      applyV3Permissions();
+      if (role === "viewer") disableEditorForm();
+    } finally {
+      applying = false;
+    }
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
     await resolveRole();
+
+    if (role === "viewer" && (location.pathname.replace(/\/+$/, "") || "/") === "/report") {
+      location.replace("/archive");
+      return;
+    }
+
     apply();
-    const observer = new MutationObserver(() => apply());
+
+    let scheduled = false;
+    const observer = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        apply();
+      });
+    });
     observer.observe(document.body, { childList: true, subtree: true });
   });
 })();
