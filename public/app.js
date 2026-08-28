@@ -13,6 +13,7 @@
   "js/app-annual-comparison.js",
   "js/app-annual-insights.js",
   "js/app-archive-search.js",
+  "js/app-archive-pagination.js",
   "js/page-mode.js",
   "js/app-smart-status.js",
   "js/app-modern-charts.js",
