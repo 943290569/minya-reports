@@ -1,24 +1,24 @@
 /* Account position refinement — screen only */
 @media screen {
-  /* Slim account strip at the lower-left edge, slightly higher above navigation */
+  /* Stable account placement: directly below logout, safely above navigation */
   .minya-user-box {
     position: absolute !important;
-    top: auto !important;
-    bottom: 66px !important;
+    top: 44px !important;
+    bottom: auto !important;
     left: 16px !important;
     width: auto !important;
     min-width: 0 !important;
     max-width: 210px !important;
-    height: 28px !important;
-    min-height: 28px !important;
-    padding: 4px 10px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 3px 9px !important;
     gap: 6px !important;
-    border-radius: 9px !important;
-    background: rgba(255,255,255,.08) !important;
-    border: 1px solid rgba(255,255,255,.12) !important;
+    border-radius: 8px !important;
+    background: rgba(255,255,255,.07) !important;
+    border: 1px solid rgba(255,255,255,.11) !important;
     box-shadow: none !important;
     backdrop-filter: blur(8px) !important;
-    z-index: 20 !important;
+    z-index: 30 !important;
   }
 
   .minya-user-avatar {
@@ -37,7 +37,7 @@
   .minya-user-name {
     max-width: 145px !important;
     color: #fff !important;
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     font-weight: 800 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -46,13 +46,13 @@
 
   .minya-user-role {
     color: rgba(255,255,255,.62) !important;
-    font-size: 8.5px !important;
+    font-size: 8px !important;
     white-space: nowrap !important;
   }
 
   @media (max-width: 1100px) {
     .minya-user-box {
-      bottom: 64px !important;
+      top: 43px !important;
       left: 14px !important;
       max-width: 190px !important;
     }
@@ -60,15 +60,15 @@
 
   @media (max-width: 700px) {
     .minya-user-box {
-      bottom: 62px !important;
+      top: 41px !important;
       left: 10px !important;
       max-width: 170px !important;
-      height: 26px !important;
-      min-height: 26px !important;
-      padding: 3px 8px !important;
+      height: 22px !important;
+      min-height: 22px !important;
+      padding: 2px 8px !important;
     }
 
-    .minya-user-name { max-width: 112px !important; font-size: 10px !important; }
-    .minya-user-role { font-size: 8px !important; }
+    .minya-user-name { max-width: 112px !important; font-size: 9.5px !important; }
+    .minya-user-role { font-size: 7.5px !important; }
   }
 }
