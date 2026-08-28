@@ -83,6 +83,10 @@ const dbPath = path.join(dataDir, "database.db");
 const db = new Database(dbPath);
 db.pragma("foreign_keys = ON");
 db.pragma("journal_mode = WAL");
+db.pragma("synchronous = NORMAL");
+db.pragma("busy_timeout = 5000");
+db.pragma("temp_store = MEMORY");
+db.pragma("cache_size = -20000");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS daily_reports (
@@ -213,6 +217,22 @@ const reportColumns = new Set(db.pragma("table_info(daily_reports)").map((c) => 
   if (!reportColumns.has(name)) db.exec(`ALTER TABLE daily_reports ADD COLUMN ${name} ${definition}`);
 });
 
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_crews_report_id ON crews(report_id);
+  CREATE INDEX IF NOT EXISTS idx_operations_report_id ON operations(report_id);
+  CREATE INDEX IF NOT EXISTS idx_stations_report_id ON transfer_stations(report_id);
+  CREATE INDEX IF NOT EXISTS idx_equipment_report_id ON equipment(report_id);
+  CREATE INDEX IF NOT EXISTS idx_attachments_report_id ON attachments(report_id);
+  CREATE INDEX IF NOT EXISTS idx_equipment_name_report ON equipment(equipment_name, report_id);
+  CREATE INDEX IF NOT EXISTS idx_maintenance_date ON maintenance_logs(log_date);
+  CREATE INDEX IF NOT EXISTS idx_maintenance_equipment_date ON maintenance_logs(equipment_name, log_date);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+  CREATE INDEX IF NOT EXISTS idx_login_ip_time ON login_attempts(ip_address, created_at);
+  CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
+  CREATE INDEX IF NOT EXISTS idx_reports_workflow_date ON daily_reports(workflow_status, report_date);
+`);
+
 const regularJsonParser = express.json({ limit: "12mb" });
 const backupJsonParser = express.json({ limit: "50mb" });
 app.use((req,res,next) => {
@@ -308,14 +328,34 @@ function buildBackupObject() {
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
   return { system: "Minya Landfill System", version: "3.1.0", exported_at: new Date().toISOString(), reports, maintenance };
 }
-function writeAutomaticBackup(reason = "auto") {
+let lastAutomaticBackupAt = 0;
+const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;
+
+function writeAutomaticBackup(reason = "auto", force = false) {
   try {
+    const now = Date.now();
+    if (!force && now - lastAutomaticBackupAt < AUTO_BACKUP_INTERVAL_MS) return false;
+
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const filename = `minya-${reason}-${stamp}.json`;
     fs.writeFileSync(path.join(backupsDir, filename), JSON.stringify(buildBackupObject(), null, 2), "utf8");
-    const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".json")).map(name => ({ name, time: fs.statSync(path.join(backupsDir, name)).mtimeMs })).sort((a,b)=>b.time-a.time);
-    files.slice(20).forEach(f => { try { fs.unlinkSync(path.join(backupsDir, f.name)); } catch {} });
-  } catch (error) { console.error("Automatic backup failed", error); }
+
+    lastAutomaticBackupAt = now;
+
+    const files = fs.readdirSync(backupsDir)
+      .filter(f => f.endsWith(".json"))
+      .map(name => ({ name, time: fs.statSync(path.join(backupsDir, name)).mtimeMs }))
+      .sort((a,b)=>b.time-a.time);
+
+    files.slice(20).forEach(f => {
+      try { fs.unlinkSync(path.join(backupsDir, f.name)); } catch {}
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Automatic backup failed", error);
+    return false;
+  }
 }
 
 app.get("/api/health", (req, res) => {
@@ -463,7 +503,7 @@ app.delete("/api/reports/:id", requireRole("admin"), (req,res)=>{
     if(!report) return res.status(404).json({ok:false,message:"التقرير غير موجود"});
     if((report.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف تقرير مرسل للمراجعة أو معتمد. أعد فتحه كمسودة أولًا"});
     const files=db.prepare(`SELECT stored_name FROM attachments WHERE report_id=?`).all(id).map(x=>x.stored_name);
-    writeAutomaticBackup("pre-delete");
+    writeAutomaticBackup("pre-delete", true);
     db.prepare(`DELETE FROM daily_reports WHERE id=?`).run(id);
     for(const stored of files){ safeUnlinkUpload(stored); }
     audit(req.user,"DELETE_REPORT","report",id,report.report_no);
@@ -505,11 +545,11 @@ app.post("/api/reports/:id/attachments", requireRole("admin","editor"), (req,res
   catch(error){res.status(500).json({ok:false,message:"فشل رفع المرفق",error:error.message});}
 });
 app.get("/api/attachments/:id/download", requireAuth, (req,res)=>{ const a=db.prepare(`SELECT * FROM attachments WHERE id=?`).get(Number(req.params.id)); if(!a) return res.status(404).end(); const file=safeUploadPath(a.stored_name); if(!file) return res.status(400).json({ok:false,message:"مسار المرفق غير صالح"}); if(!fs.existsSync(file)) return res.status(404).end(); res.type(a.mime_type); res.setHeader("Content-Disposition",`inline; filename*=UTF-8''${encodeURIComponent(a.original_name)}`); res.sendFile(file); });
-app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT a.*,r.workflow_status FROM attachments a JOIN daily_reports r ON r.id=a.report_id WHERE a.id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); if((a.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف مرفقات تقرير مرسل للمراجعة أو معتمد"}); writeAutomaticBackup("pre-attachment-delete"); safeUnlinkUpload(a.stored_name); db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
+app.delete("/api/attachments/:id", requireRole("admin","editor"), (req,res)=>{ const a=db.prepare(`SELECT a.*,r.workflow_status FROM attachments a JOIN daily_reports r ON r.id=a.report_id WHERE a.id=?`).get(Number(req.params.id)); if(!a) return res.status(404).json({ok:false,message:"المرفق غير موجود"}); if((a.workflow_status || "draft") !== "draft") return res.status(423).json({ok:false,message:"لا يمكن حذف مرفقات تقرير مرسل للمراجعة أو معتمد"}); writeAutomaticBackup("pre-attachment-delete", true); safeUnlinkUpload(a.stored_name); db.prepare(`DELETE FROM attachments WHERE id=?`).run(a.id); audit(req.user,"DELETE_ATTACHMENT","report",a.report_id,a.original_name); res.json({ok:true}); });
 
 app.get("/api/maintenance", requireAuth, (req,res)=>{ const {equipment_name="",from="",to=""}=req.query; let sql=`SELECT m.*,u.display_name AS created_by_name FROM maintenance_logs m LEFT JOIN users u ON u.id=m.created_by WHERE 1=1`; const p=[]; if(equipment_name){sql+=` AND m.equipment_name LIKE ?`;p.push(`%${equipment_name}%`);} if(from){sql+=` AND m.log_date>=?`;p.push(from);} if(to){sql+=` AND m.log_date<=?`;p.push(to);} sql+=` ORDER BY m.log_date DESC,m.id DESC`; res.json({ok:true,logs:db.prepare(sql).all(...p)}); });
 app.post("/api/maintenance", requireRole("admin","editor"), (req,res)=>{ const {equipment_name,log_date,status,description,action_taken,cost}=req.body; if(!equipment_name||!log_date||!description) return res.status(400).json({ok:false,message:"اسم الآلية والتاريخ والوصف مطلوبة"}); const r=db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by) VALUES (?,?,?,?,?,?,?)`).run(equipment_name,log_date,status||"ملاحظة",description,action_taken||"",Number(cost||0),req.user.id); audit(req.user,"CREATE_MAINTENANCE","maintenance",r.lastInsertRowid,equipment_name); writeAutomaticBackup("maintenance-create"); res.json({ok:true,id:r.lastInsertRowid}); });
-app.delete("/api/maintenance/:id", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); writeAutomaticBackup("pre-maintenance-delete"); db.prepare(`DELETE FROM maintenance_logs WHERE id=?`).run(id); audit(req.user,"DELETE_MAINTENANCE","maintenance",id); res.json({ok:true}); });
+app.delete("/api/maintenance/:id", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); writeAutomaticBackup("pre-maintenance-delete", true); db.prepare(`DELETE FROM maintenance_logs WHERE id=?`).run(id); audit(req.user,"DELETE_MAINTENANCE","maintenance",id); res.json({ok:true}); });
 
 app.get("/api/equipment/summary", requireAuth, (req,res)=>{
   const from=req.query.from||"0000-01-01", to=req.query.to||"9999-12-31";
@@ -615,13 +655,13 @@ app.post("/api/backup/validate", requireRole("admin"), (req,res)=>{
   }catch(error){res.status(400).json({ok:false,valid:false,message:"تعذر فحص النسخة",error:error.message});}
 });
 app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
-  try { const backup=req.body; const validation=validateBackupObject(backup); if(!validation.valid) return res.status(400).json({ok:false,message:"تم رفض الاستعادة لأن النسخة لم تجتز فحص السلامة",errors:validation.errors}); writeAutomaticBackup("pre-restore"); const tx=db.transaction(()=>{ ["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run()); for(const item of backup.reports){ const r=item.report; const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||""); const newId=rr.lastInsertRowid; insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; const buffer=decodeStrictBase64(a.data_base64); if(!buffer) throw new Error("بيانات مرفق غير صالحة أثناء الاستعادة"); fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at); } }); tx();
+  try { const backup=req.body; const validation=validateBackupObject(backup); if(!validation.valid) return res.status(400).json({ok:false,message:"تم رفض الاستعادة لأن النسخة لم تجتز فحص السلامة",errors:validation.errors}); writeAutomaticBackup("pre-restore", true); const tx=db.transaction(()=>{ ["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run()); for(const item of backup.reports){ const r=item.report; const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||""); const newId=rr.lastInsertRowid; insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]); for(const a of item.attachments||[]){ if(!a.data_base64) continue; const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10); const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`; const buffer=decodeStrictBase64(a.data_base64); if(!buffer) throw new Error("بيانات مرفق غير صالحة أثناء الاستعادة"); fs.writeFileSync(path.join(uploadsDir,stored),buffer); db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString()); } } for(const m of backup.maintenance||[]){ db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at); } }); tx();
     const referenced=new Set(db.prepare(`SELECT stored_name FROM attachments`).all().map(x=>x.stored_name));
     for(const name of fs.readdirSync(uploadsDir)){
       const file=path.join(uploadsDir,name);
       try{ if(fs.statSync(file).isFile() && !referenced.has(name)) fs.unlinkSync(file); }catch{}
     }
-    audit(req.user,"RESTORE_BACKUP","system","backup",`${backup.reports.length} reports`); writeAutomaticBackup("post-restore"); res.json({ok:true,message:"تمت استعادة النسخة بنجاح",count:backup.reports.length}); }
+    audit(req.user,"RESTORE_BACKUP","system","backup",`${backup.reports.length} reports`); writeAutomaticBackup("post-restore", true); res.json({ok:true,message:"تمت استعادة النسخة بنجاح",count:backup.reports.length}); }
   catch(error){res.status(500).json({ok:false,message:"فشل استعادة النسخة",error:error.message});}
 });
 
