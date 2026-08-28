@@ -6,7 +6,7 @@
   <title>إدارة النظام - مكب المنيا</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="multipage.css">
-  <link rel="stylesheet" href="system.css?v=3.2.0-final-review-polish-v1">
+  <link rel="stylesheet" href="system.css?v=3.2.0-storage-20gb-v1">
   <link rel="stylesheet" href="system-integrity.css">
   <link rel="stylesheet" href="v3.css">
 </head>
@@ -51,16 +51,16 @@
     <section class="system-panel storage-panel">
       <div class="system-panel-head"><div><span>STORAGE</span><h3>مساحة التخزين</h3></div><strong id="storageState" class="storage-state">جاري الحساب...</strong></div>
       <div class="storage-main">
-        <div class="storage-usage"><strong id="storageUsed">0 MB</strong><span>من مرجع 512 MB</span></div>
+        <div class="storage-usage"><strong id="storageUsed">0 MB</strong><span>من مرجع 20 GB</span></div>
         <div class="storage-progress" aria-label="نسبة استخدام التخزين"><i id="storageProgressBar"></i></div>
-        <div class="storage-percent"><strong id="storagePercent">0%</strong><span id="storageRemaining">متبقي 512 MB</span></div>
+        <div class="storage-percent"><strong id="storagePercent">0%</strong><span id="storageRemaining">متبقي 20 GB</span></div>
       </div>
       <div class="storage-breakdown">
         <div><span>قاعدة البيانات</span><strong id="storageDatabase">0 MB</strong></div>
         <div><span>المرفقات</span><strong id="storageUploads">0 MB</strong><small id="storageAttachmentsCount">0 مرفق</small></div>
         <div><span>النسخ الاحتياطية</span><strong id="storageBackups">0 MB</strong><small id="storageBackupsCount">0 نسخة</small></div>
       </div>
-      <p id="storageNotice" class="storage-notice">يتم استخدام 512MB كمرجع مراقبة فقط، ولا يقوم النظام بحذف البيانات تلقائيًا عند الاقتراب منه.</p>
+      <p id="storageNotice" class="storage-notice">يتم استخدام 20 GB كمرجع مراقبة آمن ضمن القرص الحالي، ولا يقوم النظام بحذف البيانات تلقائيًا عند الاقتراب منه.</p>
     </section>
 
     <section class="system-panel integrity-panel">
@@ -124,7 +124,7 @@
   </main>
 
   <script src="js/app-auth.js"></script>
-  <script src="js/app-system.js?v=3.2.0-final-review-polish-v1"></script>
-  <script src="js/app-system-integrity.js?v=3.2.0-final-review-polish-v1"></script>
+  <script src="js/app-system.js?v=3.2.0-storage-20gb-v1"></script>
+  <script src="js/app-system-integrity.js?v=3.2.0-storage-20gb-v1"></script>
 </body>
 </html>
