@@ -1,0 +1,18 @@
+/* Account position refinement — screen only */
+@media screen {
+  .minya-user-box {
+    top: 58px !important;
+  }
+
+  @media (max-width: 1100px) {
+    .minya-user-box {
+      top: 57px !important;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .minya-user-box {
+      top: 57px !important;
+    }
+  }
+}
