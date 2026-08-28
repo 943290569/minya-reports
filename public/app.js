@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-english-digits-v1";
+const MINYA_ASSET_VERSION = "3.2.0-date-display-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -119,7 +119,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "js/app-site-review-print.js",
   "js/app-header-menu.js",
   "js/app-ui-enhancements.js",
-  "js/app-english-digits.js"
+  "js/app-english-digits.js",
+  "js/app-date-display.js"
 ].forEach((src) => {
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
   document.write(`<script src="${versionedSrc}"><\/script>`);
