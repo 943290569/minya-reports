@@ -3,7 +3,7 @@
 ========================================================= */
 
 (function () {
-  const numberFormat = new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 });
+  const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
   function formatNumber(value) {
     return numberFormat.format(Number(value || 0));
@@ -25,12 +25,13 @@
   function formatDateTime(value) {
     if (!value) return "-";
     try {
-      return new Date(value).toLocaleString("ar-EG", {
+      return new Date(value).toLocaleString("en-GB", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: false,
       });
     } catch {
       return String(value);
@@ -114,17 +115,19 @@
   async function loadStorage() {
     try {
       const data = await api("/api/system/storage");
-      const percent = Math.max(0, Number(data.usage_percent || 0));
-      const remaining = Math.max(0, Number(data.reference_limit_bytes || 0) - Number(data.total_bytes || 0));
+      const percent = Math.max(0, Number(data.percent ?? data.usage_percent ?? 0));
+      const referenceLimit = Number(data.reference_limit_bytes || 0);
+      const totalBytes = Number(data.total_bytes || 0);
+      const remaining = Math.max(0, referenceLimit - totalBytes);
 
-      setText("storageUsed", formatBytes(data.total_bytes));
+      setText("storageUsed", formatBytes(totalBytes));
       setText("storagePercent", `${formatNumber(percent)}%`);
       setText("storageRemaining", `متبقي ${formatBytes(remaining)}`);
-      setText("storageDatabase", formatBytes(data.database_bytes));
-      setText("storageUploads", formatBytes(data.uploads_bytes));
-      setText("storageBackups", formatBytes(data.backups_bytes));
-      setText("storageAttachmentsCount", `${formatNumber(data.attachments_count)} مرفق`);
-      setText("storageBackupsCount", `${formatNumber(data.backups_count)} نسخة`);
+      setText("storageDatabase", formatBytes(data.db_bytes ?? data.database_bytes ?? 0));
+      setText("storageUploads", formatBytes(data.uploads_bytes || 0));
+      setText("storageBackups", formatBytes(data.backups_bytes || 0));
+      setText("storageAttachmentsCount", `${formatNumber(data.attachment_count ?? data.attachments_count ?? 0)} مرفق`);
+      setText("storageBackupsCount", `${formatNumber(data.backup_count ?? data.backups_count ?? 0)} نسخة`);
 
       const bar = document.getElementById("storageProgressBar");
       if (bar) {
@@ -157,7 +160,7 @@
       const data = await api("/api/backups");
       const rows = Array.isArray(data.backups) ? data.backups : [];
       body.innerHTML = rows.length
-        ? rows.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${formatDateTime(item.created_at)}</td><td>${formatBytes(item.size_bytes)}</td><td><a class="backup-download-link" href="/api/backups/${encodeURIComponent(item.name)}/download">تنزيل</a></td></tr>`).join("")
+        ? rows.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${formatDateTime(item.created_at)}</td><td class="system-ltr-value">${formatBytes(item.size_bytes)}</td><td><a class="backup-download-link" href="/api/backups/${encodeURIComponent(item.name)}/download">تنزيل</a></td></tr>`).join("")
         : `<tr><td colspan="4">لا توجد نسخ تلقائية محفوظة بعد.</td></tr>`;
     } catch (error) {
       console.error("فشل تحميل النسخ المحفوظة", error);
@@ -170,7 +173,7 @@
     if (!link) return;
     link.addEventListener("click", () => {
       const now = new Date();
-      const timeText = now.toLocaleString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const timeText = now.toLocaleString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
       localStorage.setItem("minyaLastBackupTime", timeText);
       setText("lastBackupTime", timeText);
       setText("backupStatus", "بدأ تنزيل النسخة الكاملة");
