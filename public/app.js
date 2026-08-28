@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-loading-stable-v1";
+const MINYA_ASSET_VERSION = "3.2.0-dashboard-metrics-fix-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -149,7 +149,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "mobile-vertical-menu.css",
   "ui-polish-v2.css",
   "ui-polish-v3.css",
-  "system-polish-final.css"
+  "system-polish-final.css",
+  "dashboard-metrics-fix.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
