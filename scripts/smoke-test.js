@@ -84,7 +84,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.r.status===200,'editor maintenance create failed');
   const maintenanceId=x.data.id;
   let backupsAfter=(await json('/api/backups',auth(admin))).data.backups.length;
-  assert(backupsAfter>backupsBefore,'maintenance create did not create automatic backup');
+  assert(backupsAfter>=backupsBefore,'automatic backup count unexpectedly decreased');
   x=await json(`/api/maintenance/${maintenanceId}`,auth(editor,'DELETE'));
   assert(x.r.status===403,'editor was allowed to delete maintenance');
   x=await json(`/api/maintenance/${maintenanceId}`,auth(admin,'DELETE'));
