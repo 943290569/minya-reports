@@ -3,3 +3,7 @@ database.db
 *.db-journal
 .env
 .DS_Store
+
+database.db-wal
+database.db-shm
+server.js.before-*
