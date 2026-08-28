@@ -1,0 +1,250 @@
+/* Calm professional screen theme — screen only */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --surface-soft: #f8faf9;
+  --surface-accent: #f1f5f3;
+  --border: #e1e7e4;
+  --border-strong: #cfd8d3;
+  --text: #26352f;
+  --muted: #6b7772;
+  --primary: #2f7a5d;
+  --primary-dark: #164e3b;
+  --primary-soft: #edf5f1;
+  --shadow-sm: 0 1px 2px rgba(20, 45, 35, .035);
+  --shadow-md: 0 4px 14px rgba(20, 45, 35, .055);
+  --shadow-lg: 0 10px 24px rgba(20, 45, 35, .07);
+}
+
+body {
+  background: #f5f7f6 !important;
+  color: var(--text) !important;
+}
+
+.top-header {
+  background: #164e3b !important;
+  border-bottom: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 3px 12px rgba(20, 45, 35, .10) !important;
+  backdrop-filter: none !important;
+}
+
+.top-header h1 {
+  font-weight: 750 !important;
+  letter-spacing: 0 !important;
+}
+
+.top-header p {
+  color: rgba(255,255,255,.70) !important;
+}
+
+.top-header nav {
+  gap: 7px !important;
+}
+
+.top-header nav a,
+.top-header nav button,
+.app-nav-link {
+  background: rgba(255,255,255,.055) !important;
+  color: rgba(255,255,255,.88) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  box-shadow: none !important;
+  border-radius: 9px !important;
+  font-weight: 650 !important;
+}
+
+.top-header nav a:hover,
+.top-header nav button:hover,
+.app-nav-link:hover {
+  background: rgba(255,255,255,.10) !important;
+  border-color: rgba(255,255,255,.22) !important;
+  transform: none !important;
+}
+
+.app-nav-link.active {
+  background: #f5f7f6 !important;
+  color: #244c3d !important;
+  border-color: #f5f7f6 !important;
+  box-shadow: none !important;
+}
+
+#minyaLogoutBtn {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  box-shadow: none !important;
+  color: rgba(255,255,255,.88) !important;
+}
+
+#minyaLogoutBtn:hover {
+  background: rgba(255,255,255,.12) !important;
+  border-color: rgba(255,255,255,.24) !important;
+}
+
+.minya-user-box {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  box-shadow: none !important;
+}
+
+.container {
+  margin-top: 22px !important;
+}
+
+.panel,
+.dashboard-card,
+.dashboard-recent-panel,
+.dashboard-metric-card,
+.monthly-comparison,
+.monthly-chart,
+#annualSummarySection {
+  background: #ffffff !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.panel {
+  border-radius: 14px !important;
+}
+
+.panel > h2,
+.dashboard-section-head h3,
+.dashboard-card h3,
+.monthly-report h3,
+#annualSummarySection h3 {
+  color: #2b3933 !important;
+}
+
+.panel > h2::before {
+  background: #6f9b88 !important;
+  width: 4px !important;
+}
+
+input,
+select,
+textarea {
+  background: #ffffff !important;
+  border-color: #d6ded9 !important;
+  color: #26352f !important;
+  box-shadow: none !important;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #c5d0ca !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #7fa693 !important;
+  box-shadow: 0 0 0 3px rgba(47,122,93,.08) !important;
+}
+
+table {
+  box-shadow: none !important;
+  border-color: var(--border) !important;
+}
+
+thead th {
+  background: #f7f9f8 !important;
+  color: #48564f !important;
+}
+
+tbody tr:hover {
+  background: #fafcfb !important;
+}
+
+.daily-summary > div,
+.archive-summary > div,
+.monthly-summary > div,
+.dashboard-metric-card {
+  background: #ffffff !important;
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+}
+
+.daily-summary > div::after,
+.archive-summary > div::after,
+.monthly-summary > div::after {
+  background: #86a99a !important;
+  width: 3px !important;
+}
+
+button,
+.dashboard-primary-action,
+#saveBtn,
+#printMonthlyReportBtn,
+#exportMonthlyCsvBtn,
+#exportAnnualCsvBtn,
+#printAnnualReportBtn {
+  box-shadow: none !important;
+}
+
+#saveBtn,
+#printMonthlyReportBtn,
+#exportMonthlyCsvBtn,
+#exportAnnualCsvBtn,
+#printAnnualReportBtn,
+.dashboard-primary-action {
+  background: #2f7a5d !important;
+  color: #fff !important;
+}
+
+#saveBtn:hover,
+#printMonthlyReportBtn:hover,
+#exportMonthlyCsvBtn:hover,
+#exportAnnualCsvBtn:hover,
+#printAnnualReportBtn:hover,
+.dashboard-primary-action:hover {
+  background: #28694f !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.archive-filters,
+.monthly-comparison {
+  background: #f8faf9 !important;
+}
+
+.dashboard-hero {
+  background: #f1f5f3 !important;
+  border-color: #dde6e1 !important;
+  box-shadow: none !important;
+}
+
+.dashboard-hero h2,
+.dashboard-hero p,
+.dashboard-kicker,
+.dashboard-today-state {
+  color: #30413a !important;
+}
+
+.dashboard-card,
+.dashboard-metric-card {
+  transition: border-color .15s ease, background .15s ease !important;
+}
+
+.dashboard-card:hover,
+.dashboard-metric-card:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-md) !important;
+  border-color: #cfd9d4 !important;
+}
+
+.monthly-chart-bar {
+  background: #6f9b88 !important;
+  box-shadow: none !important;
+}
+
+.message:not(:empty) {
+  background: #f1f5f3 !important;
+  border-color: #d8e3de !important;
+  color: #355445 !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 900px) {
+  .top-header {
+    box-shadow: 0 2px 8px rgba(20,45,35,.09) !important;
+  }
+}
