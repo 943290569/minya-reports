@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-premium-ui-v1";
+const MINYA_ASSET_VERSION = "3.2.0-premium-ui-v2-compact";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -128,7 +128,8 @@ const MINYA_LOADING_MIN_MS = 150;
   "report-responsive.css",
   "archive-mobile.css",
   "calm-theme.css",
-  "premium-theme.css"
+  "premium-theme.css",
+  "compact-theme.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
