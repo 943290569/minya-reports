@@ -1,5 +1,7 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-logout-top-resilient";
+// Hide the raw single-page report markup until page-mode finishes selecting the requested view.
+document.documentElement.style.visibility = "hidden";
+const MINYA_ASSET_VERSION = "3.2.0-no-route-flash";
 
 [
   "js/app-auth.js",
@@ -58,3 +60,18 @@ const MINYA_ASSET_VERSION = "3.2.0-logout-top-resilient";
     document.head.appendChild(link);
   }
 });
+
+function revealMinyaApp(){
+  document.documentElement.style.visibility = "visible";
+}
+
+// page-mode registers its DOMContentLoaded handler while the scripts above are loaded,
+// so this listener runs afterwards and reveals only the already-selected page.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", revealMinyaApp, { once: true });
+} else {
+  revealMinyaApp();
+}
+
+// Safety fallback: never leave the application hidden if another script fails unexpectedly.
+setTimeout(revealMinyaApp, 1800);
