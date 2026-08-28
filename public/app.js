@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-professional-header-menu-v1";
+const MINYA_ASSET_VERSION = "3.2.0-desktop-nav-hero-v2";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -108,8 +108,7 @@ const MINYA_LOADING_MIN_MS = 150;
   "js/app-reviews.js",
   "js/app-logout-header.js",
   "js/app-review-print.js",
-  "js/app-site-review-print.js",
-  "js/app-header-menu.js"
+  "js/app-site-review-print.js"
 ].forEach((src) => {
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
   document.write(`<script src="${versionedSrc}"><\/script>`);
@@ -135,7 +134,7 @@ const MINYA_LOADING_MIN_MS = 150;
   "account-position.css",
   "header-compact.css",
   "hero-clarity.css",
-  "header-menu.css"
+  "desktop-nav-hero.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
