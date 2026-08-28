@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.2.0-final-review-polish-v1";
+const MINYA_ASSET_VERSION = "3.3.0-excel-import-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -112,6 +112,7 @@ const MINYA_LOADING_MIN_MS = 150;
   "js/app-admin-audit.js",
   "js/app-admin-security.js",
   "js/app-admin-users.js",
+  "js/app-excel-import.js",
   "js/app-report-workflow.js",
   "js/app-reviews.js",
   "js/app-logout-header.js",
@@ -136,6 +137,7 @@ const MINYA_LOADING_MIN_MS = 150;
   "admin-audit.css",
   "admin-security.css",
   "admin-users.css",
+  "excel-import.css",
   "report-workflow.css",
   "reviews.css",
   "report-responsive.css",
