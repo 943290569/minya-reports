@@ -1,7 +1,7 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v3";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v6";
 const MINYA_LOADING_STARTED_AT = Date.now();
-const MINYA_LOADING_MIN_MS = 150;
+const MINYA_LOADING_MIN_MS = 3000;
 
 (function mountMinyaLoadingScreen(){
   const messages = [
