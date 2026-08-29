@@ -19,6 +19,8 @@ const bundle = read("public/app-bundle.js");
 const styleBundle = read("public/app-bundle.css");
 const annualLoader = read("public/js/app-annual-loader.js");
 const annualComparison = read("public/js/app-annual-comparison.js");
+const appearance = read("public/js/app-appearance-settings.js");
+const appearanceStyles = read("public/appearance-settings.css");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -41,6 +43,13 @@ assert(styleBundle.includes("/* ===== modern-charts.css ===== */"), "chart style
 assert(annualLoader.includes("data.previous_reports"), "annual loader does not cache previous-year reports");
 assert(annualLoader.includes("...(Array.isArray(window.annualAvailableYears)"), "annual year choices are replaced after changing the year");
 assert(annualComparison.includes("window.annualPreviousReports"), "annual comparison still requires a second request");
-assert(loader.includes("const MINYA_LOADING_MIN_MS = 3000"), "the remembrance screen is not visible long enough to read");
+assert(loader.includes("MINYA_APPEARANCE_STORAGE_KEY"), "appearance settings are not applied before the loading screen");
+assert(loader.includes("Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds"), "remembrance duration is not user-controlled");
+assert(loader.includes('"js/app-appearance-settings.js"'), "appearance controls are missing from the frontend bundle");
+assert(loader.includes('"appearance-settings.css"'), "appearance styles are missing from the style bundle");
+assert(appearance.includes('navPosition: ["top", "right", "left"]'), "menu position controls are incomplete");
+assert(appearance.includes('theme: ["day", "night", "auto"]'), "day and night controls are incomplete");
+assert(appearanceStyles.includes('html[data-nav-position="right"]'), "right-side menu styles are missing");
+assert(appearanceStyles.includes('html[data-theme="night"]'), "night theme styles are missing");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
