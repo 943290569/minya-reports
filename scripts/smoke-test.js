@@ -60,6 +60,11 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.r.status===200,'editor create report failed');
   const id=x.data.report.id;
 
+  x=await json('/api/monthly-summary?month=2099-02',auth(viewer));
+  assert(x.r.status===200&&x.data.summary.diesel===55,'monthly summary lost stored diesel total');
+  x=await json('/api/annual-summary?year=2099',auth(viewer));
+  assert(x.r.status===200&&x.data.summary.diesel===55,'annual summary lost stored diesel total');
+
   x=await json(`/api/reports/${id}`,auth(viewer));
   assert(x.r.status===200,'viewer could not read report');
   assert(x.data.operations.length===1,'operation missing');

@@ -25,22 +25,6 @@ async function exportAnnualCsv() {
 
   showMessage("جاري تجهيز ملف السنة...");
 
-  const details = await Promise.all(
-    reports.map((report) => getReport(report.id).catch(() => null))
-  );
-
-  const dieselById = new Map();
-  details.forEach((data, index) => {
-    const report = reports[index];
-    const diesel = data
-      ? (data.equipment || []).reduce(
-          (sum, item) => sum + Number(item.diesel_liters || 0),
-          0
-        )
-      : Number(report.total_diesel || 0);
-    dieselById.set(Number(report.id), diesel);
-  });
-
   const months = Array.from({ length: 12 }, (_, index) => {
     const monthNumber = String(index + 1).padStart(2, "0");
     const monthValue = `${year}-${monthNumber}`;
@@ -60,7 +44,7 @@ async function exportAnnualCsv() {
         0
       ),
       diesel: monthReports.reduce(
-        (sum, report) => sum + Number(dieselById.get(Number(report.id)) || 0),
+        (sum, report) => sum + Number(report.total_diesel || 0),
         0
       ),
     };

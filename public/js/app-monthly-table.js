@@ -164,24 +164,7 @@
       return;
     }
 
-    body.innerHTML = '<tr><td colspan="4">جاري تحميل تفاصيل الشهر...</td></tr>';
-
-    const details = await Promise.all(
-      reports.map((report) =>
-        typeof getReport === "function"
-          ? getReport(report.id).catch(() => null)
-          : Promise.resolve(null)
-      )
-    );
-
-    const dieselValues = reports.map((report, index) => {
-      const detail = details[index];
-      if (!detail) return Number(report.total_diesel || 0);
-      return (detail.equipment || []).reduce(
-        (sum, item) => sum + Number(item.diesel_liters || 0),
-        0
-      );
-    });
+    const dieselValues = reports.map((report) => Number(report.total_diesel || 0));
 
     body.innerHTML = reports.map((report, index) => `
       <tr>

@@ -36,17 +36,10 @@ async function calculateAnnualTotals(year) {
   const reports = await getAnnualReportsForYear(year);
   if (!reports.length) return null;
 
-  const details = await Promise.all(
-    reports.map((report) => getReport(report.id).catch(() => null))
+  const dieselTotal = reports.reduce(
+    (sum, report) => sum + Number(report.total_diesel || 0),
+    0
   );
-
-  let dieselTotal = 0;
-  reports.forEach((report, index) => {
-    const data = details[index];
-    dieselTotal += data
-      ? (data.equipment || []).reduce((sum, item) => sum + Number(item.diesel_liters || 0), 0)
-      : Number(report.total_diesel || 0);
-  });
 
   return {
     year,

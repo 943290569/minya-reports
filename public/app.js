@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v2";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v3";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_LOADING_MIN_MS = 150;
 
@@ -125,7 +125,7 @@ const MINYA_LOADING_MIN_MS = 150;
   "js/app-review-polish.js"
 ].forEach((src) => {
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
-  document.write(`<script src="${versionedSrc}"><\/script>`);
+  document.write(`<script defer src="${versionedSrc}"><\/script>`);
 });
 
 [
@@ -199,4 +199,4 @@ if (document.readyState === "complete") {
 }
 
 // Safety fallback only if a resource fails to finish loading.
-setTimeout(revealMinyaApp, 3000);
+setTimeout(revealMinyaApp, 30000);

@@ -228,22 +228,9 @@ async function exportMonthlyCsv() {
 
   showMessage("جاري تجهيز ملف الشهر...");
 
-  const details = await Promise.all(
-    reports.map((report) => getReport(report.id).catch(() => null))
-  );
-
-  const dieselById = new Map();
-  details.forEach((data, index) => {
-    const report = reports[index];
-    const diesel = data
-      ? (data.equipment || []).reduce((sum, item) => sum + Number(item.diesel_liters || 0), 0)
-      : Number(report.total_diesel || 0);
-    dieselById.set(Number(report.id), diesel);
-  });
-
   const wasteTotal = reports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
   const trucksTotal = reports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
-  const dieselTotal = reports.reduce((sum, report) => sum + Number(dieselById.get(Number(report.id)) || 0), 0);
+  const dieselTotal = reports.reduce((sum, report) => sum + Number(report.total_diesel || 0), 0);
   const days = reports.length;
 
   const maxReport = reports.reduce((max, report) =>
@@ -274,7 +261,7 @@ async function exportMonthlyCsv() {
       report.report_date,
       Number(report.total_trucks || 0),
       Number(report.total_waste_tons || 0),
-      Number(dieselById.get(Number(report.id)) || 0),
+      Number(report.total_diesel || 0),
     ]),
     ["المجموع", trucksTotal, wasteTotal, dieselTotal],
   ];
@@ -338,6 +325,8 @@ function getArchiveYears() {
 }
 
 function setupAnnualSummarySection() {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path !== "/annual") return;
   const archiveTable = document.getElementById("archiveTable");
   if (!archiveTable || document.getElementById("annualSummarySection")) return;
 
@@ -396,19 +385,6 @@ async function renderAnnualSummary() {
 
   cards.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:12px;">جاري حساب الملخص السنوي...</div>`;
 
-  const details = await Promise.all(
-    reports.map((report) => getReport(report.id).catch(() => null))
-  );
-
-  const dieselById = new Map();
-  details.forEach((data, index) => {
-    const report = reports[index];
-    const diesel = data
-      ? (data.equipment || []).reduce((sum, item) => sum + Number(item.diesel_liters || 0), 0)
-      : Number(report.total_diesel || 0);
-    dieselById.set(Number(report.id), diesel);
-  });
-
   const months = Array.from({ length: 12 }, (_, index) => {
     const monthNumber = String(index + 1).padStart(2, "0");
     const monthValue = `${year}-${monthNumber}`;
@@ -421,7 +397,7 @@ async function renderAnnualSummary() {
       days: monthReports.length,
       waste: monthReports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0),
       trucks: monthReports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0),
-      diesel: monthReports.reduce((sum, report) => sum + Number(dieselById.get(Number(report.id)) || 0), 0),
+      diesel: monthReports.reduce((sum, report) => sum + Number(report.total_diesel || 0), 0),
     };
   });
 

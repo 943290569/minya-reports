@@ -305,9 +305,55 @@ body[data-page="annual"] #archiveSection {
   margin-top: 0;
 }
 
+body[data-page="archive"] #monthlyReportSection,
+body[data-page="archive"] #annualSummarySection {
+  display: none !important;
+}
+
 body[data-page="monthly"] #archiveSection > h2,
 body[data-page="annual"] #archiveSection > h2 {
-  margin-bottom: 22px;
+  margin-bottom: 18px;
+}
+
+body[data-page="monthly"] .archive-date-control,
+body[data-page="monthly"] .archive-summary,
+body[data-page="monthly"] #archiveTable,
+body[data-page="monthly"] #archivePagination,
+body[data-page="monthly"] #annualSummarySection,
+body[data-page="monthly"] #clearArchiveFiltersBtn {
+  display: none !important;
+}
+
+body[data-page="monthly"] .archive-filters {
+  grid-template-columns: minmax(240px, 340px) !important;
+  justify-content: center;
+  align-items: end;
+  margin: 0 auto 18px;
+  padding: 14px;
+  border: 1px solid var(--border, #dfe6ee);
+  border-radius: 14px;
+  background: #f8faf9;
+}
+
+body[data-page="monthly"] .archive-month-control {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+body[data-page="annual"] .archive-filters,
+body[data-page="annual"] .archive-summary,
+body[data-page="annual"] #monthlyReportSection,
+body[data-page="annual"] #archiveTable,
+body[data-page="annual"] #archivePagination {
+  display: none !important;
+}
+
+body[data-page="annual"] #annualSummarySection {
+  display: block;
+  margin-top: 0 !important;
+  border-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 /* =========================================================

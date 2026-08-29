@@ -77,10 +77,17 @@ function calculateDieselFromDetailedReports(detailedReports) {
 
   detailedReports.forEach((data) => {
     const reportId = Number(data.report?.id || 0);
-    const reportDiesel = (data.equipment || []).reduce(
+    const storedDieselRaw = data.report?.total_diesel;
+    const storedDiesel = Number(storedDieselRaw);
+    const equipmentDiesel = (data.equipment || []).reduce(
       (sum, item) => sum + Number(item.diesel_liters || 0),
       0
     );
+    const reportDiesel = storedDieselRaw !== undefined &&
+      storedDieselRaw !== null &&
+      Number.isFinite(storedDiesel)
+      ? storedDiesel
+      : equipmentDiesel;
 
     dieselByReportId.set(reportId, reportDiesel);
     dieselTotal += reportDiesel;
@@ -267,18 +274,9 @@ async function updateMonthlySummary() {
     return;
   }
 
-  try {
-    const detailedReports = await getMonthlyDetailedReports(monthly.month);
-    const { dieselTotal } = calculateDieselFromDetailedReports(detailedReports);
-    setValue("monthlyDieselTotal", formatNumber(dieselTotal));
-    setValue("monthlyDieselAverage", formatNumber(monthly.days ? dieselTotal / monthly.days : 0));
-    await updateMonthlyComparison(monthly.month, dieselTotal);
-  } catch (error) {
-    console.error("فشل حساب السولار الشهري", error);
-    setValue("monthlyDieselTotal", formatNumber(monthly.dieselTotal));
-    setValue("monthlyDieselAverage", formatNumber(monthly.dieselAverage));
-    await updateMonthlyComparison(monthly.month, monthly.dieselTotal);
-  }
+  setValue("monthlyDieselTotal", formatNumber(monthly.dieselTotal));
+  setValue("monthlyDieselAverage", formatNumber(monthly.dieselAverage));
+  await updateMonthlyComparison(monthly.month, monthly.dieselTotal);
 }
 
 async function refreshArchiveDiesel(filteredReports) {
@@ -289,15 +287,11 @@ async function refreshArchiveDiesel(filteredReports) {
     return;
   }
 
-  try {
-    const detailedReports = await Promise.all(
-      filteredReports.map((report) => getReport(report.id).catch(() => null))
-    );
-    const { dieselTotal } = calculateDieselFromDetailedReports(detailedReports.filter(Boolean));
-    target.textContent = formatNumber(dieselTotal);
-  } catch (error) {
-    console.error("فشل حساب سولار الأرشيف", error);
-  }
+  const dieselTotal = filteredReports.reduce(
+    (sum, report) => sum + Number(report.total_diesel || 0),
+    0
+  );
+  target.textContent = formatNumber(dieselTotal);
 }
 
 function goToEditReport(id) {
