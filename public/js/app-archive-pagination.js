@@ -1,12 +1,18 @@
 /* =========================================================
-   V3.2 - ترقيم صفحات جدول الأرشيف
+   V3.3 - ترقيم صفحات جدول الأرشيف (صفحة الأرشيف فقط)
 ========================================================= */
 
 let archivePage = 1;
 let archivePages = 1;
 const archivePageLimit = 50;
 
+function isArchivePage() {
+  return (location.pathname.replace(/\/+$/, "") || "/") === "/archive";
+}
+
 function setupArchivePagination() {
+  if (!isArchivePage()) return;
+
   const table = document.getElementById("archiveTable");
   if (!table || document.getElementById("archivePagination")) return;
 
@@ -34,16 +40,15 @@ function setupArchivePagination() {
 }
 
 async function loadArchivePage(page = 1) {
+  if (!isArchivePage()) return;
+
   const tbody = document.querySelector("#archiveTable tbody");
   if (!tbody) return;
 
   try {
-    const dateValue =
-      document.getElementById("archiveDateFilter")?.value || "";
-    const monthValue =
-      document.getElementById("archiveMonthFilter")?.value || "";
-    const searchValue =
-      document.getElementById("archiveQuickSearch")?.value?.trim() || "";
+    const dateValue = document.getElementById("archiveDateFilter")?.value || "";
+    const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+    const searchValue = document.getElementById("archiveQuickSearch")?.value?.trim() || "";
 
     const params = new URLSearchParams({
       page: String(page),
@@ -58,16 +63,11 @@ async function loadArchivePage(page = 1) {
     } else if (monthValue) {
       const [year, month] = monthValue.split("-").map(Number);
       const lastDay = new Date(year, month, 0).getDate();
-
       params.set("from", `${monthValue}-01`);
-      params.set(
-        "to",
-        `${monthValue}-${String(lastDay).padStart(2, "0")}`
-      );
+      params.set("to", `${monthValue}-${String(lastDay).padStart(2, "0")}`);
     }
 
-    tbody.innerHTML =
-      `<tr><td colspan="6">جاري تحميل الأرشيف...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">جاري تحميل الأرشيف...</td></tr>`;
 
     const response = await fetch(`${API}/api/archive?${params}`);
     const data = await response.json();
@@ -78,7 +78,6 @@ async function loadArchivePage(page = 1) {
 
     archivePage = Number(data.page || 1);
     archivePages = Number(data.pages || 1);
-
     const reports = data.reports || [];
 
     tbody.innerHTML = reports.length
@@ -91,55 +90,41 @@ async function loadArchivePage(page = 1) {
           <td>${formatNumber(report.total_diesel)}</td>
           <td>
             <button onclick="openReport(${report.id})">فتح</button>
-            <button class="role-editor-action"
-                    onclick="goToEditReport(${report.id})">تعديل</button>
+            <button class="role-editor-action" onclick="goToEditReport(${report.id})">تعديل</button>
             <button onclick="printReport(${report.id})">طباعة</button>
-            <button class="role-admin-action"
-                    onclick="deleteReport(${report.id})"
-                    style="background:#b91c1c">حذف</button>
+            <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
           </td>
         </tr>
       `).join("")
       : `<tr><td colspan="6">لا توجد تقارير مطابقة</td></tr>`;
 
     const info = document.getElementById("archivePageInfo");
-    if (info) {
-      info.textContent =
-        `صفحة ${archivePage} من ${archivePages} — ${data.count} تقرير`;
-    }
+    if (info) info.textContent = `صفحة ${archivePage} من ${archivePages} — ${data.count} تقرير`;
 
     const prev = document.getElementById("archivePrevPage");
     const next = document.getElementById("archiveNextPage");
-
     if (prev) prev.disabled = archivePage <= 1;
     if (next) next.disabled = archivePage >= archivePages;
 
-    if (typeof window.applyRoleAwareUI === "function") {
-      window.applyRoleAwareUI();
-    }
+    if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
     console.error(error);
-    tbody.innerHTML =
-      `<tr><td colspan="6">تعذر تحميل الأرشيف</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">تعذر تحميل الأرشيف</td></tr>`;
   }
 }
 
-setupArchivePagination();
+if (isArchivePage()) {
+  setupArchivePagination();
 
-document.getElementById("archiveBtn")?.addEventListener("click", () => {
-  setTimeout(() => loadArchivePage(1), 300);
-});
+  document.getElementById("archiveBtn")?.addEventListener("click", () => {
+    setTimeout(() => loadArchivePage(1), 300);
+  });
 
-document.getElementById("archiveDateFilter")?.addEventListener("change", () => {
-  loadArchivePage(1);
-});
-
-document.getElementById("archiveMonthFilter")?.addEventListener("change", () => {
-  loadArchivePage(1);
-});
-
-document.getElementById("clearArchiveFiltersBtn")?.addEventListener("click", () => {
-  setTimeout(() => loadArchivePage(1), 80);
-});
+  document.getElementById("archiveDateFilter")?.addEventListener("change", () => loadArchivePage(1));
+  document.getElementById("archiveMonthFilter")?.addEventListener("change", () => loadArchivePage(1));
+  document.getElementById("clearArchiveFiltersBtn")?.addEventListener("click", () => {
+    setTimeout(() => loadArchivePage(1), 80);
+  });
+}
 
 window.loadArchivePage = loadArchivePage;
