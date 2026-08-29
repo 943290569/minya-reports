@@ -4,7 +4,7 @@
 
   function applyRoleNavigation(user){
     if(!user) return;
-    const adminOnlyHrefs=["/admin","/admin.html","/reviews","/system.html"];
+    const adminOnlyHrefs=["/admin","/admin.html","/reviews","/system.html","/drive-import.html"];
     document.querySelectorAll("a[href]").forEach(link=>{
       const href=link.getAttribute("href");
       if(adminOnlyHrefs.includes(href) && user.role!=="admin") link.remove();
