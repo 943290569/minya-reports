@@ -18,6 +18,12 @@ async function getAnnualReportsForYear(year) {
 
   if (localReports.length) return localReports;
 
+  if (window.annualPreviousReports?.year === String(year)) {
+    return Array.isArray(window.annualPreviousReports.reports)
+      ? window.annualPreviousReports.reports
+      : [];
+  }
+
   try {
     const response = await fetch(
       `${API}/api/annual-summary?year=${encodeURIComponent(year)}`,

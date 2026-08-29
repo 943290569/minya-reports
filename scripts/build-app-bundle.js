@@ -5,22 +5,29 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const loaderPath = path.join(root, "public", "app.js");
 const outputPath = path.join(root, "public", "app-bundle.js");
+const styleOutputPath = path.join(root, "public", "app-bundle.css");
 const loader = fs.readFileSync(loaderPath, "utf8");
 
 const startMarker = "/* MINYA_MODULES_START */";
 const endMarker = "/* MINYA_MODULES_END */";
+const styleStartMarker = "/* MINYA_STYLES_START */";
+const styleEndMarker = "/* MINYA_STYLES_END */";
 const start = loader.indexOf(startMarker);
 const end = loader.indexOf(endMarker);
+const styleStart = loader.indexOf(styleStartMarker);
+const styleEnd = loader.indexOf(styleEndMarker);
 
-if (start < 0 || end < 0 || end <= start) {
-  throw new Error("App loader module markers are missing or invalid");
+if (start < 0 || end < 0 || end <= start || styleStart < 0 || styleEnd < 0 || styleEnd <= styleStart) {
+  throw new Error("App loader bundle markers are missing or invalid");
 }
 
 const loaderBlock = loader.slice(start, end + endMarker.length);
+const styleBlock = loader.slice(styleStart, styleEnd + styleEndMarker.length);
 const modulePaths = [...loaderBlock.matchAll(/"(js\/[^"]+\.js)"/g)].map((match) => match[1]);
+const stylePaths = [...styleBlock.matchAll(/"([^"]+\.css)"/g)].map((match) => match[1]);
 
-if (!modulePaths.length) {
-  throw new Error("No frontend modules were found in the app loader");
+if (!modulePaths.length || !stylePaths.length) {
+  throw new Error("No frontend modules or styles were found in the app loader");
 }
 
 const modules = modulePaths.map((relativePath) => {
@@ -29,17 +36,25 @@ const modules = modulePaths.map((relativePath) => {
   return `\n/* ===== ${relativePath} ===== */\n${source}\n;`;
 }).join("\n");
 
-const bundle = `${loader.slice(0, start)}${modules}\n${loader.slice(end + endMarker.length)}`;
+const styles = stylePaths.map((relativePath) => {
+  const source = fs.readFileSync(path.join(root, "public", relativePath), "utf8");
+  return `\n/* ===== ${relativePath} ===== */\n${source}\n`;
+}).join("\n");
+
+const bundleWithModules = `${loader.slice(0, start)}${modules}\n${loader.slice(end + endMarker.length)}`;
+const bundle = bundleWithModules.replace(styleBlock, "");
 new vm.Script(bundle, { filename: "public/app-bundle.js" });
 
 if (process.argv.includes("--check")) {
   const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : "";
-  if (current !== bundle) {
-    console.error("public/app-bundle.js is outdated. Run: npm run build:app");
+  const currentStyles = fs.existsSync(styleOutputPath) ? fs.readFileSync(styleOutputPath, "utf8") : "";
+  if (current !== bundle || currentStyles !== styles) {
+    console.error("Frontend bundles are outdated. Run: npm run build:app");
     process.exit(1);
   }
-  console.log(`Frontend bundle is current (${modulePaths.length} modules).`);
+  console.log(`Frontend bundles are current (${modulePaths.length} modules, ${stylePaths.length} styles).`);
 } else {
   fs.writeFileSync(outputPath, bundle);
-  console.log(`Built public/app-bundle.js from ${modulePaths.length} modules.`);
+  fs.writeFileSync(styleOutputPath, styles);
+  console.log(`Built frontend bundles from ${modulePaths.length} modules and ${stylePaths.length} styles.`);
 }

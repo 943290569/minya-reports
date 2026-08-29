@@ -220,16 +220,7 @@
     renderAlerts(buildAlerts(totals));
   }
 
-  function loadStyles() {
-    if (document.querySelector('link[href="smart-status.css"]')) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "smart-status.css";
-    document.head.appendChild(link);
-  }
-
   document.addEventListener("DOMContentLoaded", () => {
-    loadStyles();
     ensureSmartPanel();
     refreshSmartStatus();
     loadMonthlyBenchmarks();

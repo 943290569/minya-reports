@@ -16,6 +16,9 @@ const annual = read("public/js/app-final.js");
 const multipage = read("public/multipage.css");
 const loader = read("public/app.js");
 const bundle = read("public/app-bundle.js");
+const styleBundle = read("public/app-bundle.css");
+const annualLoader = read("public/js/app-annual-loader.js");
+const annualComparison = read("public/js/app-annual-comparison.js");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -28,8 +31,14 @@ assert(annual.includes('if (path !== "/annual") return;'), "annual section can m
 assert(monthly.includes('setValue("monthlyDieselTotal", formatNumber(monthly.dieselTotal))'), "monthly stored diesel is not canonical");
 assert(!monthlyTable.includes('getReport(report.id)'), "monthly detail table still performs per-report requests");
 assert(index.includes('src="app-bundle.js?v='), "the page does not load the combined frontend bundle");
+assert(index.includes('href="app-bundle.css?v='), "the page does not load the combined style bundle");
 assert(loader.includes("/* MINYA_MODULES_START */"), "frontend bundle source marker is missing");
+assert(loader.includes("/* MINYA_STYLES_START */"), "style bundle source marker is missing");
 assert(bundle.includes("/* ===== js/page-mode.js ===== */"), "page routing is missing from the frontend bundle");
 assert(!bundle.includes('<script defer src='), "the combined bundle still triggers dozens of slow script requests");
+assert(!bundle.includes('link.rel = "stylesheet"'), "the JavaScript bundle still triggers dozens of slow style requests");
+assert(styleBundle.includes("/* ===== modern-charts.css ===== */"), "chart styles are missing from the style bundle");
+assert(annualLoader.includes("data.previous_reports"), "annual loader does not cache previous-year reports");
+assert(annualComparison.includes("window.annualPreviousReports"), "annual comparison still requires a second request");
 
-console.log("UI regression checks passed: page isolation + stored diesel + fast monthly details + single-request bundle.");
+console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");

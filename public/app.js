@@ -130,7 +130,10 @@ const MINYA_LOADING_MIN_MS = 150;
 });
 /* MINYA_MODULES_END */
 
+/* MINYA_STYLES_START */
 [
+  "multipage.css",
+  "smart-status.css",
   "modern-charts.css",
   "executive-dashboard.css",
   "v3.css",
@@ -167,6 +170,7 @@ const MINYA_LOADING_MIN_MS = 150;
     document.head.appendChild(link);
   }
 });
+/* MINYA_STYLES_END */
 
 function revealMinyaApp(){
   if (window.__MINYA_APP_REVEALED__) return;

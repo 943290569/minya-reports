@@ -2429,6 +2429,12 @@ async function getAnnualReportsForYear(year) {
 
   if (localReports.length) return localReports;
 
+  if (window.annualPreviousReports?.year === String(year)) {
+    return Array.isArray(window.annualPreviousReports.reports)
+      ? window.annualPreviousReports.reports
+      : [];
+  }
+
   try {
     const response = await fetch(
       `${API}/api/annual-summary?year=${encodeURIComponent(year)}`,
@@ -2660,6 +2666,7 @@ window.renderAnnualInsights = renderAnnualInsights;
 ========================================================= */
 
 window.annualAvailableYears = window.annualAvailableYears || [];
+window.annualPreviousReports = window.annualPreviousReports || { year: "", reports: [] };
 let annualLoading = false;
 let annualPendingYear = "";
 
@@ -2714,6 +2721,11 @@ async function loadAnnualArchiveData(year = "") {
     archiveReports = Array.isArray(data.reports)
       ? data.reports
       : [];
+
+    window.annualPreviousReports = {
+      year: String(Number(requestedYear) - 1),
+      reports: Array.isArray(data.previous_reports) ? data.previous_reports : [],
+    };
 
     if (typeof renderAnnualSummary === "function") {
       await renderAnnualSummary();
@@ -3000,13 +3012,6 @@ window.loadArchivePage = loadArchivePage;
 ========================================================= */
 
 (function () {
-  if (!document.querySelector('link[href="multipage.css"]')) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "multipage.css";
-    document.head.appendChild(link);
-  }
-
   function getPageFromPath() {
     const path = window.location.pathname.replace(/\/+$/, "") || "/";
     if (path === "/report") return "report";
@@ -3531,16 +3536,7 @@ window.loadArchivePage = loadArchivePage;
     renderAlerts(buildAlerts(totals));
   }
 
-  function loadStyles() {
-    if (document.querySelector('link[href="smart-status.css"]')) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "smart-status.css";
-    document.head.appendChild(link);
-  }
-
   document.addEventListener("DOMContentLoaded", () => {
-    loadStyles();
     ensureSmartPanel();
     refreshSmartStatus();
     loadMonthlyBenchmarks();
@@ -6523,43 +6519,7 @@ ${payload.sections.join("\n")}
 ;
 
 
-[
-  "modern-charts.css",
-  "executive-dashboard.css",
-  "v3.css",
-  "report-attachments.css",
-  "edit-flow.css",
-  "admin-audit.css",
-  "admin-security.css",
-  "admin-users.css",
-  "excel-import.css",
-  "report-workflow.css",
-  "reviews.css",
-  "report-responsive.css",
-  "archive-mobile.css",
-  "calm-theme.css",
-  "premium-theme.css",
-  "compact-theme.css",
-  "header-tone.css",
-  "account-position.css",
-  "header-compact.css",
-  "hero-clarity.css",
-  "desktop-nav-hero.css",
-  "final-ui-stabilize.css",
-  "mobile-vertical-menu.css",
-  "ui-polish-v2.css",
-  "ui-polish-v3.css",
-  "system-polish-final.css",
-  "dashboard-metrics-fix.css",
-  "review-polish.css"
-].forEach((href) => {
-  if (!document.querySelector(`link[href^="${href}"]`)) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = `${href}?v=${MINYA_ASSET_VERSION}`;
-    document.head.appendChild(link);
-  }
-});
+
 
 function revealMinyaApp(){
   if (window.__MINYA_APP_REVEALED__) return;

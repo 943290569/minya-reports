@@ -522,6 +522,14 @@ app.get("/api/annual-summary", requireAuth, (req, res) => {
       ORDER BY report_date ASC
     `).all(`${year}-01-01`, `${year}-12-31`);
 
+    const previousYear = String(Number(year) - 1);
+    const previousReports = db.prepare(`
+      SELECT id, report_date, report_no, total_waste_tons, total_trucks, total_diesel
+      FROM daily_reports
+      WHERE report_date >= ? AND report_date <= ?
+      ORDER BY report_date ASC
+    `).all(`${previousYear}-01-01`, `${previousYear}-12-31`);
+
     const years = db.prepare(`
       SELECT DISTINCT substr(report_date, 1, 4) AS year
       FROM daily_reports
@@ -545,7 +553,7 @@ app.get("/api/annual-summary", requireAuth, (req, res) => {
       out.days += month.days; out.waste += month.waste; out.trucks += month.trucks; out.diesel += month.diesel; return out;
     }, { days: 0, waste: 0, trucks: 0, diesel: 0 });
 
-    res.json({ ok: true, year, years, reports, months, summary });
+    res.json({ ok: true, year, years, reports, previous_reports: previousReports, months, summary });
   } catch (error) {
     res.status(500).json({ ok: false, message: "تعذر تحميل التقرير السنوي", error: error.message });
   }
