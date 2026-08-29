@@ -150,4 +150,46 @@
     background: var(--night-surface) !important;
     border-color: var(--night-line) !important;
   }
+
+  html[data-theme="night"][data-color] .v3-hero > div > span,
+  html[data-theme="night"][data-color] .v3-hero > span {
+    color: rgba(255,255,255,.78) !important;
+    opacity: 1 !important;
+  }
+
+  html[data-theme="night"] #clearArchiveFiltersBtn {
+    color: #dff2e9 !important;
+    background: #27463a !important;
+    border-color: #4f6d61 !important;
+  }
+
+  html[data-theme="night"] #archiveTable button {
+    color: var(--night-text) !important;
+    background: #263730 !important;
+    border-color: #4b6258 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .archive-open {
+    color: #ffffff !important;
+    background: var(--appearance-accent) !important;
+    border-color: #4d8b73 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .archive-edit {
+    color: #dff2e9 !important;
+    background: #27463a !important;
+    border-color: #4f6d61 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .archive-print {
+    color: #d7e5df !important;
+    background: #24322d !important;
+    border-color: #4b6258 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .role-admin-action {
+    color: #ffffff !important;
+    background: linear-gradient(135deg,#8f1c14,#b42318) !important;
+    border-color: #c84a3f !important;
+  }
 }
