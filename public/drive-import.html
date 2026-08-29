@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>استيراد التقارير من Google Drive - مكب المنيا</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="v3.css">
+  <link rel="stylesheet" href="drive-import.css?v=3.3.0-drive-import-v1">
+</head>
+<body data-page="drive-import">
+  <header class="top-header">
+    <div><h1>نظام إدارة مكب المنيا</h1><p>استيراد التقارير القديمة من Google Drive</p></div>
+    <nav>
+      <a class="app-nav-link" href="/">الرئيسية</a>
+      <a class="app-nav-link" href="/archive">الأرشيف</a>
+      <a class="app-nav-link" href="/admin">الإدارة</a>
+      <a class="app-nav-link" href="/system.html">إدارة النظام</a>
+      <a class="app-nav-link active" href="/drive-import.html">استيراد Drive</a>
+    </nav>
+  </header>
+
+  <main class="container drive-import-page">
+    <section class="v3-hero drive-hero">
+      <div><span>GOOGLE DRIVE IMPORT</span><h2>استيراد التقارير القديمة</h2><p>استعراض الملفات، تحليل صفحات الأيام، معاينة البيانات، ثم الاعتماد أو الإلغاء دون تعديل ملفات Google Drive.</p></div>
+    </section>
+
+    <section id="adminOnlyNotice" class="drive-notice hidden">هذه الصفحة متاحة للمدير فقط.</section>
+
+    <section id="driveSetupPanel" class="drive-panel">
+      <div class="drive-panel-head"><div><small>الخطوة 1</small><h3>ربط Google Drive</h3></div><span class="drive-readonly">قراءة فقط</span></div>
+      <p>أدخل Google OAuth Client ID مرة واحدة. يتم حفظه على هذا المتصفح فقط، ولا يتم تخزين كلمة مرور Google داخل النظام.</p>
+      <div class="drive-connect-grid">
+        <label>Google Client ID
+          <input id="googleClientId" type="text" autocomplete="off" placeholder="xxxxxxxxxxxx-xxxxxxxx.apps.googleusercontent.com">
+        </label>
+        <button id="saveClientIdBtn" type="button" class="drive-secondary">حفظ الإعداد</button>
+        <button id="connectDriveBtn" type="button" class="drive-primary">ربط Google Drive</button>
+      </div>
+      <div id="driveConnectionState" class="drive-state">غير متصل</div>
+    </section>
+
+    <section id="driveFilesPanel" class="drive-panel hidden">
+      <div class="drive-panel-head"><div><small>الخطوة 2</small><h3>ملفات التقارير على Drive</h3></div><button id="refreshDriveFilesBtn" class="drive-secondary" type="button">تحديث القائمة</button></div>
+      <div class="drive-search-row"><input id="driveFileSearch" type="search" placeholder="ابحث باسم الملف مثل: التقرير اليومي لشهر"><span id="driveFilesCount">0 ملف</span></div>
+      <div id="driveFilesList" class="drive-file-list"><div class="drive-empty">جاري تحميل الملفات...</div></div>
+    </section>
+
+    <section id="previewPanel" class="drive-panel hidden">
+      <div class="drive-panel-head"><div><small>الخطوة 3</small><h3>معاينة الاستيراد</h3><p id="previewFileName"></p></div><button id="cancelPreviewBtn" class="drive-secondary" type="button">إلغاء المعاينة</button></div>
+      <div class="drive-summary-cards">
+        <div><span>الصفحات المقروءة</span><strong id="previewTotal">0</strong></div>
+        <div><span>صالحة للاستيراد</span><strong id="previewValid">0</strong></div>
+        <div><span>موجودة مسبقًا</span><strong id="previewDuplicate">0</strong></div>
+        <div><span>تحتاج مراجعة</span><strong id="previewInvalid">0</strong></div>
+      </div>
+      <div class="drive-preview-note">يتم تجاهل صفحة <b>summary</b> تلقائيًا. لا يتم حفظ أي تقرير في هذه المرحلة.</div>
+      <div id="previewReports" class="drive-preview-list"></div>
+      <div class="drive-approval-bar">
+        <button id="cancelImportBtn" class="drive-cancel" type="button">إلغاء</button>
+        <button id="approveImportBtn" class="drive-primary" type="button">اعتماد الاستيراد</button>
+      </div>
+      <div id="importProgress" class="drive-progress hidden"></div>
+    </section>
+  </main>
+
+  <script src="js/app-auth.js"></script>
+  <script src="js/app-logout-header.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/app-drive-import.js?v=3.3.0-drive-import-v1"></script>
+  <script src="js/app-english-digits.js"></script>
+</body>
+</html>
