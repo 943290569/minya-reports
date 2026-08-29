@@ -20,18 +20,6 @@ html[data-color="blue"] {
   --appearance-accent-soft: #e8f2fb;
 }
 
-html[data-color="sand"] {
-  --appearance-accent: #8a5b24;
-  --appearance-accent-strong: #684116;
-  --appearance-accent-soft: #faf0df;
-}
-
-html[data-color="purple"] {
-  --appearance-accent: #6d4aa0;
-  --appearance-accent-strong: #53347c;
-  --appearance-accent-soft: #f0eafb;
-}
-
 html[data-font-size="small"] { --appearance-font-size: 14px; }
 html[data-font-size="large"] { --appearance-font-size: 18px; }
 html[data-font-size="xlarge"] { --appearance-font-size: 20px; }
@@ -75,7 +63,7 @@ html[data-color] .btn-primary {
   border-color: var(--appearance-accent) !important;
 }
 
-html[data-color] main button:not(.role-admin-action):not(#minyaAppearanceClose):not(#minyaAppearanceReset),
+html[data-color] main :is(.v3-primary,.drive-primary,.workflow-primary,.workflow-approve),
 html[data-color] .appearance-actions #minyaAppearanceDone {
   background-color: var(--appearance-accent) !important;
 }
