@@ -1,7 +1,45 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v6";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v7";
 const MINYA_LOADING_STARTED_AT = Date.now();
-const MINYA_LOADING_MIN_MS = 3000;
+const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
+
+function readMinyaAppearanceSettings() {
+  const defaults = {
+    loadingSeconds: 3,
+    theme: "day",
+    color: "green",
+    fontSize: "normal",
+    navPosition: "top",
+    density: "comfortable",
+    contrast: "normal",
+    motion: "full",
+  };
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(MINYA_APPEARANCE_STORAGE_KEY) || "{}");
+    return { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+  } catch (_) {
+    return defaults;
+  }
+}
+
+window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
+const MINYA_LOADING_MIN_MS = Math.min(
+  15000,
+  Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 3) * 1000)
+);
+
+[
+  ["theme", window.MINYA_APPEARANCE_SETTINGS.theme],
+  ["color", window.MINYA_APPEARANCE_SETTINGS.color],
+  ["fontSize", window.MINYA_APPEARANCE_SETTINGS.fontSize],
+  ["navPosition", window.MINYA_APPEARANCE_SETTINGS.navPosition],
+  ["density", window.MINYA_APPEARANCE_SETTINGS.density],
+  ["contrast", window.MINYA_APPEARANCE_SETTINGS.contrast],
+  ["motion", window.MINYA_APPEARANCE_SETTINGS.motion],
+].forEach(([name, value]) => {
+  document.documentElement.dataset[name] = String(value || "");
+});
 
 (function mountMinyaLoadingScreen(){
   const messages = [
@@ -58,6 +96,15 @@ const MINYA_LOADING_MIN_MS = 3000;
       border-radius: 50%;
       background: #176b4f;
       animation: minyaLoadingPulse .5s ease-in-out infinite alternate;
+    }
+    html[data-theme="night"] #minyaLoadingScreen {
+      background: linear-gradient(135deg, #0e1714 0%, #17231f 100%);
+    }
+    html[data-theme="night"] #minyaLoadingScreen .minya-loading-message {
+      color: #dff5ea;
+    }
+    html[data-theme="night"] #minyaLoadingScreen .minya-loading-dot {
+      background: #75cfa9;
     }
     @keyframes minyaLoadingPulse {
       from { opacity: .25; transform: scale(.85); }
@@ -123,6 +170,7 @@ const MINYA_LOADING_MIN_MS = 3000;
   "js/app-ui-enhancements.js",
   "js/app-english-digits.js",
   "js/app-date-display.js",
+  "js/app-appearance-settings.js",
   "js/app-review-polish.js"
 ].forEach((src) => {
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
@@ -134,6 +182,7 @@ const MINYA_LOADING_MIN_MS = 3000;
 [
   "multipage.css",
   "smart-status.css",
+  "appearance-settings.css",
   "modern-charts.css",
   "executive-dashboard.css",
   "v3.css",
