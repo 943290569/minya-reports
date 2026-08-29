@@ -51,9 +51,12 @@ async function loadAnnualArchiveData(year = "") {
       throw new Error(data.message || "فشل تحميل التقرير السنوي");
     }
 
-    window.annualAvailableYears = Array.isArray(data.years)
-      ? data.years.map(String)
-      : [];
+    window.annualAvailableYears = [...new Set([
+      ...(Array.isArray(window.annualAvailableYears) ? window.annualAvailableYears : []),
+      ...(Array.isArray(data.years) ? data.years.map(String) : []),
+      requestedYear,
+    ])].filter((value) => /^\d{4}$/.test(value))
+      .sort((a, b) => Number(b) - Number(a));
 
     archiveReports = Array.isArray(data.reports)
       ? data.reports
