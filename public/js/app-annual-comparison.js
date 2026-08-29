@@ -11,11 +11,29 @@ function formatAnnualChange(current, previous) {
   return `${percent > 0 ? "زيادة" : "انخفاض"} ${formatNumber(Math.abs(percent))}%`;
 }
 
-async function calculateAnnualTotals(year) {
-  const reports = archiveReports.filter((report) =>
+async function getAnnualReportsForYear(year) {
+  const localReports = archiveReports.filter((report) =>
     String(report.report_date || "").startsWith(`${year}-`)
   );
 
+  if (localReports.length) return localReports;
+
+  try {
+    const response = await fetch(
+      `${API}/api/annual-summary?year=${encodeURIComponent(year)}`,
+      { cache: "no-store" }
+    );
+    const data = await response.json();
+    if (!response.ok || !data.ok) return [];
+    return Array.isArray(data.reports) ? data.reports : [];
+  } catch (error) {
+    console.error(`تعذر تحميل بيانات سنة ${year}`, error);
+    return [];
+  }
+}
+
+async function calculateAnnualTotals(year) {
+  const reports = await getAnnualReportsForYear(year);
   if (!reports.length) return null;
 
   const details = await Promise.all(
@@ -79,6 +97,9 @@ async function renderAnnualComparison() {
 
   const previousYear = year - 1;
   title.textContent = `مقارنة مع السنة السابقة - ${previousYear}`;
+  grid.style.display = "none";
+  empty.style.display = "block";
+  empty.textContent = "جاري تحميل المقارنة...";
 
   const [current, previous] = await Promise.all([
     calculateAnnualTotals(String(year)),
@@ -105,20 +126,8 @@ async function renderAnnualComparison() {
 
 function bindAnnualComparison() {
   setupAnnualComparisonSection();
-  const select = document.getElementById("annualYearFilter");
-  if (select && !select.dataset.comparisonBound) {
-    select.dataset.comparisonBound = "1";
-    select.addEventListener("change", renderAnnualComparison);
-  }
 }
 
 bindAnnualComparison();
-
-document.getElementById("archiveBtn")?.addEventListener("click", () => {
-  setTimeout(() => {
-    bindAnnualComparison();
-    renderAnnualComparison();
-  }, 400);
-});
 
 window.renderAnnualComparison = renderAnnualComparison;
