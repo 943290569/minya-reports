@@ -64,6 +64,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.r.status===200&&x.data.summary.diesel===55,'monthly summary lost stored diesel total');
   x=await json('/api/annual-summary?year=2099',auth(viewer));
   assert(x.r.status===200&&x.data.summary.diesel===55,'annual summary lost stored diesel total');
+  assert(Array.isArray(x.data.previous_reports),'annual summary does not include previous-year reports');
 
   x=await json(`/api/reports/${id}`,auth(viewer));
   assert(x.r.status===200,'viewer could not read report');
