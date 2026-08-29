@@ -4430,3 +4430,160 @@ body[data-page="report"] #saveBtn {
   }
 }
 
+
+
+/* ===== appearance-night.css ===== */
+/* Final night-theme layer. Loaded after all general presentation styles. */
+
+@media screen {
+  html[data-theme="night"] {
+    color-scheme: dark;
+    --night-page: #0e1714;
+    --night-surface: #17231f;
+    --night-surface-alt: #1d2b26;
+    --night-surface-hover: #22342d;
+    --night-text: #edf6f2;
+    --night-muted: #a7bbb3;
+    --night-line: #344941;
+  }
+
+  html[data-theme="night"] body {
+    color: var(--night-text) !important;
+    background: var(--night-page) !important;
+  }
+
+  html[data-theme="night"] main,
+  html[data-theme="night"] .container,
+  html[data-theme="night"] .v3-page,
+  html[data-theme="night"] .reviews-page,
+  html[data-theme="night"] .system-page,
+  html[data-theme="night"] .admin-page {
+    color: var(--night-text) !important;
+    background-color: transparent !important;
+  }
+
+  html[data-theme="night"] :is(
+    .panel,
+    .v3-panel,
+    .reviews-panel,
+    .admin-panel,
+    .admin-audit-panel,
+    .admin-security-panel,
+    .system-card,
+    .security-card,
+    .audit-card,
+    .dashboard-card,
+    .dashboard-metric-card,
+    .dashboard-recent-panel,
+    .daily-summary > div,
+    .archive-summary > div,
+    .monthly-summary > div,
+    .monthly-comparison,
+    .monthly-comparison-grid > div,
+    .monthly-chart,
+    .v3-kpis > div,
+    .smart-status-panel,
+    .smart-monitoring,
+    .executive-trend-panel,
+    .drive-panel,
+    .drive-report-card,
+    .drive-summary-cards > div,
+    .attachment-list > div
+  ) {
+    color: var(--night-text) !important;
+    background: var(--night-surface) !important;
+    border-color: var(--night-line) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.24) !important;
+  }
+
+  html[data-theme="night"] :is(
+    .archive-filters,
+    .v3-filter,
+    .v3-search-grid,
+    .v3-form-grid,
+    .reviews-toolbar,
+    .drive-search-row,
+    .drive-preview-note,
+    .drive-state
+  ) {
+    color: var(--night-text) !important;
+    background: var(--night-surface-alt) !important;
+    border-color: var(--night-line) !important;
+  }
+
+  html[data-theme="night"] main :is(h1,h2,h3,h4,label),
+  html[data-theme="night"] :is(.panel,.v3-panel,.dashboard-card,.dashboard-metric-card,.monthly-summary>div,.archive-summary>div,.daily-summary>div) strong {
+    color: var(--night-text) !important;
+  }
+
+  html[data-theme="night"] main :is(p,small),
+  html[data-theme="night"] :is(.panel,.v3-panel,.dashboard-card,.dashboard-metric-card,.monthly-summary>div,.archive-summary>div,.daily-summary>div) span {
+    color: var(--night-muted) !important;
+  }
+
+  html[data-theme="night"] :is(input,select,textarea) {
+    color: var(--night-text) !important;
+    background: var(--night-surface-alt) !important;
+    border-color: var(--night-line) !important;
+    box-shadow: none !important;
+  }
+
+  html[data-theme="night"] :is(input,select,textarea):hover,
+  html[data-theme="night"] :is(input,select,textarea):focus {
+    color: var(--night-text) !important;
+    background: #24362f !important;
+    border-color: #6d9f8b !important;
+  }
+
+  html[data-theme="night"] :is(input,textarea)::placeholder {
+    color: #8ea49a !important;
+    opacity: 1 !important;
+  }
+
+  html[data-theme="night"] table {
+    color: var(--night-text) !important;
+    background: var(--night-surface) !important;
+    border-color: var(--night-line) !important;
+  }
+
+  html[data-theme="night"] table thead th {
+    color: #dce9e3 !important;
+    background: #22332d !important;
+    border-color: var(--night-line) !important;
+  }
+
+  html[data-theme="night"] table tbody tr,
+  html[data-theme="night"] table tbody td {
+    color: var(--night-text) !important;
+    background: var(--night-surface) !important;
+    border-color: var(--night-line) !important;
+  }
+
+  html[data-theme="night"] tbody tr:nth-child(even) td {
+    color: var(--night-text) !important;
+    background: var(--night-surface-alt) !important;
+  }
+
+  html[data-theme="night"] tbody tr:hover td {
+    color: #ffffff !important;
+    background: var(--night-surface-hover) !important;
+  }
+
+  html[data-theme="night"] :is(.status-pill,.workflow-badge,.drive-status,.smart-status-badge) {
+    color: var(--night-text) !important;
+    background: #2a3e36 !important;
+    border-color: #496357 !important;
+  }
+
+  html[data-theme="night"] :is(.monthly-chart-bars,.monthly-chart-scroll,.v3-table-wrap,.dashboard-table-wrap) {
+    border-color: var(--night-line) !important;
+    background-color: transparent !important;
+  }
+
+  html[data-theme="night"] #minyaAppearancePanel {
+    color: var(--night-text) !important;
+    background: var(--night-surface) !important;
+    border-color: var(--night-line) !important;
+  }
+}
+
