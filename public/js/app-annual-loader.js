@@ -3,6 +3,7 @@
 ========================================================= */
 
 window.annualAvailableYears = window.annualAvailableYears || [];
+window.annualPreviousReports = window.annualPreviousReports || { year: "", reports: [] };
 let annualLoading = false;
 let annualPendingYear = "";
 
@@ -57,6 +58,11 @@ async function loadAnnualArchiveData(year = "") {
     archiveReports = Array.isArray(data.reports)
       ? data.reports
       : [];
+
+    window.annualPreviousReports = {
+      year: String(Number(requestedYear) - 1),
+      reports: Array.isArray(data.previous_reports) ? data.previous_reports : [],
+    };
 
     if (typeof renderAnnualSummary === "function") {
       await renderAnnualSummary();
