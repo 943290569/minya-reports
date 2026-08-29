@@ -41,5 +41,6 @@ assert(styleBundle.includes("/* ===== modern-charts.css ===== */"), "chart style
 assert(annualLoader.includes("data.previous_reports"), "annual loader does not cache previous-year reports");
 assert(annualLoader.includes("...(Array.isArray(window.annualAvailableYears)"), "annual year choices are replaced after changing the year");
 assert(annualComparison.includes("window.annualPreviousReports"), "annual comparison still requires a second request");
+assert(loader.includes("const MINYA_LOADING_MIN_MS = 3000"), "the remembrance screen is not visible long enough to read");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
