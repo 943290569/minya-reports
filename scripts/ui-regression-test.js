@@ -66,7 +66,9 @@ assert(appearanceStyles.includes('html[data-nav-position="right"]'), "right-side
 assert(appearanceStyles.includes('html[data-theme="night"]'), "night theme styles are missing");
 assert(nightAppearance.includes('html[data-theme="night"] tbody tr:nth-child(even) td'), "night table stripes are not protected from light-theme styles");
 assert(nightAppearance.includes('html[data-theme="night"] body'), "night page background is not protected from light-theme styles");
-assert(dayAppearance.includes('html[data-theme="day"] .archive-open'), "day archive actions do not have a clear primary action");
-assert(dayAppearance.includes('html[data-theme="day"] .archive-edit'), "day archive actions do not distinguish editing");
+assert(dayAppearance.includes('html[data-theme="day"] #archiveTable .archive-open'), "day archive actions do not have a clear primary action");
+assert(dayAppearance.includes('html[data-theme="day"] #archiveTable .archive-edit'), "day archive actions do not distinguish editing");
+assert(nightAppearance.includes('html[data-theme="night"] #clearArchiveFiltersBtn'), "night archive filter action is not styled");
+assert(nightAppearance.includes('html[data-theme="night"] #archiveTable .archive-open'), "night archive primary action is not styled");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
