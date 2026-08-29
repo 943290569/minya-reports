@@ -3,13 +3,6 @@
 ========================================================= */
 
 (function () {
-  if (!document.querySelector('link[href="multipage.css"]')) {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "multipage.css";
-    document.head.appendChild(link);
-  }
-
   function getPageFromPath() {
     const path = window.location.pathname.replace(/\/+$/, "") || "/";
     if (path === "/report") return "report";
