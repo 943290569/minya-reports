@@ -12,6 +12,7 @@
     {label:"التقرير الإداري", href:"/managerial", icon:"▧"},
     {label:"الإدارة والصلاحيات", href:"/admin", icon:"◇", adminOnly:true},
     {label:"إدارة النظام", href:"/system.html", icon:"⚙", adminOnly:true},
+    {label:"استيراد Google Drive", href:"/drive-import.html", icon:"⇩", adminOnly:true},
     {label:"المراجعة والاعتماد", href:"/reviews", icon:"✓", adminOnly:true}
   ];
 
