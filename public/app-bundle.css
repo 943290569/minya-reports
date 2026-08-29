@@ -751,18 +751,6 @@ html[data-color="blue"] {
   --appearance-accent-soft: #e8f2fb;
 }
 
-html[data-color="sand"] {
-  --appearance-accent: #8a5b24;
-  --appearance-accent-strong: #684116;
-  --appearance-accent-soft: #faf0df;
-}
-
-html[data-color="purple"] {
-  --appearance-accent: #6d4aa0;
-  --appearance-accent-strong: #53347c;
-  --appearance-accent-soft: #f0eafb;
-}
-
 html[data-font-size="small"] { --appearance-font-size: 14px; }
 html[data-font-size="large"] { --appearance-font-size: 18px; }
 html[data-font-size="xlarge"] { --appearance-font-size: 20px; }
@@ -806,7 +794,7 @@ html[data-color] .btn-primary {
   border-color: var(--appearance-accent) !important;
 }
 
-html[data-color] main button:not(.role-admin-action):not(#minyaAppearanceClose):not(#minyaAppearanceReset),
+html[data-color] main :is(.v3-primary,.drive-primary,.workflow-primary,.workflow-approve),
 html[data-color] .appearance-actions #minyaAppearanceDone {
   background-color: var(--appearance-accent) !important;
 }
@@ -4427,6 +4415,182 @@ body[data-page="report"] #saveBtn {
     .page-report #equipmentTable { min-width:720px; }
     .page-archive #archiveTable td:last-child { white-space:normal; }
     .page-home .dashboard-grid { gap:9px!important; }
+  }
+}
+
+
+
+/* ===== appearance-day.css ===== */
+/* Final daylight palette. Loaded after general presentation styles. */
+
+@media screen {
+  html[data-theme="day"] {
+    color-scheme: light;
+    --day-page: #f4f7f5;
+    --day-surface: #ffffff;
+    --day-surface-soft: #f8faf9;
+    --day-accent-soft: #e8f2ed;
+    --day-text: #1f352c;
+    --day-muted: #66766e;
+    --day-line: #d8e3dd;
+    --day-danger: #b42318;
+  }
+
+  html[data-theme="day"] body {
+    color: var(--day-text) !important;
+    background: var(--day-page) !important;
+  }
+
+  html[data-theme="day"] :is(
+    .panel,
+    .v3-panel,
+    .reviews-panel,
+    .admin-panel,
+    .admin-audit-panel,
+    .admin-security-panel,
+    .system-card,
+    .security-card,
+    .audit-card,
+    .dashboard-card,
+    .dashboard-metric-card,
+    .dashboard-recent-panel,
+    .daily-summary > div,
+    .archive-summary > div,
+    .monthly-summary > div,
+    .monthly-comparison,
+    .monthly-comparison-grid > div,
+    .monthly-chart,
+    .v3-kpis > div,
+    .smart-status-panel,
+    .smart-monitoring,
+    .executive-trend-panel,
+    .drive-panel,
+    .drive-report-card,
+    .drive-summary-cards > div,
+    .attachment-list > div
+  ) {
+    color: var(--day-text) !important;
+    background: var(--day-surface) !important;
+    border-color: var(--day-line) !important;
+    box-shadow: 0 5px 16px rgba(23,63,49,.055) !important;
+  }
+
+  html[data-theme="day"] .v3-hero {
+    color: var(--day-text) !important;
+    background: linear-gradient(135deg, var(--appearance-accent-soft), #ffffff) !important;
+    border: 1px solid var(--day-line) !important;
+    box-shadow: 0 7px 20px rgba(23,63,49,.055) !important;
+  }
+
+  html[data-theme="day"][data-color] .v3-hero :is(h1,h2,h3),
+  html[data-theme="day"][data-color] .v3-hero > div > span,
+  html[data-theme="day"][data-color] .v3-hero > span {
+    color: var(--day-text) !important;
+    opacity: 1 !important;
+  }
+
+  html[data-theme="day"][data-color] .v3-hero p {
+    color: var(--day-muted) !important;
+    opacity: 1 !important;
+  }
+
+  html[data-theme="day"] :is(.archive-filters,.v3-filter,.reviews-toolbar,.drive-preview-note,.drive-state) {
+    color: var(--day-text) !important;
+    background: var(--day-surface-soft) !important;
+    border-color: var(--day-line) !important;
+  }
+
+  html[data-theme="day"] :is(input,select,textarea) {
+    color: var(--day-text) !important;
+    background: #ffffff !important;
+    border-color: #cfdcd5 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-theme="day"] :is(input,select,textarea):hover,
+  html[data-theme="day"] :is(input,select,textarea):focus {
+    color: var(--day-text) !important;
+    background: #ffffff !important;
+    border-color: var(--appearance-accent) !important;
+  }
+
+  html[data-theme="day"] table {
+    color: var(--day-text) !important;
+    background: #ffffff !important;
+    border-color: var(--day-line) !important;
+  }
+
+  html[data-theme="day"] table thead th {
+    color: #40544b !important;
+    background: #edf3f0 !important;
+    border-color: var(--day-line) !important;
+  }
+
+  html[data-theme="day"] table tbody td {
+    color: var(--day-text) !important;
+    background: #ffffff !important;
+    border-color: #e4ebe7 !important;
+  }
+
+  html[data-theme="day"] table tbody tr:nth-child(even) td {
+    background: #fafcfb !important;
+  }
+
+  html[data-theme="day"] main :is(button,.button,.v3-primary,.drive-primary,.workflow-primary,.workflow-approve),
+  html[data-theme="day"] main a.v3-primary {
+    color: #ffffff !important;
+    background: var(--appearance-accent) !important;
+    border-color: var(--appearance-accent) !important;
+  }
+
+  html[data-theme="day"] main :is(
+    .day-secondary,
+    .secondary,
+    .archive-edit,
+    .drive-secondary,
+    .workflow-secondary,
+    .excel-import-cancel,
+    .drive-cancel,
+    .review-return,
+    .v3-link-btn,
+    #archivePrevPage,
+    #archiveNextPage,
+    #mPrint
+  ) {
+    color: var(--appearance-accent-strong) !important;
+    background: var(--appearance-accent-soft) !important;
+    border-color: #c9dcd3 !important;
+  }
+
+  html[data-theme="day"] .archive-open {
+    color: #ffffff !important;
+    background: var(--appearance-accent) !important;
+    border-color: var(--appearance-accent) !important;
+  }
+
+  html[data-theme="day"] .archive-edit {
+    color: var(--appearance-accent-strong) !important;
+    background: var(--appearance-accent-soft) !important;
+  }
+
+  html[data-theme="day"] .archive-print {
+    color: #40544b !important;
+    background: #ffffff !important;
+    border-color: #cfdcd5 !important;
+  }
+
+  html[data-theme="day"] main :is(.role-admin-action,[data-delete-attachment]) {
+    color: #ffffff !important;
+    background: var(--day-danger) !important;
+    border-color: var(--day-danger) !important;
+  }
+
+  html[data-theme="day"] :is(.dashboard-section-head,.panel,.v3-panel) :is(h2,h3,h4,strong) {
+    color: var(--day-text) !important;
+  }
+
+  html[data-theme="day"] :is(.dashboard-section-head,.panel,.v3-panel,.dashboard-card,.dashboard-metric-card) :is(p,small,span) {
+    color: var(--day-muted) !important;
   }
 }
 

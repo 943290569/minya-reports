@@ -329,9 +329,9 @@ function renderArchiveReports() {
         <td>${formatNumber(report.total_trucks)}</td>
         <td>${formatNumber(report.total_diesel)}</td>
         <td>
-          <button onclick="openReport(${report.id})">فتح</button>
-          <button class="role-editor-action" onclick="goToEditReport(${report.id})">تعديل</button>
-          <button onclick="printReport(${report.id})">طباعة</button>
+          <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
+          <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
+          <button class="archive-print" onclick="printReport(${report.id})">طباعة</button>
           <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
         </td>
       </tr>`).join("");

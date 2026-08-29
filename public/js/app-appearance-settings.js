@@ -18,7 +18,7 @@
   const allowed = {
     loadingSeconds: [1, 2, 3, 4, 5],
     theme: ["day", "night", "auto"],
-    color: ["green", "blue", "sand", "purple"],
+    color: ["green", "blue"],
     fontSize: ["small", "normal", "large", "xlarge"],
     navPosition: ["top", "right", "left"],
     density: ["comfortable", "compact"],
@@ -120,7 +120,7 @@
         </label>
         <label>اللون الرئيسي
           <select data-appearance-key="color">
-            ${option("green", "أخضر")}${option("blue", "أزرق")}${option("sand", "رملي")}${option("purple", "بنفسجي")}
+            ${option("green", "أخضر")}${option("blue", "أزرق")}
           </select>
         </label>
         <label>حجم الخط

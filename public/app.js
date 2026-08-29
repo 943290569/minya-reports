@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v11";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v12";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -20,6 +20,7 @@ function readMinyaAppearanceSettings() {
     const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
     const loadingSeconds = Number(settings.loadingSeconds);
     settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
+    settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
     return settings;
   } catch (_) {
     return defaults;
@@ -217,6 +218,7 @@ const MINYA_LOADING_MIN_MS = Math.min(
   "system-polish-final.css",
   "dashboard-metrics-fix.css",
   "review-polish.css",
+  "appearance-day.css",
   "appearance-night.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
