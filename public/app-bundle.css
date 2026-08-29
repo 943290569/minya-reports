@@ -4562,18 +4562,18 @@ body[data-page="report"] #saveBtn {
     border-color: #c9dcd3 !important;
   }
 
-  html[data-theme="day"] .archive-open {
+  html[data-theme="day"] #archiveTable .archive-open {
     color: #ffffff !important;
     background: var(--appearance-accent) !important;
     border-color: var(--appearance-accent) !important;
   }
 
-  html[data-theme="day"] .archive-edit {
+  html[data-theme="day"] #archiveTable .archive-edit {
     color: var(--appearance-accent-strong) !important;
     background: var(--appearance-accent-soft) !important;
   }
 
-  html[data-theme="day"] .archive-print {
+  html[data-theme="day"] #archiveTable .archive-print {
     color: #40544b !important;
     background: #ffffff !important;
     border-color: #cfdcd5 !important;
@@ -4748,6 +4748,48 @@ body[data-page="report"] #saveBtn {
     color: var(--night-text) !important;
     background: var(--night-surface) !important;
     border-color: var(--night-line) !important;
+  }
+
+  html[data-theme="night"][data-color] .v3-hero > div > span,
+  html[data-theme="night"][data-color] .v3-hero > span {
+    color: rgba(255,255,255,.78) !important;
+    opacity: 1 !important;
+  }
+
+  html[data-theme="night"] #clearArchiveFiltersBtn {
+    color: #dff2e9 !important;
+    background: #27463a !important;
+    border-color: #4f6d61 !important;
+  }
+
+  html[data-theme="night"] #archiveTable button {
+    color: var(--night-text) !important;
+    background: #263730 !important;
+    border-color: #4b6258 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .archive-open {
+    color: #ffffff !important;
+    background: var(--appearance-accent) !important;
+    border-color: #4d8b73 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .archive-edit {
+    color: #dff2e9 !important;
+    background: #27463a !important;
+    border-color: #4f6d61 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .archive-print {
+    color: #d7e5df !important;
+    background: #24322d !important;
+    border-color: #4b6258 !important;
+  }
+
+  html[data-theme="night"] #archiveTable .role-admin-action {
+    color: #ffffff !important;
+    background: linear-gradient(135deg,#8f1c14,#b42318) !important;
+    border-color: #c84a3f !important;
   }
 }
 
