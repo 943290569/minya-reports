@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v7";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v8";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -17,7 +17,10 @@ function readMinyaAppearanceSettings() {
 
   try {
     const saved = JSON.parse(localStorage.getItem(MINYA_APPEARANCE_STORAGE_KEY) || "{}");
-    return { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+    const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+    const loadingSeconds = Number(settings.loadingSeconds);
+    settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
+    return settings;
   } catch (_) {
     return defaults;
   }
@@ -25,7 +28,7 @@ function readMinyaAppearanceSettings() {
 
 window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
 const MINYA_LOADING_MIN_MS = Math.min(
-  15000,
+  5000,
   Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 3) * 1000)
 );
 

@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v7";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v8";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -17,7 +17,10 @@ function readMinyaAppearanceSettings() {
 
   try {
     const saved = JSON.parse(localStorage.getItem(MINYA_APPEARANCE_STORAGE_KEY) || "{}");
-    return { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+    const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+    const loadingSeconds = Number(settings.loadingSeconds);
+    settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
+    return settings;
   } catch (_) {
     return defaults;
   }
@@ -25,7 +28,7 @@ function readMinyaAppearanceSettings() {
 
 window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
 const MINYA_LOADING_MIN_MS = Math.min(
-  15000,
+  5000,
   Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 3) * 1000)
 );
 
@@ -6526,7 +6529,7 @@ ${payload.sections.join("\n")}
   };
 
   const allowed = {
-    loadingSeconds: [1, 3, 5, 10, 15],
+    loadingSeconds: [1, 2, 3, 4, 5],
     theme: ["day", "night", "auto"],
     color: ["green", "blue", "sand", "purple"],
     fontSize: ["small", "normal", "large", "xlarge"],
@@ -6603,7 +6606,7 @@ ${payload.sections.join("\n")}
       <div class="appearance-grid">
         <label>مدة ظهور الذكر
           <select data-appearance-key="loadingSeconds">
-            ${option("1", "ثانية واحدة")}${option("3", "3 ثوانٍ")}${option("5", "5 ثوانٍ")}${option("10", "10 ثوانٍ")}${option("15", "15 ثانية")}
+            ${option("1", "ثانية واحدة")}${option("2", "ثانيتان")}${option("3", "3 ثوانٍ")}${option("4", "4 ثوانٍ")}${option("5", "5 ثوانٍ")}
           </select>
           <small>تُطبق عند فتح الصفحة التالية.</small>
         </label>

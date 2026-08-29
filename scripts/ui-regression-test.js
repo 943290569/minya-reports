@@ -49,6 +49,7 @@ assert(loader.includes('"js/app-appearance-settings.js"'), "appearance controls 
 assert(loader.includes('"appearance-settings.css"'), "appearance styles are missing from the style bundle");
 assert(appearance.includes('navPosition: ["top", "right", "left"]'), "menu position controls are incomplete");
 assert(appearance.includes('theme: ["day", "night", "auto"]'), "day and night controls are incomplete");
+assert(appearance.includes('loadingSeconds: [1, 2, 3, 4, 5]'), "remembrance duration choices must be exactly one to five seconds");
 assert(appearanceStyles.includes('html[data-nav-position="right"]'), "right-side menu styles are missing");
 assert(appearanceStyles.includes('html[data-theme="night"]'), "night theme styles are missing");
 
