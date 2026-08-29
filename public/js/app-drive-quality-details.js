@@ -33,7 +33,7 @@
     if(src.operations.length<1) add(25,'العمليات','قسم العمليات','لم يتم العثور على صفوف العمليات','نعم إذا كان اختلاف تسمية','توسيع مطابقة عنوان قسم العمليات وأسماء الحقول بدل الاعتماد على صيغة واحدة.');
     if(src.stations.length<3){
       const lost=src.stations.length?5:10;
-      add(lost,'محطات الترحيل','قسم محطات الترحيل',src.stations.length?`تمت قراءة ${src.stations.length} محطة فقط من العدد المتوقع 3`:'لم يتم العثور على محطات الترحيل', 'نعم غالبًا','مطابقة أسماء الخليل/ترقوميا/يطا بمرونة ومعالجة المسافات والاختلافات الإملائية.');
+      add(lost,'محطات الترحيل','قسم محطات الترحيل',src.stations.length?`تمت قراءة ${src.stations.length} محطة فقط من العدد المتوقع 3`:'لم يتم العثور على محطات الترحيل','نعم غالبًا','مطابقة أسماء الخليل/ترقوميا/يطا بمرونة ومعالجة المسافات والاختلافات الإملائية.');
     }
     if(src.equipment.length<10){
       const lost=src.equipment.length?10:20;
@@ -70,6 +70,18 @@
     }
   }
 
-  function watch(){const root=$('previewReports');if(!root)return;let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(enhance,260);}).observe(root,{childList:true,subtree:true});setTimeout(enhance,500);}
+  function runRetries(){
+    [180,450,900,1600,2600].forEach(delay=>setTimeout(enhance,delay));
+  }
+
+  function watch(){
+    const root=$('previewReports');if(!root)return;
+    new MutationObserver(records=>{
+      const hasNewCards=records.some(record=>[...record.addedNodes].some(node=>node.nodeType===1&&(node.matches?.('.drive-report-card')||node.querySelector?.('.drive-report-card'))));
+      if(hasNewCards)runRetries();
+    }).observe(root,{childList:true});
+    runRetries();
+  }
+
   document.addEventListener('DOMContentLoaded',watch);
 })();
