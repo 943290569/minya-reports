@@ -51,6 +51,8 @@ assert(appearance.includes('navPosition: ["top", "right", "left"]'), "menu posit
 assert(appearance.includes('theme: ["day", "night", "auto"]'), "day and night controls are incomplete");
 assert(appearance.includes('loadingSeconds: [1, 2, 3, 4, 5]'), "remembrance duration choices must be exactly one to five seconds");
 assert(appearance.includes('data?.user?.role === "admin"'), "appearance controls must be restricted to administrators");
+assert(appearanceStyles.includes('html[data-color] .v3-hero :is(h1,h2,h3)'), "colored page heroes must keep readable headings");
+assert(appearanceStyles.includes('color: rgba(255,255,255,.84) !important'), "colored page heroes must keep readable descriptions");
 assert(appearanceStyles.includes('html[data-nav-position="right"]'), "right-side menu styles are missing");
 assert(appearanceStyles.includes('html[data-theme="night"]'), "night theme styles are missing");
 
