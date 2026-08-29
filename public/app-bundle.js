@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v10";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v11";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -27,13 +27,16 @@ function readMinyaAppearanceSettings() {
 }
 
 window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
+const MINYA_RESOLVED_THEME = window.MINYA_APPEARANCE_SETTINGS.theme === "auto"
+  ? (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "night" : "day")
+  : window.MINYA_APPEARANCE_SETTINGS.theme;
 const MINYA_LOADING_MIN_MS = Math.min(
   5000,
   Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 3) * 1000)
 );
 
 [
-  ["theme", window.MINYA_APPEARANCE_SETTINGS.theme],
+  ["theme", MINYA_RESOLVED_THEME],
   ["color", window.MINYA_APPEARANCE_SETTINGS.color],
   ["fontSize", window.MINYA_APPEARANCE_SETTINGS.fontSize],
   ["navPosition", window.MINYA_APPEARANCE_SETTINGS.navPosition],
@@ -6539,6 +6542,8 @@ ${payload.sections.join("\n")}
     motion: ["full", "reduced"],
   };
 
+  const systemTheme = window.matchMedia?.("(prefers-color-scheme: dark)");
+
   function normalize(input) {
     const output = { ...defaults };
     Object.keys(defaults).forEach((key) => {
@@ -6564,7 +6569,8 @@ ${payload.sections.join("\n")}
 
   function apply(settings) {
     const root = document.documentElement;
-    root.dataset.theme = settings.theme;
+    root.dataset.theme = settings.theme === "auto" ? (systemTheme?.matches ? "night" : "day") : settings.theme;
+    root.dataset.themePreference = settings.theme;
     root.dataset.color = settings.color;
     root.dataset.fontSize = settings.fontSize;
     root.dataset.navPosition = settings.navPosition;
@@ -6723,6 +6729,10 @@ ${payload.sections.join("\n")}
   }
 
   apply(read());
+  systemTheme?.addEventListener?.("change", () => {
+    const settings = read();
+    if (settings.theme === "auto") apply(settings);
+  });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountForAdmin, { once: true });
   else mountForAdmin();
 })();
