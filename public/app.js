@@ -83,6 +83,7 @@ const MINYA_LOADING_MIN_MS = 150;
   document.documentElement.appendChild(screen);
 })();
 
+/* MINYA_MODULES_START */
 [
   "js/app-auth.js",
   "js/app-core.js",
@@ -127,6 +128,7 @@ const MINYA_LOADING_MIN_MS = 150;
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
   document.write(`<script defer src="${versionedSrc}"><\/script>`);
 });
+/* MINYA_MODULES_END */
 
 [
   "modern-charts.css",
