@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v11";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v12";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -20,6 +20,7 @@ function readMinyaAppearanceSettings() {
     const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
     const loadingSeconds = Number(settings.loadingSeconds);
     settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
+    settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
     return settings;
   } catch (_) {
     return defaults;
@@ -1024,9 +1025,9 @@ function renderArchiveReports() {
         <td>${formatNumber(report.total_trucks)}</td>
         <td>${formatNumber(report.total_diesel)}</td>
         <td>
-          <button onclick="openReport(${report.id})">فتح</button>
-          <button class="role-editor-action" onclick="goToEditReport(${report.id})">تعديل</button>
-          <button onclick="printReport(${report.id})">طباعة</button>
+          <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
+          <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
+          <button class="archive-print" onclick="printReport(${report.id})">طباعة</button>
           <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
         </td>
       </tr>`).join("");
@@ -3020,9 +3021,9 @@ async function loadArchivePage(page = 1) {
           <td>${formatNumber(report.total_trucks)}</td>
           <td>${formatNumber(report.total_diesel)}</td>
           <td>
-            <button onclick="openReport(${report.id})">فتح</button>
-            <button class="role-editor-action" onclick="goToEditReport(${report.id})">تعديل</button>
-            <button onclick="printReport(${report.id})">طباعة</button>
+            <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
+            <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
+            <button class="archive-print" onclick="printReport(${report.id})">طباعة</button>
             <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
           </td>
         </tr>
@@ -6534,7 +6535,7 @@ ${payload.sections.join("\n")}
   const allowed = {
     loadingSeconds: [1, 2, 3, 4, 5],
     theme: ["day", "night", "auto"],
-    color: ["green", "blue", "sand", "purple"],
+    color: ["green", "blue"],
     fontSize: ["small", "normal", "large", "xlarge"],
     navPosition: ["top", "right", "left"],
     density: ["comfortable", "compact"],
@@ -6636,7 +6637,7 @@ ${payload.sections.join("\n")}
         </label>
         <label>اللون الرئيسي
           <select data-appearance-key="color">
-            ${option("green", "أخضر")}${option("blue", "أزرق")}${option("sand", "رملي")}${option("purple", "بنفسجي")}
+            ${option("green", "أخضر")}${option("blue", "أزرق")}
           </select>
         </label>
         <label>حجم الخط
