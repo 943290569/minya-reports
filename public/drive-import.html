@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="desktop-nav-hero.css">
   <link rel="stylesheet" href="final-ui-stabilize.css">
   <link rel="stylesheet" href="mobile-vertical-menu.css">
-  <link rel="stylesheet" href="drive-import.css?v=3.3.0-drive-import-v2">
+  <link rel="stylesheet" href="drive-import.css?v=3.3.0-drive-import-v3">
+  <link rel="stylesheet" href="drive-folder-nav.css?v=3.3.0-drive-folders-v1">
 </head>
 <body data-page="drive-import">
   <header class="top-header">
@@ -39,7 +40,7 @@
 
   <main class="container drive-import-page">
     <section class="v3-hero drive-hero">
-      <div><span>GOOGLE DRIVE IMPORT</span><h2>استيراد التقارير القديمة</h2><p>استعراض الملفات، تحليل صفحات الأيام، معاينة البيانات، ثم الاعتماد أو الإلغاء دون تعديل ملفات Google Drive.</p></div>
+      <div><span>GOOGLE DRIVE IMPORT</span><h2>استيراد التقارير القديمة</h2><p>استعرض مجلدات Google Drive كما هي، افتح ملف التقرير، عاين البيانات، ثم اعتمد أو ألغِ دون تعديل ملفات Drive.</p></div>
     </section>
 
     <section id="adminOnlyNotice" class="drive-notice hidden">هذه الصفحة متاحة للمدير فقط.</section>
@@ -58,8 +59,8 @@
     </section>
 
     <section id="driveFilesPanel" class="drive-panel hidden">
-      <div class="drive-panel-head"><div><small>الخطوة 2</small><h3>ملفات التقارير على Drive</h3></div><button id="refreshDriveFilesBtn" class="drive-secondary" type="button">تحديث القائمة</button></div>
-      <div class="drive-search-row"><input id="driveFileSearch" type="search" placeholder="ابحث باسم الملف مثل: التقرير اليومي لشهر"><span id="driveFilesCount">0 ملف</span></div>
+      <div class="drive-panel-head"><div><small>الخطوة 2</small><h3>ملفات ومجلدات Google Drive</h3></div><button id="refreshDriveFilesBtn" class="drive-secondary" type="button">تحديث القائمة</button></div>
+      <div class="drive-search-row"><input id="driveFileSearch" type="search" placeholder="ابحث داخل المجلد الحالي"><span id="driveFilesCount">0 ملف</span></div>
       <div id="driveFilesList" class="drive-file-list"><div class="drive-empty">جاري تحميل الملفات...</div></div>
     </section>
 
@@ -86,7 +87,8 @@
   <script src="js/app-header-menu.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="js/app-drive-import.js?v=3.3.0-drive-import-v2"></script>
+  <script src="js/app-drive-import.js?v=3.3.0-drive-import-v3"></script>
+  <script src="js/app-drive-folder-nav.js?v=3.3.0-drive-folders-v1"></script>
   <script src="js/app-english-digits.js"></script>
 </body>
 </html>
