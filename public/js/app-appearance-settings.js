@@ -65,6 +65,19 @@
     return `<option value="${value}">${label}</option>`;
   }
 
+  async function isAdmin() {
+    const knownRole = window.MINYA_USER?.role || document.documentElement.dataset.userRole;
+    if (knownRole) return knownRole === "admin";
+
+    try {
+      const response = await fetch("/api/auth/status", { cache: "no-store" });
+      const data = await response.json();
+      return data?.authenticated === true && data?.user?.role === "admin";
+    } catch (_) {
+      return false;
+    }
+  }
+
   function mount() {
     if (document.getElementById("minyaAppearanceButton")) return;
 
@@ -192,7 +205,11 @@
     });
   }
 
+  async function mountForAdmin() {
+    if (await isAdmin()) mount();
+  }
+
   apply(read());
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, { once: true });
-  else mount();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountForAdmin, { once: true });
+  else mountForAdmin();
 })();
