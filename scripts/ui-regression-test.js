@@ -21,6 +21,7 @@ const annualLoader = read("public/js/app-annual-loader.js");
 const annualComparison = read("public/js/app-annual-comparison.js");
 const appearance = read("public/js/app-appearance-settings.js");
 const appearanceStyles = read("public/appearance-settings.css");
+const nightAppearance = read("public/appearance-night.css");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -47,13 +48,18 @@ assert(loader.includes("MINYA_APPEARANCE_STORAGE_KEY"), "appearance settings are
 assert(loader.includes("Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds"), "remembrance duration is not user-controlled");
 assert(loader.includes('"js/app-appearance-settings.js"'), "appearance controls are missing from the frontend bundle");
 assert(loader.includes('"appearance-settings.css"'), "appearance styles are missing from the style bundle");
+assert(loader.includes('"appearance-night.css"'), "night theme overrides are missing from the style bundle");
+assert(loader.indexOf('"appearance-night.css"') > loader.indexOf('"review-polish.css"'), "night theme overrides must load after the general polish styles");
 assert(appearance.includes('navPosition: ["top", "right", "left"]'), "menu position controls are incomplete");
 assert(appearance.includes('theme: ["day", "night", "auto"]'), "day and night controls are incomplete");
 assert(appearance.includes('loadingSeconds: [1, 2, 3, 4, 5]'), "remembrance duration choices must be exactly one to five seconds");
 assert(appearance.includes('data?.user?.role === "admin"'), "appearance controls must be restricted to administrators");
+assert(appearance.includes('settings.theme === "auto" ? (systemTheme?.matches ? "night" : "day")'), "automatic theme must resolve to day or night");
 assert(appearanceStyles.includes('html[data-color] .v3-hero :is(h1,h2,h3)'), "colored page heroes must keep readable headings");
 assert(appearanceStyles.includes('color: rgba(255,255,255,.84) !important'), "colored page heroes must keep readable descriptions");
 assert(appearanceStyles.includes('html[data-nav-position="right"]'), "right-side menu styles are missing");
 assert(appearanceStyles.includes('html[data-theme="night"]'), "night theme styles are missing");
+assert(nightAppearance.includes('html[data-theme="night"] tbody tr:nth-child(even) td'), "night table stripes are not protected from light-theme styles");
+assert(nightAppearance.includes('html[data-theme="night"] body'), "night page background is not protected from light-theme styles");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
