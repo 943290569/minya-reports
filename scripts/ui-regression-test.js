@@ -15,6 +15,7 @@ const monthlyTable = read("public/js/app-monthly-table.js");
 const annual = read("public/js/app-final.js");
 const multipage = read("public/multipage.css");
 const loader = read("public/app.js");
+const bundle = read("public/app-bundle.js");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -26,6 +27,9 @@ assert(multipage.includes('body[data-page="monthly"] .archive-date-control'), "d
 assert(annual.includes('if (path !== "/annual") return;'), "annual section can mount outside annual page");
 assert(monthly.includes('setValue("monthlyDieselTotal", formatNumber(monthly.dieselTotal))'), "monthly stored diesel is not canonical");
 assert(!monthlyTable.includes('getReport(report.id)'), "monthly detail table still performs per-report requests");
-assert(loader.includes('<script defer src='), "frontend scripts are not parallel-downloadable deferred scripts");
+assert(index.includes('src="app-bundle.js?v='), "the page does not load the combined frontend bundle");
+assert(loader.includes("/* MINYA_MODULES_START */"), "frontend bundle source marker is missing");
+assert(bundle.includes("/* ===== js/page-mode.js ===== */"), "page routing is missing from the frontend bundle");
+assert(!bundle.includes('<script defer src='), "the combined bundle still triggers dozens of slow script requests");
 
-console.log("UI regression checks passed: page isolation + stored diesel + fast monthly details + deferred assets.");
+console.log("UI regression checks passed: page isolation + stored diesel + fast monthly details + single-request bundle.");
