@@ -30,10 +30,6 @@
 
   /* Archive: keep the same compact width but improve hierarchy. */
   .page-archive .archive-summary strong { font-size:22px!important; }
-  .page-archive #annualSummarySection { padding:15px!important; }
-  .page-archive #annualSummarySection h3 { margin-bottom:10px!important; }
-  .page-archive #annualSummaryCards { gap:9px!important; }
-  .page-archive #annualSummaryCards > div { min-height:76px!important; padding:10px!important; }
   .page-archive #archiveTable th,
   .page-archive #archiveTable td { padding-top:7px!important; padding-bottom:7px!important; }
   .page-archive #archiveTable td:last-child { white-space:nowrap; }
@@ -41,11 +37,10 @@
   .page-archive .archive-pagination,
   .page-archive #archivePagination { margin-top:10px!important; font-weight:700!important; }
 
-  /* Monthly: slightly tighter summary and chart, annual block visually secondary. */
+  /* Monthly: compact summary and chart. */
   .page-monthly .monthly-summary { gap:9px!important; }
   .page-monthly .monthly-summary > div { min-height:78px!important; padding:10px 8px!important; }
   .page-monthly .monthly-chart { padding:11px!important; }
-  .page-monthly #annualSummarySection { margin-top:14px!important; opacity:.97; }
   .page-monthly .modern-chart-grid { opacity:.72!important; }
   .page-monthly .modern-chart-axis-label,
   .page-monthly .modern-chart-x-label { font-weight:700!important; }

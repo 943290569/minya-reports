@@ -255,17 +255,30 @@
 
     if (page === "archive") {
       if (monthly) monthly.style.display = "none";
+      const annual = document.getElementById("annualSummarySection");
+      if (annual) annual.style.display = "none";
       document.documentElement.classList.add("archive-page");
       return;
     }
 
     if (page === "monthly") {
+      const title = document.getElementById("periodPageTitle");
+      if (title) title.textContent = "التقرير الشهري";
       if (archiveTable) archiveTable.style.display = "none";
+      if (archiveSummary) archiveSummary.style.display = "none";
+      const dateControl = document.querySelector(".archive-date-control");
+      if (dateControl) dateControl.style.display = "none";
+      const clearFilters = document.getElementById("clearArchiveFiltersBtn");
+      if (clearFilters) clearFilters.style.display = "none";
+      const annual = document.getElementById("annualSummarySection");
+      if (annual) annual.style.display = "none";
       document.documentElement.classList.add("monthly-page");
       return;
     }
 
     if (page === "annual") {
+      const title = document.getElementById("periodPageTitle");
+      if (title) title.textContent = "التقرير السنوي";
       if (monthly) monthly.style.display = "none";
       if (archiveTable) archiveTable.style.display = "none";
       if (filters) filters.style.display = "none";

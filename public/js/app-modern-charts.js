@@ -23,16 +23,7 @@
     if (metric === "waste") return reports.map((r) => Number(r.total_waste_tons || 0));
     if (metric === "trucks") return reports.map((r) => Number(r.total_trucks || 0));
 
-    const details = await Promise.all(
-      reports.map((report) => getReport(report.id).catch(() => null))
-    );
-    return reports.map((report, index) => {
-      const data = details[index];
-      if (!data) return Number(report.total_diesel || 0);
-      return (data.equipment || []).reduce(
-        (sum, item) => sum + Number(item.diesel_liters || 0), 0
-      );
-    });
+    return reports.map((report) => Number(report.total_diesel || 0));
   }
 
   function makeTicks(maxValue) {
