@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node scripts/check-js.js && node scripts/ui-regression-test.js && node scripts/smoke-test.js"
+    "build:app": "node scripts/build-app-bundle.js",
+    "test": "node scripts/build-app-bundle.js --check && node scripts/check-js.js && node scripts/ui-regression-test.js && node scripts/smoke-test.js"
   },
   "keywords": [
     "minya-landfill",
