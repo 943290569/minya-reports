@@ -111,10 +111,10 @@ async function exportAnnualCsv() {
 function setupAnnualExportButton() {
   const section = document.getElementById("annualSummarySection");
   const select = document.getElementById("annualYearFilter");
-  if (!section || !select || document.getElementById("exportAnnualCsvBtn")) return;
+  if (!section || !select || document.getElementById("exportAnnualCsvBtn")) return false;
 
   const controls = select.closest("div");
-  if (!controls) return;
+  if (!controls) return false;
 
   const button = document.createElement("button");
   button.id = "exportAnnualCsvBtn";
@@ -130,12 +130,26 @@ function setupAnnualExportButton() {
   button.addEventListener("click", exportAnnualCsv);
 
   controls.appendChild(button);
+  return true;
 }
 
-setupAnnualExportButton();
+function ensureAnnualExportButton() {
+  if (setupAnnualExportButton()) return;
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    if (setupAnnualExportButton() || tries >= 30) clearInterval(timer);
+  }, 120);
+}
+
+ensureAnnualExportButton();
+
+document.addEventListener("DOMContentLoaded", ensureAnnualExportButton, { once: true });
 
 document.getElementById("archiveBtn")?.addEventListener("click", () => {
-  setTimeout(setupAnnualExportButton, 300);
+  setTimeout(ensureAnnualExportButton, 300);
 });
 
 window.exportAnnualCsv = exportAnnualCsv;
+window.setupAnnualExportButton = setupAnnualExportButton;
+window.ensureAnnualExportButton = ensureAnnualExportButton;
