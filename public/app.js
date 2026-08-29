@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v10";
+const MINYA_ASSET_VERSION = "3.3.0-20260829-v11";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -27,13 +27,16 @@ function readMinyaAppearanceSettings() {
 }
 
 window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
+const MINYA_RESOLVED_THEME = window.MINYA_APPEARANCE_SETTINGS.theme === "auto"
+  ? (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "night" : "day")
+  : window.MINYA_APPEARANCE_SETTINGS.theme;
 const MINYA_LOADING_MIN_MS = Math.min(
   5000,
   Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 3) * 1000)
 );
 
 [
-  ["theme", window.MINYA_APPEARANCE_SETTINGS.theme],
+  ["theme", MINYA_RESOLVED_THEME],
   ["color", window.MINYA_APPEARANCE_SETTINGS.color],
   ["fontSize", window.MINYA_APPEARANCE_SETTINGS.fontSize],
   ["navPosition", window.MINYA_APPEARANCE_SETTINGS.navPosition],
@@ -213,7 +216,8 @@ const MINYA_LOADING_MIN_MS = Math.min(
   "ui-polish-v3.css",
   "system-polish-final.css",
   "dashboard-metrics-fix.css",
-  "review-polish.css"
+  "review-polish.css",
+  "appearance-night.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
