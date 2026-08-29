@@ -26,6 +26,8 @@
     motion: ["full", "reduced"],
   };
 
+  const systemTheme = window.matchMedia?.("(prefers-color-scheme: dark)");
+
   function normalize(input) {
     const output = { ...defaults };
     Object.keys(defaults).forEach((key) => {
@@ -51,7 +53,8 @@
 
   function apply(settings) {
     const root = document.documentElement;
-    root.dataset.theme = settings.theme;
+    root.dataset.theme = settings.theme === "auto" ? (systemTheme?.matches ? "night" : "day") : settings.theme;
+    root.dataset.themePreference = settings.theme;
     root.dataset.color = settings.color;
     root.dataset.fontSize = settings.fontSize;
     root.dataset.navPosition = settings.navPosition;
@@ -210,6 +213,10 @@
   }
 
   apply(read());
+  systemTheme?.addEventListener?.("change", () => {
+    const settings = read();
+    if (settings.theme === "auto") apply(settings);
+  });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountForAdmin, { once: true });
   else mountForAdmin();
 })();
