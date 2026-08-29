@@ -8,6 +8,7 @@
   let driveFiles=[];
   let previewRows=[];
   let existingDates=new Set();
+  let existingReportIds=new Map();
 
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
@@ -177,7 +178,10 @@
     const r=await driveFetch(url);const data=await r.arrayBuffer();return XLSX.read(data,{type:'array',cellDates:false});
   }
   async function loadExistingDates(){
-    const r=await fetch('/api/reports',{cache:'no-store'});const d=await r.json();existingDates=new Set((d.reports||[]).map(x=>String(x.report_date||'')));
+    const r=await fetch('/api/reports',{cache:'no-store'});const d=await r.json();
+    const reports=Array.isArray(d.reports)?d.reports:[];
+    existingDates=new Set(reports.map(x=>String(x.report_date||'')));
+    existingReportIds=new Map(reports.filter(x=>x.report_date&&x.id).map(x=>[String(x.report_date),Number(x.id)]));
   }
   async function previewFile(id){
     const file=driveFiles.find(f=>f.id===id);if(!file)return;
@@ -186,32 +190,49 @@
       await loadExistingDates();const wb=await downloadWorkbook(file);
       const names=wb.SheetNames.filter(name=>normalize(name)!=='summary');
       previewRows=names.map(name=>parseDailySheet(name,wb.Sheets[name])).filter(r=>r.report_date||r.issues.length);
-      previewRows.forEach(r=>{r.duplicate=existingDates.has(r.report_date);r.valid=!r.duplicate&&!r.issues.length;r.selected=r.valid;});
+      previewRows.forEach(r=>{
+        r.duplicate=existingDates.has(r.report_date);
+        r.existing_id=existingReportIds.get(r.report_date)||null;
+        r.valid=!r.issues.length;
+        r.selected=!r.duplicate&&r.valid;
+      });
       renderPreview();
     }catch(e){$('previewReports').innerHTML=`<div class="drive-empty">${esc(e.message)}</div>`;}
   }
   function renderPreview(){
-    const total=previewRows.length,dup=previewRows.filter(x=>x.duplicate).length,invalid=previewRows.filter(x=>x.issues.length&&!x.duplicate).length,valid=previewRows.filter(x=>x.valid).length;
+    const total=previewRows.length,dup=previewRows.filter(x=>x.duplicate).length,invalid=previewRows.filter(x=>x.issues.length&&!x.duplicate).length,valid=previewRows.filter(x=>!x.duplicate&&x.valid).length;
     $('previewTotal').textContent=total;$('previewValid').textContent=valid;$('previewDuplicate').textContent=dup;$('previewInvalid').textContent=invalid;
     $('approveImportBtn').disabled=!previewRows.some(x=>x.selected&&x.valid);
     $('previewReports').innerHTML=previewRows.length?previewRows.map((r,i)=>{
       const status=r.duplicate?['duplicate','موجود مسبقًا']:r.issues.length?['invalid','يحتاج مراجعة']:['valid','صالح للاستيراد'];
-      return `<article class="drive-report-card"><div class="drive-report-head"><input type="checkbox" data-import-check="${i}" ${r.selected?'checked':''} ${r.valid?'':'disabled'}><div class="drive-report-main"><strong>${dateDisplay(r.report_date)} · ${esc(r.sheet_name)}</strong><small>${r.issues.length?esc(r.issues.join('، ')):'تمت مطابقة الأقسام الرئيسية'}</small></div><span class="drive-status ${status[0]}">${status[1]}</span></div><div class="drive-report-details"><div><span>النفايات</span><strong>${fmt(r.total_waste_tons)} طن</strong></div><div><span>الشاحنات</span><strong>${fmt(r.total_trucks)}</strong></div><div><span>السولار</span><strong>${fmt(r.total_diesel)} لتر</strong></div><div><span>المعدات</span><strong>${r.equipment.length}</strong></div></div><div class="drive-report-extra"><details><summary>عرض المحتويات المطابقة</summary><div class="drive-detail-grid"><div><b>شؤون الموظفين</b>${r.crews.map(x=>`<p>${esc(x.crew_name)}: ${fmt(x.crew_count)}</p>`).join('')||'<p>لا توجد بيانات</p>'}</div><div><b>العمليات والمحطات</b>${r.operations.map(x=>`<p>${esc(x.operation_name)}: عدد المركبات ${fmt(x.vehicle_count)} · الكمية ${fmt(x.quantity)} ${esc(x.unit)}</p>`).join('')}${r.stations.map(x=>`<p>${esc(x.station_name)}: عدد الشاحنات ${fmt(x.truck_count)} · الكمية ${fmt(x.waste_tons)} طن</p>`).join('')}</div><div><b>المعدات</b>${r.equipment.map(x=>`<p>${esc(x.equipment_name)}: ${esc(x.operating_status)} · ${fmt(x.diesel_liters)} لتر</p>`).join('')}</div></div></details></div></article>`;
+      const canSelect=r.valid&&(!r.duplicate||Boolean(r.existing_id));
+      const hint=r.duplicate&&r.valid?'موجود في الموقع — اتركه بدون تحديد للتخطي، أو حدده لتحديثه من Google Drive':r.issues.length?esc(r.issues.join('، ')):'تمت مطابقة الأقسام الرئيسية';
+      return `<article class="drive-report-card"><div class="drive-report-head"><input type="checkbox" data-import-check="${i}" ${r.selected?'checked':''} ${canSelect?'':'disabled'}><div class="drive-report-main"><strong>${dateDisplay(r.report_date)} · ${esc(r.sheet_name)}</strong><small>${hint}</small></div><span class="drive-status ${status[0]}">${status[1]}</span></div><div class="drive-report-details"><div><span>النفايات</span><strong>${fmt(r.total_waste_tons)} طن</strong></div><div><span>الشاحنات</span><strong>${fmt(r.total_trucks)}</strong></div><div><span>السولار</span><strong>${fmt(r.total_diesel)} لتر</strong></div><div><span>المعدات</span><strong>${r.equipment.length}</strong></div></div><div class="drive-report-extra"><details><summary>عرض المحتويات المطابقة</summary><div class="drive-detail-grid"><div><b>شؤون الموظفين</b>${r.crews.map(x=>`<p>${esc(x.crew_name)}: ${fmt(x.crew_count)}</p>`).join('')||'<p>لا توجد بيانات</p>'}</div><div><b>العمليات والمحطات</b>${r.operations.map(x=>`<p>${esc(x.operation_name)}: عدد المركبات ${fmt(x.vehicle_count)} · الكمية ${fmt(x.quantity)} ${esc(x.unit)}</p>`).join('')}${r.stations.map(x=>`<p>${esc(x.station_name)}: عدد الشاحنات ${fmt(x.truck_count)} · الكمية ${fmt(x.waste_tons)} طن</p>`).join('')}</div><div><b>المعدات</b>${r.equipment.map(x=>`<p>${esc(x.equipment_name)}: ${esc(x.operating_status)} · ${fmt(x.diesel_liters)} لتر</p>`).join('')}</div></div></details></div></article>`;
     }).join(''):'<div class="drive-empty">لم يتم العثور على صفحات يومية قابلة للقراءة.</div>';
   }
   function cancelPreview(){previewRows=[];$('previewPanel').classList.add('hidden');$('importProgress').classList.add('hidden');$('importProgress').textContent='';}
   async function approveImport(){
     const selected=previewRows.filter(x=>x.selected&&x.valid);if(!selected.length)return;
-    if(!confirm(`سيتم استيراد ${selected.length} تقرير إلى النظام. هل تريد الاعتماد؟`))return;
+    const updates=selected.filter(x=>x.duplicate).length;
+    const creates=selected.length-updates;
+    const confirmText=updates
+      ? `سيتم استيراد ${creates} تقرير جديد وتحديث ${updates} تقرير موجود من Google Drive. التحديث يستبدل بيانات التقرير المختار فقط. هل تريد الاعتماد؟`
+      : `سيتم استيراد ${creates} تقرير إلى النظام. هل تريد الاعتماد؟`;
+    if(!confirm(confirmText))return;
     const btn=$('approveImportBtn'),progress=$('importProgress');btn.disabled=true;progress.classList.remove('hidden');let ok=0,failed=0;
     for(let i=0;i<selected.length;i++){
-      const r=selected[i];progress.textContent=`جاري استيراد ${i+1} من ${selected.length}: ${dateDisplay(r.report_date)}`;
+      const r=selected[i];progress.textContent=`جاري ${r.duplicate?'تحديث':'استيراد'} ${i+1} من ${selected.length}: ${dateDisplay(r.report_date)}`;
       try{
         const payload={report_date:r.report_date,weather:r.weather,temperature:r.temperature,start_time:r.start_time,end_time:r.end_time,total_trucks:r.total_trucks,total_waste_tons:r.total_waste_tons,total_diesel:r.total_diesel,notes:r.notes,crews:r.crews,operations:r.operations,stations:r.stations,equipment:r.equipment};
-        const res=await fetch('/api/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok)throw new Error(data.message||'فشل الحفظ');ok++;existingDates.add(r.report_date);r.duplicate=true;r.valid=false;r.selected=false;
+        const url=r.duplicate?`/api/reports/${r.existing_id}`:'/api/reports';
+        const method=r.duplicate?'PUT':'POST';
+        const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok)throw new Error(data.message||'فشل الحفظ');
+        ok++;
+        if(!r.duplicate&&data.report?.id){existingReportIds.set(r.report_date,Number(data.report.id));r.existing_id=Number(data.report.id);}
+        existingDates.add(r.report_date);r.duplicate=true;r.valid=true;r.selected=false;
       }catch(e){failed++;r.issues=[...(r.issues||[]),e.message];r.valid=false;r.selected=false;}
     }
-    progress.textContent=`اكتمل الاستيراد: ${ok} ناجح${failed?`، ${failed} فشل`:''}.`;renderPreview();btn.disabled=!previewRows.some(x=>x.selected&&x.valid);
+    progress.textContent=`اكتملت العملية: ${ok} ناجح${failed?`، ${failed} فشل`:''}.`;renderPreview();btn.disabled=!previewRows.some(x=>x.selected&&x.valid);
   }
 
   document.addEventListener('DOMContentLoaded',async()=>{
