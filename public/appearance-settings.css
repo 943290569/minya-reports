@@ -53,6 +53,20 @@ html[data-color] .v3-hero {
   background-image: linear-gradient(135deg, var(--appearance-accent-strong), var(--appearance-accent)) !important;
 }
 
+html[data-color] .top-header h1,
+html[data-color] .v3-hero :is(h1,h2,h3),
+html[data-color] .v3-hero .v3-kicker {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+html[data-color] .top-header p,
+html[data-color] .v3-hero p {
+  color: rgba(255,255,255,.84) !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
 html[data-color] button:not(#minyaAppearanceClose):not(#minyaAppearanceReset),
 html[data-color] .dashboard-primary-action,
 html[data-color] .app-nav-link.active,
