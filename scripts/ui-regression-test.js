@@ -122,5 +122,11 @@ assert(linkedSummary.includes("إجمالي الوارد لمكب المنيا")
 assert(linkedSummary.includes("نفايات مكب المنيا + نفايات جميع محطات الترحيل"), "incoming waste formula is not explained");
 assert(linkedSummary.includes("تنبيه اختلاف:"), "linked Summary does not flag mismatched stored totals");
 assert(linkedSummaryStyles.includes("linked-summary-grand"), "incoming waste grand total has no distinct visual style");
+assert(server.includes('ALTER TABLE users ADD COLUMN mobile'), "existing users do not receive the mobile field migration");
+assert(server.includes('function validMobile(value)'), "mobile numbers are not validated on the server");
+assert(server.includes('u.mobile,u.role'), "administrator user data does not include mobile numbers");
+assert(read("public/js/app-admin-users.js").includes('id="smsRecipient"'), "administrator SMS recipient control is missing");
+assert(read("public/js/app-admin-users.js").includes('location.href=`sms:${mobile}?body='), "SMS action does not open the phone messaging application");
+assert(read("public/js/app-admin-users.js").includes('data-user="${u.id}" ${u.mobile?\'\':\'disabled\'}>SMS'), "SMS action is not disabled when a user has no mobile number");
 
-console.log("UI regression checks passed: page isolation + linked monthly/annual Summary + consolidated assets.");
+console.log("UI regression checks passed: page isolation + linked Summary + administrator SMS compose + consolidated assets.");

@@ -164,6 +164,7 @@ db.exec(`
     username TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL,
     email TEXT DEFAULT '',
+    mobile TEXT DEFAULT '',
     password_hash TEXT NOT NULL,
     salt TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'viewer',
@@ -240,6 +241,7 @@ const reportColumns = new Set(db.pragma("table_info(daily_reports)").map((c) => 
 
 const userColumns = new Set(db.pragma("table_info(users)").map((c) => c.name));
 if (!userColumns.has("email")) db.exec(`ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''`);
+if (!userColumns.has("mobile")) db.exec(`ALTER TABLE users ADD COLUMN mobile TEXT DEFAULT ''`);
 
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(lower(email)) WHERE email IS NOT NULL AND trim(email) <> '';
@@ -283,6 +285,15 @@ function validEmail(value) {
   const email = normalizeEmail(value);
   return !email || (email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 }
+function normalizeMobile(value) {
+  let mobile=String(value || "").trim().replace(/[\s().-]/g, "");
+  if(mobile.startsWith("00")) mobile=`+${mobile.slice(2)}`;
+  return mobile;
+}
+function validMobile(value) {
+  const mobile=normalizeMobile(value);
+  return !mobile || /^\+?\d{8,15}$/.test(mobile);
+}
 function parseCookies(req) {
   return String(req.headers.cookie || "").split(";").reduce((acc, part) => {
     const idx = part.indexOf("=");
@@ -298,7 +309,7 @@ function currentUser(req) {
   }
   const token = parseCookies(req).minya_session;
   if (!token) return null;
-  const row = db.prepare(`SELECT u.id,u.username,u.display_name,u.email,u.role,u.is_active,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?`).get(tokenHash(token));
+  const row = db.prepare(`SELECT u.id,u.username,u.display_name,u.email,u.mobile,u.role,u.is_active,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?`).get(tokenHash(token));
   if (!row || !row.is_active || new Date(row.expires_at).getTime() < Date.now()) return null;
   return row;
 }
@@ -443,7 +454,7 @@ app.get("/api/health", (req, res) => {
 app.get("/api/auth/status", (req, res) => {
   const setupRequired = db.prepare(`SELECT COUNT(*) AS count FROM users`).get().count === 0;
   const user = currentUser(req);
-  res.json({ ok: true, setupRequired, authenticated: Boolean(user), user: user ? { id:user.id, username:user.username, display_name:user.display_name, email:user.email || "", role:user.role } : null });
+  res.json({ ok: true, setupRequired, authenticated: Boolean(user), user: user ? { id:user.id, username:user.username, display_name:user.display_name, email:user.email || "", mobile:user.mobile || "", role:user.role } : null });
 });
 app.post("/api/auth/setup", (req, res) => {
   if (db.prepare(`SELECT COUNT(*) AS count FROM users`).get().count > 0) return res.status(409).json({ ok:false,message:"تم إعداد النظام مسبقًا" });
@@ -481,7 +492,7 @@ app.post("/api/auth/login", (req, res) => {
   db.prepare(`INSERT INTO sessions (user_id,token_hash,expires_at) VALUES (?,?,?)`).run(user.id, tokenHash(token), expires);
   res.setHeader("Set-Cookie", `minya_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${COOKIE_SECURE ? "; Secure" : ""}`);
   audit(user, "LOGIN", "user", user.id, `Login from ${ip}`);
-  res.json({ ok:true,user:{ id:user.id,username:user.username,display_name:user.display_name,email:user.email || "",role:user.role } });
+  res.json({ ok:true,user:{ id:user.id,username:user.username,display_name:user.display_name,email:user.email || "",mobile:user.mobile || "",role:user.role } });
 });
 app.post("/api/auth/logout", requireAuth, (req,res)=>{
   const token = parseCookies(req).minya_session;
@@ -503,17 +514,19 @@ app.put("/api/appearance-settings", requireRole("admin"), (req,res)=>{
   res.json({ok:true,settings,message:"تم حفظ إعدادات المظهر لجميع المستخدمين"});
 });
 
-app.get("/api/users", requireRole("admin"), (req,res)=>res.json({ok:true,users:db.prepare(`SELECT id,username,display_name,email,role,is_active,created_at FROM users ORDER BY id`).all()}));
+app.get("/api/users", requireRole("admin"), (req,res)=>res.json({ok:true,users:db.prepare(`SELECT id,username,display_name,email,mobile,role,is_active,created_at FROM users ORDER BY id`).all()}));
 app.post("/api/users", requireRole("admin"), (req,res)=>{
   try {
-    const { username, display_name, email="", password, role="viewer" } = req.body;
+    const { username, display_name, email="", mobile="", password, role="viewer" } = req.body;
     const normalizedEmail=normalizeEmail(email);
+    const normalizedMobile=normalizeMobile(mobile);
     if (!username || !password || String(password).length < 8) return res.status(400).json({ok:false,message:"بيانات المستخدم غير مكتملة"});
     if (!validEmail(normalizedEmail)) return res.status(400).json({ok:false,message:"البريد الإلكتروني غير صالح"});
+    if (!validMobile(normalizedMobile)) return res.status(400).json({ok:false,message:"رقم الجوال غير صالح"});
     if (!["admin","editor","viewer"].includes(role)) return res.status(400).json({ok:false,message:"صلاحية غير صحيحة"});
     const salt=newSalt();
-    const result=db.prepare(`INSERT INTO users (username,display_name,email,password_hash,salt,role) VALUES (?,?,?,?,?,?)`).run(String(username).trim(),String(display_name||username).trim(),normalizedEmail,hashPassword(password,salt),salt,role);
-    audit(req.user,"CREATE_USER","user",result.lastInsertRowid,`${username}:${role}:${normalizedEmail}`);
+    const result=db.prepare(`INSERT INTO users (username,display_name,email,mobile,password_hash,salt,role) VALUES (?,?,?,?,?,?,?)`).run(String(username).trim(),String(display_name||username).trim(),normalizedEmail,normalizedMobile,hashPassword(password,salt),salt,role);
+    audit(req.user,"CREATE_USER","user",result.lastInsertRowid,`${username}:${role}`);
     res.json({ok:true,id:result.lastInsertRowid});
   } catch(error){
     const duplicateEmail=String(error.message||"").includes("idx_users_email_unique") || String(error.message||"").includes("users.email");
@@ -523,12 +536,14 @@ app.post("/api/users", requireRole("admin"), (req,res)=>{
 });
 app.put("/api/users/:id", requireRole("admin"), (req,res)=>{
   try {
-    const id=Number(req.params.id); const {display_name,email,role,is_active,password}=req.body;
+    const id=Number(req.params.id); const {display_name,email,mobile,role,is_active,password}=req.body;
     const target=db.prepare(`SELECT * FROM users WHERE id=?`).get(id);
     if(!target) return res.status(404).json({ok:false,message:"المستخدم غير موجود"});
     if(role && !["admin","editor","viewer"].includes(role)) return res.status(400).json({ok:false,message:"صلاحية غير صحيحة"});
     const nextEmail=email===undefined?String(target.email||""):normalizeEmail(email);
+    const nextMobile=mobile===undefined?String(target.mobile||""):normalizeMobile(mobile);
     if(!validEmail(nextEmail)) return res.status(400).json({ok:false,message:"البريد الإلكتروني غير صالح"});
+    if(!validMobile(nextMobile)) return res.status(400).json({ok:false,message:"رقم الجوال غير صالح"});
     if(nextEmail){
       const emailOwner=db.prepare(`SELECT id FROM users WHERE lower(email)=lower(?) AND id<>?`).get(nextEmail,id);
       if(emailOwner) return res.status(409).json({ok:false,message:"البريد الإلكتروني مستخدم لحساب آخر"});
@@ -543,7 +558,7 @@ app.put("/api/users/:id", requireRole("admin"), (req,res)=>{
     }
     if(password && String(password).length<8) return res.status(400).json({ok:false,message:"كلمة المرور يجب أن تكون 8 أحرف على الأقل"});
     const tx=db.transaction(()=>{
-      db.prepare(`UPDATE users SET display_name=?,email=?,role=?,is_active=? WHERE id=?`).run(String(display_name ?? target.display_name).trim()||target.display_name,nextEmail,nextRole,nextActive,id);
+      db.prepare(`UPDATE users SET display_name=?,email=?,mobile=?,role=?,is_active=? WHERE id=?`).run(String(display_name ?? target.display_name).trim()||target.display_name,nextEmail,nextMobile,nextRole,nextActive,id);
       if(password){
         const salt=newSalt();
         db.prepare(`UPDATE users SET password_hash=?,salt=? WHERE id=?`).run(hashPassword(password,salt),salt,id);
@@ -553,7 +568,7 @@ app.put("/api/users/:id", requireRole("admin"), (req,res)=>{
       }
     });
     tx();
-    audit(req.user,"UPDATE_USER","user",id,JSON.stringify({display_name:display_name??target.display_name,email:nextEmail,role:nextRole,is_active:nextActive,password_changed:Boolean(password)}));
+    audit(req.user,"UPDATE_USER","user",id,JSON.stringify({display_name:display_name??target.display_name,email_changed:nextEmail!==String(target.email||""),mobile_changed:nextMobile!==String(target.mobile||""),role:nextRole,is_active:nextActive,password_changed:Boolean(password)}));
     res.json({ok:true,message:"تم تحديث المستخدم"});
   } catch(error){res.status(500).json({ok:false,message:"تعذر تحديث المستخدم"});}
 });
@@ -561,7 +576,7 @@ app.put("/api/users/:id", requireRole("admin"), (req,res)=>{
 app.get("/api/security/sessions", requireRole("admin"), (req,res)=>{
   db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(new Date().toISOString());
   const sessions=db.prepare(`SELECT s.id,s.user_id,s.expires_at,s.created_at,u.username,u.display_name,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id ORDER BY s.created_at DESC`).all();
-  const users=db.prepare(`SELECT u.id,u.username,u.display_name,u.email,u.role,u.is_active,
+  const users=db.prepare(`SELECT u.id,u.username,u.display_name,u.email,u.mobile,u.role,u.is_active,
     (SELECT MAX(created_at) FROM login_attempts la WHERE la.username=u.username AND la.success=1) AS last_success_login,
     (SELECT COUNT(*) FROM sessions ss WHERE ss.user_id=u.id) AS active_sessions
     FROM users u ORDER BY u.id`).all();
