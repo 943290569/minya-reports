@@ -30,6 +30,8 @@ const driveQuality = read("public/js/app-drive-quality.js");
 const excelImport = read("public/js/app-excel-import.js");
 const workflow = read("public/js/app-report-workflow.js");
 const dateDisplay = read("public/js/app-date-display.js");
+const linkedSummary = read("public/js/app-period-linked-summary.js");
+const linkedSummaryStyles = read("public/period-linked-summary.css");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -108,5 +110,17 @@ assert(server.includes('const adminApproved=req.user.role==="admin"'), "admin re
 assert(server.includes('adminApproved?"approved":"draft"'), "report workflow does not distinguish admin approval from editor drafts");
 assert(server.includes('req.user.role!=="admin"&&(report.workflow_status||"draft")!=="draft"'), "admin cannot attach files after automatic approval");
 assert(workflow.includes('status !== "draft" && window.MINYA_USER?.role !== "admin"'), "approved reports remain incorrectly locked for administrators");
+assert(server.includes("function getLinkedPeriodSummary(from, to)"), "monthly and annual APIs are not linked to daily report details");
+assert(server.includes("incoming_waste_tons:landfillWaste+stationWaste"), "incoming waste is not calculated as landfill plus transfer stations");
+assert(monthly.includes('window.renderLinkedPeriodSummary("monthly"'), "monthly report does not render linked Summary totals");
+assert(annualLoader.includes('window.renderLinkedPeriodSummary("annual"'), "annual report does not render linked Summary totals");
+assert(loader.includes('"js/app-period-linked-summary.js"'), "linked Summary component is missing from the frontend bundle");
+assert(loader.includes('"period-linked-summary.css"'), "linked Summary styles are missing from the frontend bundle");
+assert(linkedSummary.includes("نفايات مكب المنيا"), "landfill waste is not labeled separately");
+assert(linkedSummary.includes("نفايات محطات الترحيل"), "transfer-station waste is not labeled separately");
+assert(linkedSummary.includes("إجمالي الوارد لمكب المنيا"), "incoming waste grand total is not labeled clearly");
+assert(linkedSummary.includes("نفايات مكب المنيا + نفايات جميع محطات الترحيل"), "incoming waste formula is not explained");
+assert(linkedSummary.includes("تنبيه اختلاف:"), "linked Summary does not flag mismatched stored totals");
+assert(linkedSummaryStyles.includes("linked-summary-grand"), "incoming waste grand total has no distinct visual style");
 
-console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
+console.log("UI regression checks passed: page isolation + linked monthly/annual Summary + consolidated assets.");
