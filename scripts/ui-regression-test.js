@@ -77,5 +77,7 @@ assert(appearance.includes('data-appearance-key="remembranceFontSize"'), "admin 
 assert(appearance.includes('data-appearance-key="siteFontSize"'), "admin appearance panel is missing the site font control");
 assert(appearance.includes('root.style.setProperty("--appearance-font-size"'), "site font size is not applied immediately");
 assert(appearance.includes('["remembranceFontSize", "siteFontSize"].includes(key)'), "font sliders are not saved during input");
+assert(appearance.includes('data-appearance-number="remembranceFontSize"'), "remembrance font numeric input is missing");
+assert(loader.includes('style="font-size:${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px !important"'), "loading remembrance size is not protected inline");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");

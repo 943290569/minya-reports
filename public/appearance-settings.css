@@ -199,11 +199,29 @@ html[data-color] textarea:focus {
   cursor: pointer;
 }
 
-.appearance-range-row output {
+.appearance-number-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.appearance-number-box input[type="number"] {
+  width: 54px;
+  min-height: 34px;
+  padding: 4px;
   color: var(--appearance-text);
+  background: var(--appearance-surface);
+  border: 1px solid var(--appearance-border);
+  border-radius: 7px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
+}
+
+.appearance-number-box span {
+  color: var(--appearance-muted);
+  font-size: 11px;
 }
 
 .appearance-remembrance-preview {

@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v17";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v18";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -114,7 +114,7 @@ document.documentElement.style.setProperty(
     #minyaLoadingScreen .minya-loading-message {
       margin: 0;
       color: #176b4f;
-      font-size: ${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px;
+      font-size: ${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px !important;
       font-weight: 900;
       line-height: 1.35;
       letter-spacing: -.4px;
@@ -154,7 +154,7 @@ document.documentElement.style.setProperty(
   screen.setAttribute("aria-live", "polite");
   screen.innerHTML = `
     <div class="minya-loading-card">
-      <p class="minya-loading-message">${chosen}</p>
+      <p class="minya-loading-message" style="font-size:${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px !important">${chosen}</p>
       <div class="minya-loading-dot" aria-hidden="true"></div>
     </div>
   `;
@@ -6669,7 +6669,7 @@ ${payload.sections.join("\n")}
         <label class="appearance-range-field">حجم خط الأذكار
           <div class="appearance-range-row">
             <input type="range" min="11" max="72" step="1" data-appearance-key="remembranceFontSize" aria-label="حجم خط الأذكار">
-            <output data-remembrance-font-value>72 بكسل</output>
+            <div class="appearance-number-box"><input type="number" min="11" max="72" step="1" value="72" data-appearance-number="remembranceFontSize" aria-label="قيمة حجم خط الأذكار"><span>بكسل</span></div>
           </div>
           <p class="appearance-remembrance-preview" data-remembrance-preview>سبحان الله وبحمده</p>
           <small>من 11 إلى 72 بكسل. يعرض المثال الحجم المختار.</small>
@@ -6687,7 +6687,7 @@ ${payload.sections.join("\n")}
         <label class="appearance-range-field">حجم خط بيانات الموقع
           <div class="appearance-range-row">
             <input type="range" min="11" max="30" step="1" data-appearance-key="siteFontSize" aria-label="حجم خط بيانات الموقع">
-            <output data-site-font-value>16 بكسل</output>
+            <div class="appearance-number-box"><input type="number" min="11" max="30" step="1" value="16" data-appearance-number="siteFontSize" aria-label="قيمة حجم خط بيانات الموقع"><span>بكسل</span></div>
           </div>
           <small>من 11 إلى 30 بكسل. يُطبق مباشرة على الصفحة.</small>
         </label>
@@ -6728,10 +6728,9 @@ ${payload.sections.join("\n")}
       panel.querySelectorAll("[data-appearance-key]").forEach((control) => {
         control.value = String(settings[control.dataset.appearanceKey]);
       });
-      const fontValue = panel.querySelector("[data-remembrance-font-value]");
-      if (fontValue) fontValue.textContent = `${settings.remembranceFontSize} بكسل`;
-      const siteFontValue = panel.querySelector("[data-site-font-value]");
-      if (siteFontValue) siteFontValue.textContent = `${settings.siteFontSize} بكسل`;
+      panel.querySelectorAll("[data-appearance-number]").forEach((control) => {
+        control.value = String(settings[control.dataset.appearanceNumber]);
+      });
       const preview = panel.querySelector("[data-remembrance-preview]");
       if (preview) preview.style.fontSize = `${settings.remembranceFontSize}px`;
     };
@@ -6753,17 +6752,20 @@ ${payload.sections.join("\n")}
     panel.querySelector("#minyaAppearanceDone")?.addEventListener("click", () => setOpen(false));
 
     panel.addEventListener("change", (event) => {
-      const key = event.target?.dataset?.appearanceKey;
+      const key = event.target?.dataset?.appearanceKey || event.target?.dataset?.appearanceNumber;
       if (!key) return;
-      if (["remembranceFontSize", "siteFontSize"].includes(key)) return;
-      const value = key === "loadingSeconds" ? Number(event.target.value) : event.target.value;
+      if (["remembranceFontSize", "siteFontSize"].includes(key) && event.target?.dataset?.appearanceKey) return;
+      const value = ["loadingSeconds", "remembranceFontSize", "siteFontSize"].includes(key) ? Number(event.target.value) : event.target.value;
       settings = normalize({ ...settings, [key]: value });
       save(settings);
       apply(settings);
+      syncControls();
       const status = panel.querySelector("#minyaAppearanceStatus");
-      if (status) status.textContent = key === "loadingSeconds"
-        ? "حُفظ الإعداد وسيظهر في الصفحة التالية."
-        : "تم تطبيق الإعداد وحفظه.";
+      if (status) status.textContent = key === "remembranceFontSize"
+        ? "حُفظ حجم الذكر وسيظهر في شاشة الانتظار التالية."
+        : key === "loadingSeconds"
+          ? "حُفظ الإعداد وسيظهر في الصفحة التالية."
+          : "تم تطبيق الإعداد وحفظه.";
     });
 
     panel.addEventListener("input", (event) => {
