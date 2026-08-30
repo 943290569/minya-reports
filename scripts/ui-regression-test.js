@@ -70,5 +70,8 @@ assert(dayAppearance.includes('html[data-theme="day"] #archiveTable .archive-ope
 assert(dayAppearance.includes('html[data-theme="day"] #archiveTable .archive-edit'), "day archive actions do not distinguish editing");
 assert(nightAppearance.includes('html[data-theme="night"] #clearArchiveFiltersBtn'), "night archive filter action is not styled");
 assert(nightAppearance.includes('html[data-theme="night"] #archiveTable .archive-open'), "night archive primary action is not styled");
+assert(loader.includes('remembranceFontSize: 48'), "loading remembrance font default is missing");
+assert(loader.includes('Math.min(72, Math.max(11, remembranceFontSize))'), "loading remembrance font range is not enforced");
+assert(appearance.includes('data-appearance-key="remembranceFontSize"'), "admin appearance panel is missing the remembrance font control");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
