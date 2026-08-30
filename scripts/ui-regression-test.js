@@ -84,5 +84,7 @@ assert(appearance.includes('fetch("/api/appearance-settings"'), "shared appearan
 assert(appearance.includes('method: "PUT"'), "admin appearance settings are not saved to the server");
 assert(server.includes('CREATE TABLE IF NOT EXISTS system_settings'), "shared settings table is missing");
 assert(server.includes('app.put("/api/appearance-settings", requireRole("admin")'), "shared settings updates are not restricted to administrators");
+assert(appearanceStyles.includes('input:is([type="date"],[type="month"],[type="time"],[type="datetime-local"])'), "localized date controls are not isolated from RTL text reversal");
+assert(appearanceStyles.includes('unicode-bidi: isolate !important'), "date controls do not isolate bidirectional text");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
