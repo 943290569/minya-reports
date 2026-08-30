@@ -1,11 +1,12 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v14";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v15";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
 function readMinyaAppearanceSettings() {
   const defaults = {
     loadingSeconds: 3,
+    remembranceFontSize: 48,
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -20,6 +21,10 @@ function readMinyaAppearanceSettings() {
     const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
     const loadingSeconds = Number(settings.loadingSeconds);
     settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
+    const remembranceFontSize = Math.round(Number(settings.remembranceFontSize));
+    settings.remembranceFontSize = Number.isFinite(remembranceFontSize)
+      ? Math.min(72, Math.max(11, remembranceFontSize))
+      : 48;
     settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
     return settings;
   } catch (_) {
@@ -96,7 +101,7 @@ const MINYA_LOADING_MIN_MS = Math.min(
     #minyaLoadingScreen .minya-loading-message {
       margin: 0;
       color: #176b4f;
-      font-size: clamp(44px, 9vw, 84px);
+      font-size: ${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px;
       font-weight: 800;
       line-height: 1.35;
       letter-spacing: -.4px;
