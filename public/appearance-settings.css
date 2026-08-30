@@ -39,6 +39,12 @@ html[dir="rtl"] input:is([type="date"],[type="month"],[type="time"],[type="datet
   text-align: right !important;
 }
 
+html[dir="rtl"] input[type="date"]::-webkit-datetime-edit,
+html[dir="rtl"] input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  direction: rtl !important;
+  unicode-bidi: plaintext !important;
+}
+
 html[data-color] .top-header,
 html[data-color] .dashboard-hero,
 html[data-color] .auth-brand,

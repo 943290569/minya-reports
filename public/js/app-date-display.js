@@ -47,7 +47,37 @@
     });
   }
 
+
+  function stabilizeDateInputs(root=document){
+    root.querySelectorAll?.('input[type="date"],input[data-minya-date-input="1"]').forEach(input=>{
+      if(input.dataset.minyaDateInput!=="1"){
+        input.dataset.minyaDateInput="1";
+        input.addEventListener("focus",()=>{
+          if(input.type!=="date"){
+            input.type="date";
+            input.removeAttribute("placeholder");
+            input.setAttribute("dir","rtl");
+            requestAnimationFrame(()=>{try{input.showPicker?.();}catch{}});
+          }
+        });
+        input.addEventListener("blur",()=>setDateTextMode(input));
+        input.addEventListener("change",()=>{if(!input.value&&document.activeElement!==input)setDateTextMode(input);});
+      }
+      if(!input.value&&document.activeElement!==input)setDateTextMode(input);
+    });
+  }
+
+  function setDateTextMode(input){
+    if(input.value||document.activeElement===input)return;
+    input.type="text";
+    input.placeholder="YYYY-MM-DD";
+    input.inputMode="numeric";
+    input.setAttribute("dir","ltr");
+    input.setAttribute("aria-label",input.getAttribute("aria-label")||"التاريخ بصيغة سنة-شهر-يوم");
+  }
+
   function apply(){
+    stabilizeDateInputs(document);
     applyChartMonths(document);
     applyTableDates(document);
   }
