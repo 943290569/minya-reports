@@ -53,7 +53,7 @@
   function applyReportLock(status) {
     const main = document.querySelector("main.container");
     if (!main) return;
-    const locked = status !== "draft";
+    const locked = status !== "draft" && window.MINYA_USER?.role !== "admin";
     main.classList.toggle("workflow-locked", locked);
 
     const editableSelectors = [
@@ -75,7 +75,7 @@
       notice = document.createElement("div");
       notice.id = "workflowReadOnlyNotice";
       notice.className = "workflow-readonly-notice no-print";
-      notice.textContent = "التقرير للقراءة فقط. لإجراء تعديل يجب على المدير إعادة فتحه كمسودة.";
+      notice.textContent = "التقرير للقراءة فقط. يمكن للمدير تعديله مباشرة، أو إعادة فتحه كمسودة للمحرر.";
       const panel = document.getElementById("reportWorkflowPanel");
       panel?.after(notice);
     } else if (!locked && notice) notice.remove();
