@@ -177,6 +177,35 @@ html[data-color] textarea:focus {
   border-radius: 9px;
 }
 
+.appearance-range-field {
+  grid-column: 1 / -1;
+}
+
+.appearance-range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  align-items: center;
+  gap: 12px;
+  min-height: 43px;
+  padding: 7px 10px;
+  background: var(--appearance-surface-muted);
+  border: 1px solid var(--appearance-border);
+  border-radius: 9px;
+}
+
+.appearance-range-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--appearance-accent);
+  cursor: pointer;
+}
+
+.appearance-range-row output {
+  color: var(--appearance-text);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .appearance-grid label small {
   color: var(--appearance-muted);
   font-size: 11px;
