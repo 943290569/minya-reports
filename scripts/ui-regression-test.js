@@ -23,6 +23,7 @@ const appearance = read("public/js/app-appearance-settings.js");
 const appearanceStyles = read("public/appearance-settings.css");
 const dayAppearance = read("public/appearance-day.css");
 const nightAppearance = read("public/appearance-night.css");
+const server = read("server.js");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -79,5 +80,9 @@ assert(appearance.includes('root.style.setProperty("--appearance-font-size"'), "
 assert(appearance.includes('["remembranceFontSize", "siteFontSize"].includes(key)'), "font sliders are not saved during input");
 assert(appearance.includes('data-appearance-number="remembranceFontSize"'), "remembrance font numeric input is missing");
 assert(loader.includes('style="font-size:${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px !important"'), "loading remembrance size is not protected inline");
+assert(appearance.includes('fetch("/api/appearance-settings"'), "shared appearance settings are not loaded from the server");
+assert(appearance.includes('method: "PUT"'), "admin appearance settings are not saved to the server");
+assert(server.includes('CREATE TABLE IF NOT EXISTS system_settings'), "shared settings table is missing");
+assert(server.includes('app.put("/api/appearance-settings", requireRole("admin")'), "shared settings updates are not restricted to administrators");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");
