@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v15";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v16";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -7,6 +7,7 @@ function readMinyaAppearanceSettings() {
   const defaults = {
     loadingSeconds: 3,
     remembranceFontSize: 48,
+    siteFontSize: 16,
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -25,6 +26,10 @@ function readMinyaAppearanceSettings() {
     settings.remembranceFontSize = Number.isFinite(remembranceFontSize)
       ? Math.min(72, Math.max(11, remembranceFontSize))
       : 48;
+    const siteFontSize = Math.round(Number(settings.siteFontSize));
+    settings.siteFontSize = Number.isFinite(siteFontSize)
+      ? Math.min(30, Math.max(11, siteFontSize))
+      : 16;
     settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
     return settings;
   } catch (_) {
@@ -52,6 +57,10 @@ const MINYA_LOADING_MIN_MS = Math.min(
 ].forEach(([name, value]) => {
   document.documentElement.dataset[name] = String(value || "");
 });
+document.documentElement.style.setProperty(
+  "--appearance-font-size",
+  `${window.MINYA_APPEARANCE_SETTINGS.siteFontSize}px`
+);
 
 (function mountMinyaLoadingScreen(){
   const messages = [
@@ -6536,6 +6545,7 @@ ${payload.sections.join("\n")}
   const defaults = {
     loadingSeconds: 3,
     remembranceFontSize: 48,
+    siteFontSize: 16,
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -6561,9 +6571,10 @@ ${payload.sections.join("\n")}
   function normalize(input) {
     const output = { ...defaults };
     Object.keys(defaults).forEach((key) => {
-      if (key === "remembranceFontSize") {
+      if (["remembranceFontSize", "siteFontSize"].includes(key)) {
         const size = Math.round(Number(input?.[key]));
-        if (Number.isFinite(size)) output[key] = Math.min(72, Math.max(11, size));
+        const maximum = key === "remembranceFontSize" ? 72 : 30;
+        if (Number.isFinite(size)) output[key] = Math.min(maximum, Math.max(11, size));
         return;
       }
       const value = key === "loadingSeconds" ? Number(input?.[key]) : input?.[key];
@@ -6596,6 +6607,7 @@ ${payload.sections.join("\n")}
     root.dataset.density = settings.density;
     root.dataset.contrast = settings.contrast;
     root.dataset.motion = settings.motion;
+    root.style.setProperty("--appearance-font-size", `${settings.siteFontSize}px`);
     window.MINYA_APPEARANCE_SETTINGS = { ...settings };
   }
 
@@ -6653,7 +6665,8 @@ ${payload.sections.join("\n")}
             <input type="range" min="11" max="72" step="1" data-appearance-key="remembranceFontSize" aria-label="حجم خط الأذكار">
             <output data-remembrance-font-value>48 بكسل</output>
           </div>
-          <small>من 11 إلى 72 بكسل. يُطبق عند فتح الصفحة التالية.</small>
+          <p class="appearance-remembrance-preview" data-remembrance-preview>سبحان الله وبحمده</p>
+          <small>من 11 إلى 72 بكسل. يعرض المثال الحجم المختار.</small>
         </label>
         <label>وضع العرض
           <select data-appearance-key="theme">
@@ -6665,10 +6678,12 @@ ${payload.sections.join("\n")}
             ${option("green", "أخضر")}${option("blue", "أزرق")}
           </select>
         </label>
-        <label>حجم الخط
-          <select data-appearance-key="fontSize">
-            ${option("small", "صغير")}${option("normal", "عادي")}${option("large", "كبير")}${option("xlarge", "كبير جدًا")}
-          </select>
+        <label class="appearance-range-field">حجم خط بيانات الموقع
+          <div class="appearance-range-row">
+            <input type="range" min="11" max="30" step="1" data-appearance-key="siteFontSize" aria-label="حجم خط بيانات الموقع">
+            <output data-site-font-value>16 بكسل</output>
+          </div>
+          <small>من 11 إلى 30 بكسل. يُطبق مباشرة على الصفحة.</small>
         </label>
         <label>موقع القائمة
           <select data-appearance-key="navPosition">
@@ -6709,6 +6724,10 @@ ${payload.sections.join("\n")}
       });
       const fontValue = panel.querySelector("[data-remembrance-font-value]");
       if (fontValue) fontValue.textContent = `${settings.remembranceFontSize} بكسل`;
+      const siteFontValue = panel.querySelector("[data-site-font-value]");
+      if (siteFontValue) siteFontValue.textContent = `${settings.siteFontSize} بكسل`;
+      const preview = panel.querySelector("[data-remembrance-preview]");
+      if (preview) preview.style.fontSize = `${settings.remembranceFontSize}px`;
     };
 
     const setOpen = (open) => {
@@ -6730,20 +6749,28 @@ ${payload.sections.join("\n")}
     panel.addEventListener("change", (event) => {
       const key = event.target?.dataset?.appearanceKey;
       if (!key) return;
-      const value = ["loadingSeconds", "remembranceFontSize"].includes(key) ? Number(event.target.value) : event.target.value;
+      if (["remembranceFontSize", "siteFontSize"].includes(key)) return;
+      const value = key === "loadingSeconds" ? Number(event.target.value) : event.target.value;
       settings = normalize({ ...settings, [key]: value });
       save(settings);
       apply(settings);
       const status = panel.querySelector("#minyaAppearanceStatus");
-      if (status) status.textContent = ["loadingSeconds", "remembranceFontSize"].includes(key)
+      if (status) status.textContent = key === "loadingSeconds"
         ? "حُفظ الإعداد وسيظهر في الصفحة التالية."
         : "تم تطبيق الإعداد وحفظه.";
     });
 
     panel.addEventListener("input", (event) => {
-      if (event.target?.dataset?.appearanceKey !== "remembranceFontSize") return;
-      const fontValue = panel.querySelector("[data-remembrance-font-value]");
-      if (fontValue) fontValue.textContent = `${event.target.value} بكسل`;
+      const key = event.target?.dataset?.appearanceKey;
+      if (!["remembranceFontSize", "siteFontSize"].includes(key)) return;
+      settings = normalize({ ...settings, [key]: Number(event.target.value) });
+      save(settings);
+      apply(settings);
+      syncControls();
+      const status = panel.querySelector("#minyaAppearanceStatus");
+      if (status) status.textContent = key === "remembranceFontSize"
+        ? "حُفظ حجم الذكر وسيظهر في شاشة الانتظار التالية."
+        : "تم تطبيق حجم خط بيانات الموقع وحفظه.";
     });
 
     panel.querySelector("#minyaAppearanceReset")?.addEventListener("click", () => {
