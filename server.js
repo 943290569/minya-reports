@@ -571,6 +571,33 @@ app.delete("/api/security/sessions/:id", requireRole("admin"), (req,res)=>{ cons
 app.post("/api/security/users/:id/logout-all", requireRole("admin"), (req,res)=>{ const id=Number(req.params.id); const u=db.prepare(`SELECT username FROM users WHERE id=?`).get(id); if(!u) return res.status(404).json({ok:false,message:"المستخدم غير موجود"}); const r=db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(id); audit(req.user,"LOGOUT_USER_ALL","user",id,`${u.username}:${r.changes}`); res.json({ok:true,count:r.changes,message:"تم إنهاء جميع جلسات المستخدم"}); });
 app.post("/api/security/cleanup", requireRole("admin"), (req,res)=>{ const now=new Date().toISOString(); const s=db.prepare(`DELETE FROM sessions WHERE expires_at < ?`).run(now); const cutoff=new Date(Date.now()-30*24*60*60*1000).toISOString(); const a=db.prepare(`DELETE FROM login_attempts WHERE created_at < ?`).run(cutoff); audit(req.user,"SECURITY_CLEANUP","system","security",`sessions:${s.changes},attempts:${a.changes}`); res.json({ok:true,sessions_removed:s.changes,attempts_removed:a.changes}); });
 
+function getLinkedPeriodSummary(from, to) {
+  const recorded=db.prepare(`SELECT COUNT(*) AS days,COALESCE(SUM(total_waste_tons),0) AS waste_tons,COALESCE(SUM(total_trucks),0) AS trucks,COALESCE(SUM(total_diesel),0) AS diesel_liters FROM daily_reports WHERE report_date BETWEEN ? AND ?`).get(from,to);
+  const days=Number(recorded.days||0);
+  const operations=db.prepare(`SELECT TRIM(o.operation_name) AS name,COALESCE(SUM(o.vehicle_count),0) AS vehicles,COALESCE(SUM(o.quantity),0) AS quantity,COALESCE(MAX(NULLIF(TRIM(o.unit),'')),'') AS unit FROM operations o JOIN daily_reports r ON r.id=o.report_id WHERE r.report_date BETWEEN ? AND ? AND TRIM(o.operation_name)<>'' GROUP BY TRIM(o.operation_name) ORDER BY MIN(o.id)`).all(from,to).map(row=>({name:row.name,vehicles:Number(row.vehicles||0),quantity:Number(row.quantity||0),unit:row.unit||'',daily_average:days?Number(row.quantity||0)/days:0}));
+  const stations=db.prepare(`SELECT TRIM(s.station_name) AS name,COALESCE(SUM(s.truck_count),0) AS vehicles,COALESCE(SUM(s.waste_tons),0) AS quantity,COALESCE(MAX(NULLIF(TRIM(s.unit),'')),'طن') AS unit FROM transfer_stations s JOIN daily_reports r ON r.id=s.report_id WHERE r.report_date BETWEEN ? AND ? AND TRIM(s.station_name)<>'' GROUP BY TRIM(s.station_name) ORDER BY MIN(s.id)`).all(from,to).map(row=>({name:row.name,vehicles:Number(row.vehicles||0),quantity:Number(row.quantity||0),unit:row.unit||'طن',daily_average:days?Number(row.quantity||0)/days:0}));
+  const equipment=db.prepare(`SELECT TRIM(e.equipment_name) AS name,COALESCE(SUM(e.diesel_liters),0) AS diesel_liters FROM equipment e JOIN daily_reports r ON r.id=e.report_id WHERE r.report_date BETWEEN ? AND ? AND TRIM(e.equipment_name)<>'' GROUP BY TRIM(e.equipment_name) ORDER BY MIN(e.id)`).all(from,to).map(row=>({name:row.name,diesel_liters:Number(row.diesel_liters||0)}));
+  const normalizeName=value=>String(value||'').replace(/\s+/g,'').toLowerCase();
+  const landfillRows=operations.filter(row=>normalizeName(row.name).includes('مكبنفاياتالمنيا'));
+  const landfillWaste=landfillRows.reduce((sum,row)=>sum+Number(row.quantity||0),0);
+  const landfillTrucks=landfillRows.reduce((sum,row)=>sum+Number(row.vehicles||0),0);
+  const stationWaste=stations.reduce((sum,row)=>sum+Number(row.quantity||0),0);
+  const stationTrucks=stations.reduce((sum,row)=>sum+Number(row.vehicles||0),0);
+  return {source:'daily_reports',from,to,days,totals:{
+    landfill_waste_tons:landfillWaste,
+    landfill_trucks:landfillTrucks,
+    station_waste_tons:stationWaste,
+    station_trucks:stationTrucks,
+    incoming_waste_tons:landfillWaste+stationWaste,
+    incoming_trucks:landfillTrucks+stationTrucks,
+    waste_tons:landfillWaste+stationWaste,
+    trucks:landfillTrucks+stationTrucks,
+    diesel_liters:Number(recorded.diesel_liters||0),
+    recorded_waste_tons:Number(recorded.waste_tons||0),
+    recorded_trucks:Number(recorded.trucks||0)
+  },operations,stations,equipment};
+}
+
 app.get("/api/annual-summary", requireAuth, (req, res) => {
   try {
     const year = String(req.query.year || "").trim();
@@ -617,7 +644,8 @@ app.get("/api/annual-summary", requireAuth, (req, res) => {
       out.days += month.days; out.waste += month.waste; out.trucks += month.trucks; out.diesel += month.diesel; return out;
     }, { days: 0, waste: 0, trucks: 0, diesel: 0 });
 
-    res.json({ ok: true, year, years, reports, previous_reports: previousReports, months, summary });
+    const details=getLinkedPeriodSummary(`${year}-01-01`,`${year}-12-31`);
+    res.json({ ok: true, year, years, reports, previous_reports: previousReports, months, summary, details });
   } catch (error) {
     res.status(500).json({ ok: false, message: "تعذر تحميل التقرير السنوي", error: error.message });
   }
@@ -631,7 +659,8 @@ app.get("/api/monthly-summary", requireAuth, (req, res) => {
     const summary = reports.reduce((out, report) => { out.waste += Number(report.total_waste_tons || 0); out.trucks += Number(report.total_trucks || 0); out.diesel += Number(report.total_diesel || 0); return out; }, { waste:0,trucks:0,diesel:0 });
     let maxReport=null,minReport=null;
     if(reports.length){ maxReport=reports.reduce((a,b)=>Number(b.total_waste_tons||0)>Number(a.total_waste_tons||0)?b:a); minReport=reports.reduce((a,b)=>Number(b.total_waste_tons||0)<Number(a.total_waste_tons||0)?b:a); }
-    res.json({ok:true,month,days:reports.length,reports,summary:{waste:summary.waste,waste_average:reports.length?summary.waste/reports.length:0,trucks:summary.trucks,trucks_average:reports.length?summary.trucks/reports.length:0,diesel:summary.diesel,diesel_average:reports.length?summary.diesel/reports.length:0,max_waste:maxReport?Number(maxReport.total_waste_tons||0):0,max_waste_date:maxReport?maxReport.report_date:null,min_waste:minReport?Number(minReport.total_waste_tons||0):0,min_waste_date:minReport?minReport.report_date:null}});
+    const details=getLinkedPeriodSummary(`${month}-01`,`${month}-31`);
+    res.json({ok:true,month,days:reports.length,reports,summary:{waste:summary.waste,waste_average:reports.length?summary.waste/reports.length:0,trucks:summary.trucks,trucks_average:reports.length?summary.trucks/reports.length:0,diesel:summary.diesel,diesel_average:reports.length?summary.diesel/reports.length:0,max_waste:maxReport?Number(maxReport.total_waste_tons||0):0,max_waste_date:maxReport?maxReport.report_date:null,min_waste:minReport?Number(minReport.total_waste_tons||0):0,min_waste_date:minReport?minReport.report_date:null},details});
   } catch(error){res.status(500).json({ok:false,message:"تعذر تحميل التقرير الشهري",error:error.message});}
 });
 
