@@ -765,9 +765,9 @@ html[data-font-size] table {
 }
 
 html[dir="rtl"] input:is([type="date"],[type="month"],[type="time"],[type="datetime-local"]) {
-  direction: ltr !important;
-  unicode-bidi: isolate !important;
-  text-align: left !important;
+  direction: rtl !important;
+  unicode-bidi: normal !important;
+  text-align: right !important;
 }
 
 html[data-color] .top-header,
