@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v15";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v16";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -7,6 +7,7 @@ function readMinyaAppearanceSettings() {
   const defaults = {
     loadingSeconds: 3,
     remembranceFontSize: 48,
+    siteFontSize: 16,
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -25,6 +26,10 @@ function readMinyaAppearanceSettings() {
     settings.remembranceFontSize = Number.isFinite(remembranceFontSize)
       ? Math.min(72, Math.max(11, remembranceFontSize))
       : 48;
+    const siteFontSize = Math.round(Number(settings.siteFontSize));
+    settings.siteFontSize = Number.isFinite(siteFontSize)
+      ? Math.min(30, Math.max(11, siteFontSize))
+      : 16;
     settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
     return settings;
   } catch (_) {
@@ -52,6 +57,10 @@ const MINYA_LOADING_MIN_MS = Math.min(
 ].forEach(([name, value]) => {
   document.documentElement.dataset[name] = String(value || "");
 });
+document.documentElement.style.setProperty(
+  "--appearance-font-size",
+  `${window.MINYA_APPEARANCE_SETTINGS.siteFontSize}px`
+);
 
 (function mountMinyaLoadingScreen(){
   const messages = [
