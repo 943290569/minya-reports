@@ -24,6 +24,11 @@ const appearanceStyles = read("public/appearance-settings.css");
 const dayAppearance = read("public/appearance-day.css");
 const nightAppearance = read("public/appearance-night.css");
 const server = read("server.js");
+const drivePage = read("public/drive-import.html");
+const driveImport = read("public/js/app-drive-import.js");
+const driveQuality = read("public/js/app-drive-quality.js");
+const excelImport = read("public/js/app-excel-import.js");
+const workflow = read("public/js/app-report-workflow.js");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -86,5 +91,16 @@ assert(server.includes('CREATE TABLE IF NOT EXISTS system_settings'), "shared se
 assert(server.includes('app.put("/api/appearance-settings", requireRole("admin")'), "shared settings updates are not restricted to administrators");
 assert(appearanceStyles.includes('input:is([type="date"],[type="month"],[type="time"],[type="datetime-local"])'), "localized date controls are not isolated from RTL text reversal");
 assert(appearanceStyles.includes('unicode-bidi: isolate !important'), "date controls do not isolate bidirectional text");
+assert(drivePage.includes('id="localExcelFile"'), "direct Excel upload control is missing from the unified import page");
+assert(drivePage.includes('id="previewLocalExcelBtn"'), "direct Excel preview action is missing");
+assert(driveImport.includes('function prepareWorkbookPreview('), "Drive and Excel do not share the same preview pipeline");
+assert(driveImport.includes('function previewLocalExcel('), "direct Excel files are not parsed for preview");
+assert(driveImport.includes("prepareWorkbookPreview(wb,file.name,'Excel من الجهاز')"), "Excel does not use the unified workbook preview");
+assert(driveQuality.includes('جودة القراءة'), "unified preview lost reading quality metrics");
+assert(excelImport.includes('href="/drive-import.html"'), "admin page does not link to the unified importer");
+assert(server.includes('const adminApproved=req.user.role==="admin"'), "admin reports are not detected for automatic approval");
+assert(server.includes('adminApproved?"approved":"draft"'), "report workflow does not distinguish admin approval from editor drafts");
+assert(server.includes('req.user.role!=="admin"&&(report.workflow_status||"draft")!=="draft"'), "admin cannot attach files after automatic approval");
+assert(workflow.includes('status !== "draft" && window.MINYA_USER?.role !== "admin"'), "approved reports remain incorrectly locked for administrators");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");

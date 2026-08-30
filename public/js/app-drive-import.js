@@ -9,6 +9,7 @@
   let previewRows=[];
   let existingDates=new Set();
   let existingReportIds=new Map();
+  let previewSource='Google Drive';
 
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
@@ -142,6 +143,7 @@
     if(!user||user.role!=='admin'){
       $('adminOnlyNotice')?.classList.remove('hidden');
       $('driveSetupPanel')?.classList.add('hidden');
+      $('localExcelPanel')?.classList.add('hidden');
       return false;
     }
     return true;
@@ -188,16 +190,35 @@
     $('previewPanel').classList.remove('hidden');$('previewFileName').textContent=file.name;$('previewReports').innerHTML='<div class="drive-empty">جاري قراءة الملف وتحليل صفحات الأيام...</div>';window.scrollTo({top:$('previewPanel').offsetTop-90,behavior:'smooth'});
     try{
       await loadExistingDates();const wb=await downloadWorkbook(file);
-      const names=wb.SheetNames.filter(name=>normalize(name)!=='summary');
-      previewRows=names.map(name=>parseDailySheet(name,wb.Sheets[name])).filter(r=>r.report_date||r.issues.length);
-      previewRows.forEach(r=>{
-        r.duplicate=existingDates.has(r.report_date);
-        r.existing_id=existingReportIds.get(r.report_date)||null;
-        r.valid=!r.issues.length;
-        r.selected=!r.duplicate&&r.valid;
-      });
-      renderPreview();
+      prepareWorkbookPreview(wb,file.name,'Google Drive');
     }catch(e){$('previewReports').innerHTML=`<div class="drive-empty">${esc(e.message)}</div>`;}
+  }
+  function prepareWorkbookPreview(wb,fileName,source){
+    previewSource=source;
+    $('previewPanel').classList.remove('hidden');
+    $('previewFileName').textContent=`${fileName} · ${source}`;
+    const names=wb.SheetNames.filter(name=>normalize(name)!=='summary');
+    previewRows=names.map(name=>parseDailySheet(name,wb.Sheets[name])).filter(r=>r.report_date||r.issues.length);
+    previewRows.forEach(r=>{
+      r.duplicate=existingDates.has(r.report_date);
+      r.existing_id=existingReportIds.get(r.report_date)||null;
+      r.valid=!r.issues.length;
+      r.selected=!r.duplicate&&r.valid;
+    });
+    renderPreview();
+    window.scrollTo({top:$('previewPanel').offsetTop-90,behavior:'smooth'});
+  }
+  async function previewLocalExcel(){
+    const input=$('localExcelFile'),state=$('localExcelState'),file=input?.files?.[0];
+    if(!file){state.textContent='اختر ملف Excel أولًا.';state.className='drive-state error';return;}
+    if(file.size>30*1024*1024){state.textContent='حجم الملف يتجاوز 30MB.';state.className='drive-state error';return;}
+    try{
+      state.textContent='جاري قراءة ملف Excel وبناء المعاينة...';state.className='drive-state';
+      await loadExistingDates();
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
+      prepareWorkbookPreview(wb,file.name,'Excel من الجهاز');
+      state.textContent=`تمت قراءة ${previewRows.length} ورقة يومية. راجع الجودة والاختلافات ثم اعتمد أو ألغِ.`;state.className='drive-state ok';
+    }catch(e){state.textContent=e.message||'تعذر قراءة ملف Excel';state.className='drive-state error';}
   }
   function renderPreview(){
     const total=previewRows.length,dup=previewRows.filter(x=>x.duplicate).length,invalid=previewRows.filter(x=>x.issues.length&&!x.duplicate).length,valid=previewRows.filter(x=>!x.duplicate&&x.valid).length;
@@ -206,7 +227,7 @@
     $('previewReports').innerHTML=previewRows.length?previewRows.map((r,i)=>{
       const status=r.duplicate?['duplicate','موجود مسبقًا']:r.issues.length?['invalid','يحتاج مراجعة']:['valid','صالح للاستيراد'];
       const canSelect=r.valid&&(!r.duplicate||Boolean(r.existing_id));
-      const hint=r.duplicate&&r.valid?'موجود في الموقع — اتركه بدون تحديد للتخطي، أو حدده لتحديثه من Google Drive':r.issues.length?esc(r.issues.join('، ')):'تمت مطابقة الأقسام الرئيسية';
+      const hint=r.duplicate&&r.valid?`موجود في الموقع — اتركه بدون تحديد للتخطي، أو حدده لتحديثه من ${previewSource}`:r.issues.length?esc(r.issues.join('، ')):'تمت مطابقة الأقسام الرئيسية';
       return `<article class="drive-report-card"><div class="drive-report-head"><input type="checkbox" data-import-check="${i}" ${r.selected?'checked':''} ${canSelect?'':'disabled'}><div class="drive-report-main"><strong>${dateDisplay(r.report_date)} · ${esc(r.sheet_name)}</strong><small>${hint}</small></div><span class="drive-status ${status[0]}">${status[1]}</span></div><div class="drive-report-details"><div><span>النفايات</span><strong>${fmt(r.total_waste_tons)} طن</strong></div><div><span>الشاحنات</span><strong>${fmt(r.total_trucks)}</strong></div><div><span>السولار</span><strong>${fmt(r.total_diesel)} لتر</strong></div><div><span>المعدات</span><strong>${r.equipment.length}</strong></div></div><div class="drive-report-extra"><details><summary>عرض المحتويات المطابقة</summary><div class="drive-detail-grid"><div><b>شؤون الموظفين</b>${r.crews.map(x=>`<p>${esc(x.crew_name)}: ${fmt(x.crew_count)}</p>`).join('')||'<p>لا توجد بيانات</p>'}</div><div><b>العمليات والمحطات</b>${r.operations.map(x=>`<p>${esc(x.operation_name)}: عدد المركبات ${fmt(x.vehicle_count)} · الكمية ${fmt(x.quantity)} ${esc(x.unit)}</p>`).join('')}${r.stations.map(x=>`<p>${esc(x.station_name)}: عدد الشاحنات ${fmt(x.truck_count)} · الكمية ${fmt(x.waste_tons)} طن</p>`).join('')}</div><div><b>المعدات</b>${r.equipment.map(x=>`<p>${esc(x.equipment_name)}: ${esc(x.operating_status)} · ${fmt(x.diesel_liters)} لتر</p>`).join('')}</div></div></details></div></article>`;
     }).join(''):'<div class="drive-empty">لم يتم العثور على صفحات يومية قابلة للقراءة.</div>';
   }
@@ -216,7 +237,7 @@
     const updates=selected.filter(x=>x.duplicate).length;
     const creates=selected.length-updates;
     const confirmText=updates
-      ? `سيتم استيراد ${creates} تقرير جديد وتحديث ${updates} تقرير موجود من Google Drive. التحديث يستبدل بيانات التقرير المختار فقط. هل تريد الاعتماد؟`
+      ? `سيتم استيراد ${creates} تقرير جديد وتحديث ${updates} تقرير موجود من ${previewSource}. التحديث يستبدل بيانات التقرير المختار فقط. هل تريد الاعتماد؟`
       : `سيتم استيراد ${creates} تقرير إلى النظام. هل تريد الاعتماد؟`;
     if(!confirm(confirmText))return;
     const btn=$('approveImportBtn'),progress=$('importProgress');btn.disabled=true;progress.classList.remove('hidden');let ok=0,failed=0;
@@ -238,6 +259,8 @@
   document.addEventListener('DOMContentLoaded',async()=>{
     if(!await authStatus())return;
     $('googleClientId').value=savedClientId();
+    $('previewLocalExcelBtn').onclick=previewLocalExcel;
+    $('localExcelFile').addEventListener('change',()=>{const file=$('localExcelFile').files?.[0];const state=$('localExcelState');state.textContent=file?`تم اختيار ${file.name}. اضغط معاينة Excel.`:'لم يتم اختيار ملف.';state.className='drive-state';});
     $('saveClientIdBtn').onclick=()=>{const id=text($('googleClientId').value);if(!id)return setState('أدخل Google Client ID أولًا','error');localStorage.setItem('minyaGoogleDriveClientId',id);setState('تم حفظ إعداد Google Client ID على هذا المتصفح','ok');};
     $('connectDriveBtn').onclick=connectDrive;
     $('refreshDriveFilesBtn').onclick=loadDriveFiles;

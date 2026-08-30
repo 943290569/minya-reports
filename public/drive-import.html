@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>استيراد التقارير من Google Drive - مكب المنيا</title>
+  <title>استيراد التقارير من Drive وExcel - مكب المنيا</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="v3.css">
   <link rel="stylesheet" href="header-tone.css">
@@ -12,14 +12,14 @@
   <link rel="stylesheet" href="desktop-nav-hero.css">
   <link rel="stylesheet" href="final-ui-stabilize.css">
   <link rel="stylesheet" href="mobile-vertical-menu.css">
-  <link rel="stylesheet" href="drive-import.css?v=3.3.0-drive-import-v3">
+  <link rel="stylesheet" href="drive-import.css?v=3.3.0-drive-import-v4">
   <link rel="stylesheet" href="drive-folder-nav.css?v=3.3.0-drive-folders-v1">
 </head>
 <body data-page="drive-import">
   <header class="top-header">
     <div>
       <h1>نظام إدارة مكب المنيا</h1>
-      <p>استيراد التقارير القديمة من Google Drive</p>
+      <p>استيراد التقارير من Google Drive أو Excel</p>
     </div>
     <nav>
       <a class="app-nav-link" href="/">الرئيسية</a>
@@ -34,16 +34,26 @@
       <a class="app-nav-link" href="/admin">الإدارة</a>
       <a class="app-nav-link" href="/system.html">إدارة النظام</a>
       <a class="app-nav-link" href="/reviews">المراجعة</a>
-      <a class="app-nav-link active" href="/drive-import.html">استيراد Drive</a>
+      <a class="app-nav-link active" href="/drive-import.html">الاستيراد</a>
     </nav>
   </header>
 
   <main class="container drive-import-page">
     <section class="v3-hero drive-hero">
-      <div><span>GOOGLE DRIVE IMPORT</span><h2>استيراد التقارير القديمة</h2><p>استعرض مجلدات Google Drive كما هي، افتح ملف التقرير، عاين البيانات، ثم اعتمد أو ألغِ دون تعديل ملفات Drive.</p></div>
+      <div><span>DRIVE & EXCEL IMPORT</span><h2>استيراد التقارير القديمة</h2><p>اختر ملفًا من جهازك أو من Google Drive، ثم استخدم المعاينة والجودة والاختلافات والتحديد قبل الاعتماد.</p></div>
     </section>
 
     <section id="adminOnlyNotice" class="drive-notice hidden">هذه الصفحة متاحة للمدير فقط.</section>
+
+    <section id="localExcelPanel" class="drive-panel">
+      <div class="drive-panel-head"><div><small>رفع مباشر</small><h3>رفع ملف Excel من الجهاز</h3></div><span class="drive-readonly">معاينة قبل الحفظ</span></div>
+      <p>اختر ملف XLSX أو XLS. سيستخدم النظام نفس قارئ Google Drive ونفس فحص الجودة والتطابق والاختلافات.</p>
+      <div class="drive-local-upload">
+        <input id="localExcelFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+        <button id="previewLocalExcelBtn" type="button" class="drive-primary">معاينة Excel</button>
+      </div>
+      <div id="localExcelState" class="drive-state">لم يتم اختيار ملف.</div>
+    </section>
 
     <section id="driveSetupPanel" class="drive-panel">
       <div class="drive-panel-head"><div><small>الخطوة 1</small><h3>ربط Google Drive</h3></div><span class="drive-readonly">قراءة فقط</span></div>
@@ -87,9 +97,9 @@
   <script src="js/app-header-menu.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="js/app-drive-import.js?v=3.3.0-drive-import-v3"></script>
+  <script src="js/app-drive-import.js?v=3.3.0-drive-import-v4"></script>
   <script src="js/app-drive-observer-stabilizer.js?v=3.3.0-drive-observer-fix-v1"></script>
-  <script src="js/app-drive-quality.js?v=3.3.0-drive-quality-v1"></script>
+  <script src="js/app-drive-quality.js?v=3.3.0-drive-quality-v2"></script>
   <script src="js/app-drive-quality-details.js?v=3.3.0-drive-quality-details-v1"></script>
   <script src="js/app-drive-folder-nav.js?v=3.3.0-drive-folders-v1"></script>
   <script src="js/app-english-digits.js"></script>

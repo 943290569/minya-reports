@@ -68,6 +68,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.r.status===403,'viewer was allowed to create a report');
   x=await json('/api/reports',auth(editor,'POST',report));
   assert(x.r.status===200,'editor create report failed');
+  assert(x.data.report.workflow_status==='draft','editor report was not saved as draft');
   const id=x.data.report.id;
 
   x=await json('/api/monthly-summary?month=2099-02',auth(viewer));
@@ -169,6 +170,27 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   x=await json('/api/appearance-settings',auth(viewer));
   assert(x.r.status===200&&x.data.settings.remembranceFontSize===64,'restore lost shared appearance settings');
 
+  const adminReport={...report,report_date:'2099-02-02',notes:'admin auto approval smoke'};
+  x=await json('/api/reports',auth(admin,'POST',adminReport));
+  assert(x.r.status===200,'admin create report failed');
+  assert(x.data.report.workflow_status==='approved','admin-created report was not approved automatically');
+  assert(x.data.report.approved_by_name==='Smoke Admin','admin-created report lost approver name');
+  const adminReportId=x.data.report.id;
+  x=await json(`/api/reports/${adminReportId}`,auth(admin));
+  assert(x.r.status===200&&x.data.report.workflow_status==='approved','stored admin report is not approved');
+  x=await json(`/api/reports/${adminReportId}/attachments`,auth(admin,'POST',{name:'admin-evidence.txt',mime_type:'text/plain',data_base64:payload}));
+  assert(x.r.status===200,'admin could not attach a file to an auto-approved report');
+  const adminAttachmentId=x.data.id;
+  x=await json(`/api/reports/${adminReportId}`,auth(admin,'PUT',{...adminReport,notes:'updated by admin'}));
+  assert(x.r.status===200&&x.data.report.workflow_status==='approved','admin update did not keep the report approved');
+  x=await json(`/api/attachments/${adminAttachmentId}`,auth(admin,'DELETE'));
+  assert(x.r.status===200,'admin could not delete an attachment from an approved report');
+  x=await json(`/api/reports/${adminReportId}/reopen`,auth(admin,'POST',{reason:'smoke cleanup'}));
+  assert(x.r.status===200,'admin report cleanup reopen failed');
+  x=await json(`/api/reports/${adminReportId}`,auth(admin,'DELETE'));
+  assert(x.r.status===200,'admin report cleanup delete failed');
+  assert(uploadFiles().length===1,'admin auto-approval test left unexpected attachment files');
+
   x=await json('/api/security/sessions',auth(admin));
   assert(x.r.status===200&&x.data.summary.admins>=1,'security sessions endpoint failed');
   assert(x.data.users.some(u=>u.id===editorId)&&x.data.users.some(u=>u.id===viewerId),'security users missing');
@@ -178,7 +200,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   x=await json('/api/audit?limit=500',auth(admin));
   assert(x.r.status===200,'audit endpoint failed');
   const actions=new Set((x.data.logs||[]).map(r=>r.action));
-  ['UPDATE_APPEARANCE_SETTINGS','CREATE_REPORT','ADD_ATTACHMENT','CREATE_MAINTENANCE','DELETE_MAINTENANCE','SUBMIT_REPORT','APPROVE_REPORT','REOPEN_REPORT','RESTORE_BACKUP'].forEach(a=>assert(actions.has(a),`audit missing ${a}`));
+  ['UPDATE_APPEARANCE_SETTINGS','CREATE_REPORT','CREATE_APPROVED_REPORT','UPDATE_APPROVED_REPORT','ADD_ATTACHMENT','CREATE_MAINTENANCE','DELETE_MAINTENANCE','SUBMIT_REPORT','APPROVE_REPORT','REOPEN_REPORT','RESTORE_BACKUP'].forEach(a=>assert(actions.has(a),`audit missing ${a}`));
 
   x=await json('/api/system/storage',auth(admin));
   assert(x.r.status===200&&x.data.attachment_count===1,'storage endpoint incorrect');

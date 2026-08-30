@@ -214,9 +214,8 @@
   function mount(){
     const c=document.getElementById("v3Content"); if(!c||document.getElementById("excelImportPanel"))return;
     const panel=document.createElement("div");panel.id="excelImportPanel";panel.className="v3-panel excel-import-panel";
-    panel.innerHTML=`<div class="excel-import-head"><div><span>EXCEL IMPORT</span><h3>استيراد التقارير القديمة من Excel</h3><p>اختر ملف شهر واحد. يتم تجاهل ورقة <b>summary</b> تلقائيًا، ثم تظهر المعاينة قبل أي حفظ.</p></div></div><div class="excel-import-picker"><input id="excelImportFile" type="file" accept=".xlsx,.xls"><button id="excelImportPreviewBtn" type="button" class="v3-primary">معاينة الملف</button></div><p id="excelImportMessage" class="excel-import-message">لم يتم اختيار ملف بعد.</p><div id="excelImportPreview"></div>`;
+    panel.innerHTML=`<div class="excel-import-head"><div><span>DRIVE & EXCEL IMPORT</span><h3>الاستيراد الموحد مع المعاينة</h3><p>ارفع Excel أو اختر ملفًا من Google Drive في صفحة واحدة، مع جودة القراءة والتطابق والاختلافات والتحديد قبل الاعتماد.</p></div></div><div class="excel-import-actions"><a class="v3-primary" href="/drive-import.html">فتح صفحة الاستيراد والمعاينة</a></div>`;
     c.prepend(panel);
-    document.getElementById("excelImportPreviewBtn")?.addEventListener("click",()=>{const f=document.getElementById("excelImportFile")?.files?.[0];if(!f){document.getElementById("excelImportMessage").textContent="اختر ملف Excel أولًا.";return;}previewFile(f);});
   }
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(mount,0)); else setTimeout(mount,0);
