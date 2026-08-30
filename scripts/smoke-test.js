@@ -57,10 +57,10 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
 
   const report={
     report_date:'2099-02-01',weather:'صحو',temperature:21,start_time:'04:00',end_time:'19:00',
-    total_trucks:12,total_waste_tons:150,total_diesel:55,notes:'V3.2 final smoke',
+    total_trucks:15,total_waste_tons:190,total_diesel:55,notes:'V3.2 final smoke',
     crews:[{crew_name:'فريق التشغيل',crew_count:3,notes:''}],
     operations:[{operation_name:'مكب نفايات المنيا',vehicle_count:12,quantity:150,unit:'طن',notes:''}],
-    stations:[],
+    stations:[{station_name:'محطة ترحيل يطا',truck_count:3,waste_tons:40,unit:'طن',notes:''}],
     equipment:[{equipment_name:'Bomag',operating_status:'يعمل',status_description:'',working_hours:6,diesel_liters:55,notes:''}]
   };
 
@@ -73,9 +73,17 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
 
   x=await json('/api/monthly-summary?month=2099-02',auth(viewer));
   assert(x.r.status===200&&x.data.summary.diesel===55,'monthly summary lost stored diesel total');
+  assert(x.data.details&&x.data.details.days===1,'monthly linked Summary report count is incorrect');
+  assert(x.data.details.totals.landfill_waste_tons===150,'monthly landfill waste must exclude transfer stations');
+  assert(x.data.details.totals.station_waste_tons===40,'monthly transfer-station waste is incorrect');
+  assert(x.data.details.totals.incoming_waste_tons===190,'monthly incoming waste must equal landfill plus stations');
+  assert(x.data.details.totals.landfill_trucks===12&&x.data.details.totals.station_trucks===3&&x.data.details.totals.incoming_trucks===15,'monthly linked vehicle totals are incorrect');
+  assert(x.data.details.equipment.some(row=>row.name==='Bomag'&&row.diesel_liters===55),'monthly equipment diesel Summary is incorrect');
   x=await json('/api/annual-summary?year=2099',auth(viewer));
   assert(x.r.status===200&&x.data.summary.diesel===55,'annual summary lost stored diesel total');
   assert(Array.isArray(x.data.previous_reports),'annual summary does not include previous-year reports');
+  assert(x.data.details&&x.data.details.totals.landfill_waste_tons===150,'annual landfill waste must exclude transfer stations');
+  assert(x.data.details.totals.station_waste_tons===40&&x.data.details.totals.incoming_waste_tons===190,'annual incoming waste must equal landfill plus stations');
 
   x=await json(`/api/reports/${id}`,auth(viewer));
   assert(x.r.status===200,'viewer could not read report');

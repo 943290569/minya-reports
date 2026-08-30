@@ -66,9 +66,13 @@ async function loadAnnualArchiveData(year = "") {
       year: String(Number(requestedYear) - 1),
       reports: Array.isArray(data.previous_reports) ? data.previous_reports : [],
     };
+    window.MINYA_ANNUAL_LINKED_SUMMARY = data.details || null;
 
     if (typeof renderAnnualSummary === "function") {
       await renderAnnualSummary();
+    }
+    if (typeof window.renderLinkedPeriodSummary === "function") {
+      window.renderLinkedPeriodSummary("annual", data.details || null);
     }
 
     const select = document.getElementById("annualYearFilter");
