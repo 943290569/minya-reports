@@ -90,7 +90,8 @@ assert(appearance.includes('method: "PUT"'), "admin appearance settings are not 
 assert(server.includes('CREATE TABLE IF NOT EXISTS system_settings'), "shared settings table is missing");
 assert(server.includes('app.put("/api/appearance-settings", requireRole("admin")'), "shared settings updates are not restricted to administrators");
 assert(appearanceStyles.includes('input:is([type="date"],[type="month"],[type="time"],[type="datetime-local"])'), "localized date controls are not isolated from RTL text reversal");
-assert(appearanceStyles.includes('unicode-bidi: isolate !important'), "date controls do not isolate bidirectional text");
+assert(appearanceStyles.includes('direction: rtl !important'), "Arabic native date labels are not kept in their natural direction");
+assert(appearanceStyles.includes('unicode-bidi: normal !important'), "native date controls still force bidirectional isolation that reverses Arabic labels");
 assert(drivePage.includes('id="localExcelFile"'), "direct Excel upload control is missing from the unified import page");
 assert(drivePage.includes('id="previewLocalExcelBtn"'), "direct Excel preview action is missing");
 assert(driveImport.includes('function prepareWorkbookPreview('), "Drive and Excel do not share the same preview pipeline");
