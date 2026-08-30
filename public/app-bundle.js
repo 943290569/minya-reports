@@ -1,12 +1,13 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v16";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v17";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
 function readMinyaAppearanceSettings() {
   const defaults = {
     loadingSeconds: 3,
-    remembranceFontSize: 48,
+    remembranceFontSize: 72,
+    remembranceFontRevision: 2,
     siteFontSize: 16,
     theme: "day",
     color: "green",
@@ -20,17 +21,20 @@ function readMinyaAppearanceSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(MINYA_APPEARANCE_STORAGE_KEY) || "{}");
     const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+    if (Number(saved?.remembranceFontRevision) !== 2) settings.remembranceFontSize = 72;
+    settings.remembranceFontRevision = 2;
     const loadingSeconds = Number(settings.loadingSeconds);
     settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
     const remembranceFontSize = Math.round(Number(settings.remembranceFontSize));
     settings.remembranceFontSize = Number.isFinite(remembranceFontSize)
       ? Math.min(72, Math.max(11, remembranceFontSize))
-      : 48;
+      : 72;
     const siteFontSize = Math.round(Number(settings.siteFontSize));
     settings.siteFontSize = Number.isFinite(siteFontSize)
       ? Math.min(30, Math.max(11, siteFontSize))
       : 16;
     settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
+    localStorage.setItem(MINYA_APPEARANCE_STORAGE_KEY, JSON.stringify(settings));
     return settings;
   } catch (_) {
     return defaults;
@@ -111,7 +115,7 @@ document.documentElement.style.setProperty(
       margin: 0;
       color: #176b4f;
       font-size: ${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px;
-      font-weight: 800;
+      font-weight: 900;
       line-height: 1.35;
       letter-spacing: -.4px;
       text-align: center;
@@ -6544,7 +6548,8 @@ ${payload.sections.join("\n")}
   const storageKey = "minya_appearance_settings_v1";
   const defaults = {
     loadingSeconds: 3,
-    remembranceFontSize: 48,
+    remembranceFontSize: 72,
+    remembranceFontRevision: 2,
     siteFontSize: 16,
     theme: "day",
     color: "green",
@@ -6557,6 +6562,7 @@ ${payload.sections.join("\n")}
 
   const allowed = {
     loadingSeconds: [1, 2, 3, 4, 5],
+    remembranceFontRevision: [2],
     theme: ["day", "night", "auto"],
     color: ["green", "blue"],
     fontSize: ["small", "normal", "large", "xlarge"],
@@ -6663,7 +6669,7 @@ ${payload.sections.join("\n")}
         <label class="appearance-range-field">حجم خط الأذكار
           <div class="appearance-range-row">
             <input type="range" min="11" max="72" step="1" data-appearance-key="remembranceFontSize" aria-label="حجم خط الأذكار">
-            <output data-remembrance-font-value>48 بكسل</output>
+            <output data-remembrance-font-value>72 بكسل</output>
           </div>
           <p class="appearance-remembrance-preview" data-remembrance-preview>سبحان الله وبحمده</p>
           <small>من 11 إلى 72 بكسل. يعرض المثال الحجم المختار.</small>
