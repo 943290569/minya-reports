@@ -400,8 +400,13 @@ async function loadMonthlyArchiveData(showStatus = false) {
       ...((previousResponse.ok && previous.ok) ? (previous.reports || []) : [])
     ];
 
+    window.MINYA_MONTHLY_LINKED_SUMMARY = current.details || null;
+
     renderArchiveReports();
     await updateMonthlySummary();
+    if (typeof window.renderLinkedPeriodSummary === "function") {
+      window.renderLinkedPeriodSummary("monthly", current.details || null);
+    }
 
     if (typeof renderMonthlyMetricChart === "function") {
       await renderMonthlyMetricChart("waste");
