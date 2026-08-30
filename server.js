@@ -218,6 +218,12 @@ db.exec(`
     created_by INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    updated_by INTEGER,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 const reportColumns = new Set(db.pragma("table_info(daily_reports)").map((c) => c.name));
@@ -314,6 +320,53 @@ function requireRole(...roles) {
 function audit(user, action, entityType = "", entityId = "", details = "") {
   db.prepare(`INSERT INTO audit_logs (user_id,username,action,entity_type,entity_id,details) VALUES (?,?,?,?,?,?)`).run(user?.id || null, user?.username || "system", action, entityType, String(entityId || ""), String(details || ""));
 }
+const APPEARANCE_DEFAULTS = {
+  loadingSeconds: 3,
+  remembranceFontSize: 72,
+  remembranceFontRevision: 2,
+  siteFontSize: 16,
+  theme: "day",
+  color: "green",
+  fontSize: "normal",
+  navPosition: "top",
+  density: "comfortable",
+  contrast: "normal",
+  motion: "full"
+};
+function normalizeAppearanceSettings(input = {}) {
+  const settings = { ...APPEARANCE_DEFAULTS };
+  const loadingSeconds = Math.round(Number(input.loadingSeconds));
+  if ([1,2,3,4,5].includes(loadingSeconds)) settings.loadingSeconds = loadingSeconds;
+  const remembranceFontSize = Math.round(Number(input.remembranceFontSize));
+  if (Number.isFinite(remembranceFontSize)) settings.remembranceFontSize = Math.min(72, Math.max(11, remembranceFontSize));
+  const siteFontSize = Math.round(Number(input.siteFontSize));
+  if (Number.isFinite(siteFontSize)) settings.siteFontSize = Math.min(30, Math.max(11, siteFontSize));
+  const choices = {
+    theme: ["day","night","auto"], color: ["green","blue"],
+    fontSize: ["small","normal","large","xlarge"], navPosition: ["top","right","left"],
+    density: ["comfortable","compact"], contrast: ["normal","high"], motion: ["full","reduced"]
+  };
+  Object.entries(choices).forEach(([key, allowed]) => {
+    if (allowed.includes(input[key])) settings[key] = input[key];
+  });
+  return settings;
+}
+function getSharedAppearanceSettings() {
+  const row = db.prepare(`SELECT setting_value,updated_by,updated_at FROM system_settings WHERE setting_key='appearance'`).get();
+  if (!row) return { settings: { ...APPEARANCE_DEFAULTS }, configured: false, updated_by: null, updated_at: null };
+  try {
+    return { settings: normalizeAppearanceSettings(JSON.parse(row.setting_value)), configured: true, updated_by: row.updated_by, updated_at: row.updated_at };
+  } catch {
+    return { settings: { ...APPEARANCE_DEFAULTS }, configured: false, updated_by: null, updated_at: null };
+  }
+}
+function setSharedAppearanceSettings(input, userId = null) {
+  const settings = normalizeAppearanceSettings(input);
+  db.prepare(`INSERT INTO system_settings (setting_key,setting_value,updated_by,updated_at) VALUES ('appearance',?,?,CURRENT_TIMESTAMP)
+    ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP`)
+    .run(JSON.stringify(settings), userId);
+  return settings;
+}
 function localDateString(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hebron", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
@@ -350,7 +403,7 @@ function getFullReport(reportId, includeAttachmentData = false) {
 function buildBackupObject() {
   const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id, true));
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
-  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance };
+  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, appearance_settings: getSharedAppearanceSettings().settings };
 }
 let lastAutomaticBackupAt = 0;
 const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;
@@ -438,6 +491,17 @@ app.post("/api/auth/logout", requireAuth, (req,res)=>{
   res.json({ok:true});
 });
 app.get("/api/auth/me", requireAuth, (req,res)=>res.json({ok:true,user:req.user}));
+
+app.get("/api/appearance-settings", requireAuth, (req,res)=>{
+  const shared=getSharedAppearanceSettings();
+  res.json({ok:true,...shared});
+});
+app.put("/api/appearance-settings", requireRole("admin"), (req,res)=>{
+  const settings=setSharedAppearanceSettings(req.body?.settings||req.body,req.user.id);
+  audit(req.user,"UPDATE_APPEARANCE_SETTINGS","system","appearance",JSON.stringify(settings));
+  writeAutomaticBackup("appearance-settings");
+  res.json({ok:true,settings,message:"تم حفظ إعدادات المظهر لجميع المستخدمين"});
+});
 
 app.get("/api/users", requireRole("admin"), (req,res)=>res.json({ok:true,users:db.prepare(`SELECT id,username,display_name,email,role,is_active,created_at FROM users ORDER BY id`).all()}));
 app.post("/api/users", requireRole("admin"), (req,res)=>{
@@ -656,7 +720,7 @@ app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
 
 app.post("/api/backup/validate", requireRole("admin"), (req,res)=>{ try{const result=validateBackupObject(req.body);res.status(result.valid?200:400).json({ok:result.valid,valid:result.valid,message:result.valid?"النسخة صالحة للاستعادة":"النسخة تحتوي أخطاء تمنع الاستعادة",errors:result.errors,summary:result.summary});}catch(error){res.status(400).json({ok:false,valid:false,message:"تعذر فحص النسخة",error:error.message});} });
 app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
-  try { const backup=req.body;const validation=validateBackupObject(backup);if(!validation.valid)return res.status(400).json({ok:false,message:"تم رفض الاستعادة لأن النسخة لم تجتز فحص السلامة",errors:validation.errors});writeAutomaticBackup("pre-restore",true);const tx=db.transaction(()=>{["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run());for(const item of backup.reports){const r=item.report;const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||"");const newId=rr.lastInsertRowid;insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]);for(const a of item.attachments||[]){if(!a.data_base64)continue;const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10);const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`;const buffer=decodeStrictBase64(a.data_base64);if(!buffer)throw new Error("بيانات مرفق غير صالحة أثناء الاستعادة");fs.writeFileSync(path.join(uploadsDir,stored),buffer);db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString());}}for(const m of backup.maintenance||[]){db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at);}});tx();const referenced=new Set(db.prepare(`SELECT stored_name FROM attachments`).all().map(x=>x.stored_name));for(const name of fs.readdirSync(uploadsDir)){const file=path.join(uploadsDir,name);try{if(fs.statSync(file).isFile()&&!referenced.has(name))fs.unlinkSync(file);}catch{}}audit(req.user,"RESTORE_BACKUP","system","backup",`${backup.reports.length} reports`);writeAutomaticBackup("post-restore",true);res.json({ok:true,message:"تمت استعادة النسخة بنجاح",count:backup.reports.length}); } catch(error){res.status(500).json({ok:false,message:"فشل استعادة النسخة",error:error.message});}
+  try { const backup=req.body;const validation=validateBackupObject(backup);if(!validation.valid)return res.status(400).json({ok:false,message:"تم رفض الاستعادة لأن النسخة لم تجتز فحص السلامة",errors:validation.errors});writeAutomaticBackup("pre-restore",true);const tx=db.transaction(()=>{["crews","operations","transfer_stations","equipment","attachments","daily_reports","maintenance_logs"].forEach(t=>db.prepare(`DELETE FROM ${t}`).run());for(const item of backup.reports){const r=item.report;const rr=db.prepare(`INSERT INTO daily_reports (report_date,report_no,weather,temperature,start_time,end_time,total_trucks,total_waste_tons,total_diesel,notes,created_at,updated_at,workflow_status,submitted_at,submitted_by,approved_at,approved_by,approved_by_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.report_date,r.report_no||generateReportNo(r.report_date),r.weather||"",r.temperature||0,r.start_time||"",r.end_time||"",r.total_trucks||0,r.total_waste_tons||0,r.total_diesel||0,r.notes||"",r.created_at||new Date().toISOString(),r.updated_at||new Date().toISOString(),["draft","pending","approved"].includes(r.workflow_status)?r.workflow_status:"draft",r.submitted_at||null,r.submitted_by||null,r.approved_at||null,r.approved_by||null,r.approved_by_name||"");const newId=rr.lastInsertRowid;insertChildren(newId,item.crews||[],item.operations||[],item.stations||[],item.equipment||[]);for(const a of item.attachments||[]){if(!a.data_base64)continue;const ext=path.extname(a.original_name||"").replace(/[^.a-zA-Z0-9]/g,"").slice(0,10);const stored=`${newId}-${Date.now()}-${crypto.randomBytes(5).toString("hex")}${ext}`;const buffer=decodeStrictBase64(a.data_base64);if(!buffer)throw new Error("بيانات مرفق غير صالحة أثناء الاستعادة");fs.writeFileSync(path.join(uploadsDir,stored),buffer);db.prepare(`INSERT INTO attachments (report_id,original_name,stored_name,mime_type,size_bytes,created_at) VALUES (?,?,?,?,?,?)`).run(newId,a.original_name||"file",stored,a.mime_type||"application/octet-stream",buffer.length,a.created_at||new Date().toISOString());}}for(const m of backup.maintenance||[]){db.prepare(`INSERT INTO maintenance_logs (equipment_name,log_date,status,description,action_taken,cost,created_by,created_at) VALUES (?,?,?,?,?,?,?,?)`).run(m.equipment_name,m.log_date,m.status,m.description,m.action_taken,m.cost,m.created_by,m.created_at);}if(backup.appearance_settings)setSharedAppearanceSettings(backup.appearance_settings,req.user.id);});tx();const referenced=new Set(db.prepare(`SELECT stored_name FROM attachments`).all().map(x=>x.stored_name));for(const name of fs.readdirSync(uploadsDir)){const file=path.join(uploadsDir,name);try{if(fs.statSync(file).isFile()&&!referenced.has(name))fs.unlinkSync(file);}catch{}}audit(req.user,"RESTORE_BACKUP","system","backup",`${backup.reports.length} reports`);writeAutomaticBackup("post-restore",true);res.json({ok:true,message:"تمت استعادة النسخة بنجاح",count:backup.reports.length}); } catch(error){res.status(500).json({ok:false,message:"فشل استعادة النسخة",error:error.message});}
 });
 
 app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));

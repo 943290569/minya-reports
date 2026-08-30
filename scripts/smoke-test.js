@@ -45,6 +45,16 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   const editor=await login('smokeeditor','EditorPass123');
   const viewer=await login('smokeviewer','ViewerPass123');
 
+  x=await json('/api/appearance-settings',auth(viewer));
+  assert(x.r.status===200&&x.data.configured===false,'initial shared appearance state is incorrect');
+  const sharedAppearance={loadingSeconds:5,remembranceFontSize:64,siteFontSize:18,theme:'night',color:'blue',fontSize:'normal',navPosition:'right',density:'compact',contrast:'high',motion:'reduced'};
+  x=await json('/api/appearance-settings',auth(viewer,'PUT',{settings:sharedAppearance}));
+  assert(x.r.status===403,'viewer was allowed to update shared appearance settings');
+  x=await json('/api/appearance-settings',auth(admin,'PUT',{settings:sharedAppearance}));
+  assert(x.r.status===200&&x.data.settings.remembranceFontSize===64,'admin shared appearance update failed');
+  x=await json('/api/appearance-settings',auth(viewer));
+  assert(x.r.status===200&&x.data.configured===true&&x.data.settings.siteFontSize===18&&x.data.settings.theme==='night','shared appearance settings are not visible across users');
+
   const report={
     report_date:'2099-02-01',weather:'صحو',temperature:21,start_time:'04:00',end_time:'19:00',
     total_trucks:12,total_waste_tons:150,total_diesel:55,notes:'V3.2 final smoke',
@@ -124,6 +134,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(backed.report.workflow_status==='approved','backup lost workflow status');
   assert(backed.attachments.length===1&&backed.attachments[0].data_base64,'backup lost attachment bytes');
   assert(backed.attachments[0].stored_name,'backup lost stored attachment name');
+  assert(backup.appearance_settings&&backup.appearance_settings.remembranceFontSize===64,'backup lost shared appearance settings');
   x=await json('/api/backup/validate',auth(admin,'POST',backup));
   assert(x.r.status===200&&x.data.valid,'backup validation failed');
 
@@ -134,6 +145,9 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(uploadFiles().length===0,'report delete left orphan attachment file');
   fs.writeFileSync(path.join(uploadsDir,'manual-orphan.tmp'),'orphan');
   assert(uploadFiles().includes('manual-orphan.tmp'),'orphan fixture failed');
+
+  x=await json('/api/appearance-settings',auth(admin,'PUT',{settings:{...sharedAppearance,remembranceFontSize:20}}));
+  assert(x.r.status===200&&x.data.settings.remembranceFontSize===20,'appearance change before restore failed');
 
   x=await json('/api/backup/restore',auth(admin,'POST',backup));
   assert(x.r.status===200&&x.data.count===1,'restore failed');
@@ -152,6 +166,8 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(dl.status===200,'restored attachment download failed');
   assert((await dl.text())==='attachment survives V3.2 final backup','restored attachment content changed');
   assert(uploadFiles().length===1,'unexpected physical files after restore cleanup');
+  x=await json('/api/appearance-settings',auth(viewer));
+  assert(x.r.status===200&&x.data.settings.remembranceFontSize===64,'restore lost shared appearance settings');
 
   x=await json('/api/security/sessions',auth(admin));
   assert(x.r.status===200&&x.data.summary.admins>=1,'security sessions endpoint failed');
@@ -162,7 +178,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   x=await json('/api/audit?limit=500',auth(admin));
   assert(x.r.status===200,'audit endpoint failed');
   const actions=new Set((x.data.logs||[]).map(r=>r.action));
-  ['CREATE_REPORT','ADD_ATTACHMENT','CREATE_MAINTENANCE','DELETE_MAINTENANCE','SUBMIT_REPORT','APPROVE_REPORT','REOPEN_REPORT','RESTORE_BACKUP'].forEach(a=>assert(actions.has(a),`audit missing ${a}`));
+  ['UPDATE_APPEARANCE_SETTINGS','CREATE_REPORT','ADD_ATTACHMENT','CREATE_MAINTENANCE','DELETE_MAINTENANCE','SUBMIT_REPORT','APPROVE_REPORT','REOPEN_REPORT','RESTORE_BACKUP'].forEach(a=>assert(actions.has(a),`audit missing ${a}`));
 
   x=await json('/api/system/storage',auth(admin));
   assert(x.r.status===200&&x.data.attachment_count===1,'storage endpoint incorrect');
