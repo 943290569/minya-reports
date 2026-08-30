@@ -206,6 +206,19 @@ html[data-color] textarea:focus {
   font-weight: 800;
 }
 
+.appearance-remembrance-preview {
+  max-width: 100%;
+  margin: 4px 0 0;
+  padding: 14px 10px;
+  overflow-wrap: anywhere;
+  color: var(--appearance-accent);
+  background: var(--appearance-accent-soft);
+  border-radius: 9px;
+  text-align: center;
+  line-height: 1.3;
+  font-weight: 800;
+}
+
 .appearance-grid label small {
   color: var(--appearance-muted);
   font-size: 11px;

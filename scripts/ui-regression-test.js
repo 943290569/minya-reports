@@ -73,5 +73,8 @@ assert(nightAppearance.includes('html[data-theme="night"] #archiveTable .archive
 assert(loader.includes('remembranceFontSize: 48'), "loading remembrance font default is missing");
 assert(loader.includes('Math.min(72, Math.max(11, remembranceFontSize))'), "loading remembrance font range is not enforced");
 assert(appearance.includes('data-appearance-key="remembranceFontSize"'), "admin appearance panel is missing the remembrance font control");
+assert(appearance.includes('data-appearance-key="siteFontSize"'), "admin appearance panel is missing the site font control");
+assert(appearance.includes('root.style.setProperty("--appearance-font-size"'), "site font size is not applied immediately");
+assert(appearance.includes('["remembranceFontSize", "siteFontSize"].includes(key)'), "font sliders are not saved during input");
 
 console.log("UI regression checks passed: page isolation + stored diesel + consolidated assets + single-request annual comparison.");

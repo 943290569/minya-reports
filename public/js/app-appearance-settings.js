@@ -7,6 +7,7 @@
   const defaults = {
     loadingSeconds: 3,
     remembranceFontSize: 48,
+    siteFontSize: 16,
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -32,9 +33,10 @@
   function normalize(input) {
     const output = { ...defaults };
     Object.keys(defaults).forEach((key) => {
-      if (key === "remembranceFontSize") {
+      if (["remembranceFontSize", "siteFontSize"].includes(key)) {
         const size = Math.round(Number(input?.[key]));
-        if (Number.isFinite(size)) output[key] = Math.min(72, Math.max(11, size));
+        const maximum = key === "remembranceFontSize" ? 72 : 30;
+        if (Number.isFinite(size)) output[key] = Math.min(maximum, Math.max(11, size));
         return;
       }
       const value = key === "loadingSeconds" ? Number(input?.[key]) : input?.[key];
@@ -67,6 +69,7 @@
     root.dataset.density = settings.density;
     root.dataset.contrast = settings.contrast;
     root.dataset.motion = settings.motion;
+    root.style.setProperty("--appearance-font-size", `${settings.siteFontSize}px`);
     window.MINYA_APPEARANCE_SETTINGS = { ...settings };
   }
 
@@ -124,7 +127,8 @@
             <input type="range" min="11" max="72" step="1" data-appearance-key="remembranceFontSize" aria-label="حجم خط الأذكار">
             <output data-remembrance-font-value>48 بكسل</output>
           </div>
-          <small>من 11 إلى 72 بكسل. يُطبق عند فتح الصفحة التالية.</small>
+          <p class="appearance-remembrance-preview" data-remembrance-preview>سبحان الله وبحمده</p>
+          <small>من 11 إلى 72 بكسل. يعرض المثال الحجم المختار.</small>
         </label>
         <label>وضع العرض
           <select data-appearance-key="theme">
@@ -136,10 +140,12 @@
             ${option("green", "أخضر")}${option("blue", "أزرق")}
           </select>
         </label>
-        <label>حجم الخط
-          <select data-appearance-key="fontSize">
-            ${option("small", "صغير")}${option("normal", "عادي")}${option("large", "كبير")}${option("xlarge", "كبير جدًا")}
-          </select>
+        <label class="appearance-range-field">حجم خط بيانات الموقع
+          <div class="appearance-range-row">
+            <input type="range" min="11" max="30" step="1" data-appearance-key="siteFontSize" aria-label="حجم خط بيانات الموقع">
+            <output data-site-font-value>16 بكسل</output>
+          </div>
+          <small>من 11 إلى 30 بكسل. يُطبق مباشرة على الصفحة.</small>
         </label>
         <label>موقع القائمة
           <select data-appearance-key="navPosition">
@@ -180,6 +186,10 @@
       });
       const fontValue = panel.querySelector("[data-remembrance-font-value]");
       if (fontValue) fontValue.textContent = `${settings.remembranceFontSize} بكسل`;
+      const siteFontValue = panel.querySelector("[data-site-font-value]");
+      if (siteFontValue) siteFontValue.textContent = `${settings.siteFontSize} بكسل`;
+      const preview = panel.querySelector("[data-remembrance-preview]");
+      if (preview) preview.style.fontSize = `${settings.remembranceFontSize}px`;
     };
 
     const setOpen = (open) => {
@@ -201,20 +211,28 @@
     panel.addEventListener("change", (event) => {
       const key = event.target?.dataset?.appearanceKey;
       if (!key) return;
-      const value = ["loadingSeconds", "remembranceFontSize"].includes(key) ? Number(event.target.value) : event.target.value;
+      if (["remembranceFontSize", "siteFontSize"].includes(key)) return;
+      const value = key === "loadingSeconds" ? Number(event.target.value) : event.target.value;
       settings = normalize({ ...settings, [key]: value });
       save(settings);
       apply(settings);
       const status = panel.querySelector("#minyaAppearanceStatus");
-      if (status) status.textContent = ["loadingSeconds", "remembranceFontSize"].includes(key)
+      if (status) status.textContent = key === "loadingSeconds"
         ? "حُفظ الإعداد وسيظهر في الصفحة التالية."
         : "تم تطبيق الإعداد وحفظه.";
     });
 
     panel.addEventListener("input", (event) => {
-      if (event.target?.dataset?.appearanceKey !== "remembranceFontSize") return;
-      const fontValue = panel.querySelector("[data-remembrance-font-value]");
-      if (fontValue) fontValue.textContent = `${event.target.value} بكسل`;
+      const key = event.target?.dataset?.appearanceKey;
+      if (!["remembranceFontSize", "siteFontSize"].includes(key)) return;
+      settings = normalize({ ...settings, [key]: Number(event.target.value) });
+      save(settings);
+      apply(settings);
+      syncControls();
+      const status = panel.querySelector("#minyaAppearanceStatus");
+      if (status) status.textContent = key === "remembranceFontSize"
+        ? "حُفظ حجم الذكر وسيظهر في شاشة الانتظار التالية."
+        : "تم تطبيق حجم خط بيانات الموقع وحفظه.";
     });
 
     panel.querySelector("#minyaAppearanceReset")?.addEventListener("click", () => {
