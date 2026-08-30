@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260829-v13";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v14";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -85,16 +85,23 @@ const MINYA_LOADING_MIN_MS = Math.min(
       visibility: visible !important;
     }
     #minyaLoadingScreen .minya-loading-card {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      padding: 28px 36px;
+      padding: 32px 20px;
     }
     #minyaLoadingScreen .minya-loading-message {
       margin: 0;
       color: #176b4f;
-      font-size: clamp(30px, 5vw, 54px);
+      font-size: clamp(44px, 9vw, 84px);
       font-weight: 800;
-      line-height: 1.45;
+      line-height: 1.35;
       letter-spacing: -.4px;
+      text-align: center;
+      text-wrap: balance;
     }
     #minyaLoadingScreen .minya-loading-dot {
       width: 8px;
