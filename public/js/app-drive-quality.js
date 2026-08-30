@@ -43,18 +43,18 @@
 
   function compareExisting(src,data){
     const diffs=[],critical=[];let checks=0;
-    function check(label,a,b,isCritical=false){checks++;if(!sameNum(a,b)){diffs.push(`${label}: Drive ${fmt(a)} / الموقع ${fmt(b)}`);if(isCritical)critical.push(label);}}
+    function check(label,a,b,isCritical=false){checks++;if(!sameNum(a,b)){diffs.push(`${label}: المصدر ${fmt(a)} / الموقع ${fmt(b)}`);if(isCritical)critical.push(label);}}
     check('إجمالي النفايات',src.totalWaste,data.report?.total_waste_tons,true);
     check('إجمالي الشاحنات',src.totalTrucks,data.report?.total_trucks,true);
     check('إجمالي السولار',src.totalDiesel,data.report?.total_diesel,false);
     const ops=keyMap(data.operations,'operation_name');
-    for(const x of src.operations){const old=findByLooseName(ops,x.name);checks+=2;if(!old){diffs.push(`عملية غير موجودة: ${x.name}`);critical.push(x.name);continue;}if(!sameNum(x.vehicles,old.vehicle_count)){diffs.push(`${x.name} - المركبات: Drive ${fmt(x.vehicles)} / الموقع ${fmt(old.vehicle_count)}`);if(norm(x.name).includes('مكب نفايات المنيا'))critical.push(`${x.name} - المركبات`);}if(!sameNum(x.quantity,old.quantity)){diffs.push(`${x.name} - الكمية: Drive ${fmt(x.quantity)} / الموقع ${fmt(old.quantity)}`);if(norm(x.name).includes('مكب نفايات المنيا'))critical.push(`${x.name} - الكمية`);}}
+    for(const x of src.operations){const old=findByLooseName(ops,x.name);checks+=2;if(!old){diffs.push(`عملية غير موجودة: ${x.name}`);critical.push(x.name);continue;}if(!sameNum(x.vehicles,old.vehicle_count)){diffs.push(`${x.name} - المركبات: المصدر ${fmt(x.vehicles)} / الموقع ${fmt(old.vehicle_count)}`);if(norm(x.name).includes('مكب نفايات المنيا'))critical.push(`${x.name} - المركبات`);}if(!sameNum(x.quantity,old.quantity)){diffs.push(`${x.name} - الكمية: المصدر ${fmt(x.quantity)} / الموقع ${fmt(old.quantity)}`);if(norm(x.name).includes('مكب نفايات المنيا'))critical.push(`${x.name} - الكمية`);}}
     const sts=keyMap(data.stations,'station_name');
-    for(const x of src.stations){const old=findByLooseName(sts,x.name);checks+=2;if(!old){diffs.push(`محطة غير موجودة: ${x.name}`);critical.push(x.name);continue;}if(!sameNum(x.trucks,old.truck_count)){diffs.push(`${x.name} - الشاحنات: Drive ${fmt(x.trucks)} / الموقع ${fmt(old.truck_count)}`);critical.push(`${x.name} - الشاحنات`);}if(!sameNum(x.quantity,old.waste_tons)){diffs.push(`${x.name} - الكمية: Drive ${fmt(x.quantity)} / الموقع ${fmt(old.waste_tons)}`);critical.push(`${x.name} - الكمية`);}}
+    for(const x of src.stations){const old=findByLooseName(sts,x.name);checks+=2;if(!old){diffs.push(`محطة غير موجودة: ${x.name}`);critical.push(x.name);continue;}if(!sameNum(x.trucks,old.truck_count)){diffs.push(`${x.name} - الشاحنات: المصدر ${fmt(x.trucks)} / الموقع ${fmt(old.truck_count)}`);critical.push(`${x.name} - الشاحنات`);}if(!sameNum(x.quantity,old.waste_tons)){diffs.push(`${x.name} - الكمية: المصدر ${fmt(x.quantity)} / الموقع ${fmt(old.waste_tons)}`);critical.push(`${x.name} - الكمية`);}}
     const crews=keyMap(data.crews,'crew_name');
-    for(const x of src.crews){const old=findByLooseName(crews,x.name);checks++;if(!old||!sameNum(x.count,old.crew_count))diffs.push(`${x.name} - العمال: Drive ${fmt(x.count)} / الموقع ${fmt(old?.crew_count||0)}`);}
+    for(const x of src.crews){const old=findByLooseName(crews,x.name);checks++;if(!old||!sameNum(x.count,old.crew_count))diffs.push(`${x.name} - العمال: المصدر ${fmt(x.count)} / الموقع ${fmt(old?.crew_count||0)}`);}
     const eq=keyMap(data.equipment,'equipment_name');
-    for(const x of src.equipment){const old=findByLooseName(eq,x.name);checks++;if(!old||!sameNum(x.diesel,old.diesel_liters))diffs.push(`${x.name} - السولار: Drive ${fmt(x.diesel)} / الموقع ${fmt(old?.diesel_liters||0)}`);}
+    for(const x of src.equipment){const old=findByLooseName(eq,x.name);checks++;if(!old||!sameNum(x.diesel,old.diesel_liters))diffs.push(`${x.name} - السولار: المصدر ${fmt(x.diesel)} / الموقع ${fmt(old?.diesel_liters||0)}`);}
     const match=checks?Math.max(0,Math.round(((checks-diffs.length)/checks)*100)):0;
     return {match,diffs,critical};
   }
