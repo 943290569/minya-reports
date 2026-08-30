@@ -36,7 +36,7 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   assert(x.r.status===200,'admin setup failed');
   const admin=await login('smokeadmin','SmokePass123');
 
-  x=await json('/api/users',auth(admin,'POST',{username:'smokeeditor',display_name:'Smoke Editor',password:'EditorPass123',role:'editor'}));
+  x=await json('/api/users',auth(admin,'POST',{username:'smokeeditor',display_name:'Smoke Editor',mobile:'0591234567',password:'EditorPass123',role:'editor'}));
   assert(x.r.status===200,'editor creation failed');
   const editorId=x.data.id;
   x=await json('/api/users',auth(admin,'POST',{username:'smokeviewer',display_name:'Smoke Viewer',password:'ViewerPass123',role:'viewer'}));
@@ -44,6 +44,11 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
   const viewerId=x.data.id;
   const editor=await login('smokeeditor','EditorPass123');
   const viewer=await login('smokeviewer','ViewerPass123');
+
+  x=await json('/api/security/sessions',auth(admin));
+  assert(x.r.status===200&&x.data.users.some(user=>user.username==='smokeeditor'&&user.mobile==='0591234567'),'user mobile number was not stored for SMS compose');
+  x=await json(`/api/users/${editorId}`,auth(admin,'PUT',{mobile:'123',display_name:'Smoke Editor',role:'editor',is_active:1}));
+  assert(x.r.status===400,'invalid mobile number was accepted');
 
   x=await json('/api/appearance-settings',auth(viewer));
   assert(x.r.status===200&&x.data.configured===false,'initial shared appearance state is incorrect');
