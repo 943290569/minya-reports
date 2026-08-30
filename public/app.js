@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v23";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v24";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -177,6 +177,7 @@ document.documentElement.style.setProperty(
   "js/app-annual-comparison.js",
   "js/app-annual-insights.js",
   "js/app-annual-loader.js",
+  "js/app-period-linked-summary.js",
   "js/app-archive-search.js",
   "js/app-archive-pagination.js",
   "js/page-mode.js",
@@ -244,7 +245,8 @@ document.documentElement.style.setProperty(
   "dashboard-metrics-fix.css",
   "review-polish.css",
   "appearance-day.css",
-  "appearance-night.css"
+  "appearance-night.css",
+  "period-linked-summary.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
