@@ -29,6 +29,7 @@ const driveImport = read("public/js/app-drive-import.js");
 const driveQuality = read("public/js/app-drive-quality.js");
 const excelImport = read("public/js/app-excel-import.js");
 const workflow = read("public/js/app-report-workflow.js");
+const dateDisplay = read("public/js/app-date-display.js");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -92,6 +93,10 @@ assert(server.includes('app.put("/api/appearance-settings", requireRole("admin")
 assert(appearanceStyles.includes('input:is([type="date"],[type="month"],[type="time"],[type="datetime-local"])'), "localized date controls are not isolated from RTL text reversal");
 assert(appearanceStyles.includes('direction: rtl !important'), "Arabic native date labels are not kept in their natural direction");
 assert(appearanceStyles.includes('unicode-bidi: normal !important'), "native date controls still force bidirectional isolation that reverses Arabic labels");
+assert(appearanceStyles.includes('::-webkit-datetime-edit-fields-wrapper'), "Chromium native date parts are not directionally stabilized");
+assert(dateDisplay.includes('function stabilizeDateInputs('), "dynamic date inputs are not stabilized");
+assert(dateDisplay.includes('input.placeholder="YYYY-MM-DD"'), "empty native date fields do not use a stable ISO placeholder");
+assert(dateDisplay.includes('input.showPicker?.()'), "the stable date placeholder does not restore the native date picker");
 assert(drivePage.includes('id="localExcelFile"'), "direct Excel upload control is missing from the unified import page");
 assert(drivePage.includes('id="previewLocalExcelBtn"'), "direct Excel preview action is missing");
 assert(driveImport.includes('function prepareWorkbookPreview('), "Drive and Excel do not share the same preview pipeline");
