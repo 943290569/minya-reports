@@ -6,6 +6,7 @@
   const storageKey = "minya_appearance_settings_v1";
   const defaults = {
     loadingSeconds: 3,
+    remembranceFontSize: 48,
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -31,6 +32,11 @@
   function normalize(input) {
     const output = { ...defaults };
     Object.keys(defaults).forEach((key) => {
+      if (key === "remembranceFontSize") {
+        const size = Math.round(Number(input?.[key]));
+        if (Number.isFinite(size)) output[key] = Math.min(72, Math.max(11, size));
+        return;
+      }
       const value = key === "loadingSeconds" ? Number(input?.[key]) : input?.[key];
       if (allowed[key].includes(value)) output[key] = value;
     });
@@ -113,6 +119,13 @@
           </select>
           <small>تُطبق عند فتح الصفحة التالية.</small>
         </label>
+        <label class="appearance-range-field">حجم خط الأذكار
+          <div class="appearance-range-row">
+            <input type="range" min="11" max="72" step="1" data-appearance-key="remembranceFontSize" aria-label="حجم خط الأذكار">
+            <output data-remembrance-font-value>48 بكسل</output>
+          </div>
+          <small>من 11 إلى 72 بكسل. يُطبق عند فتح الصفحة التالية.</small>
+        </label>
         <label>وضع العرض
           <select data-appearance-key="theme">
             ${option("day", "نهاري")}${option("night", "ليلي")}${option("auto", "تلقائي حسب الجهاز")}
@@ -165,6 +178,8 @@
       panel.querySelectorAll("[data-appearance-key]").forEach((control) => {
         control.value = String(settings[control.dataset.appearanceKey]);
       });
+      const fontValue = panel.querySelector("[data-remembrance-font-value]");
+      if (fontValue) fontValue.textContent = `${settings.remembranceFontSize} بكسل`;
     };
 
     const setOpen = (open) => {
@@ -186,12 +201,20 @@
     panel.addEventListener("change", (event) => {
       const key = event.target?.dataset?.appearanceKey;
       if (!key) return;
-      const value = key === "loadingSeconds" ? Number(event.target.value) : event.target.value;
+      const value = ["loadingSeconds", "remembranceFontSize"].includes(key) ? Number(event.target.value) : event.target.value;
       settings = normalize({ ...settings, [key]: value });
       save(settings);
       apply(settings);
       const status = panel.querySelector("#minyaAppearanceStatus");
-      if (status) status.textContent = key === "loadingSeconds" ? "حُفظت المدة وستظهر في الصفحة التالية." : "تم تطبيق الإعداد وحفظه.";
+      if (status) status.textContent = ["loadingSeconds", "remembranceFontSize"].includes(key)
+        ? "حُفظ الإعداد وسيظهر في الصفحة التالية."
+        : "تم تطبيق الإعداد وحفظه.";
+    });
+
+    panel.addEventListener("input", (event) => {
+      if (event.target?.dataset?.appearanceKey !== "remembranceFontSize") return;
+      const fontValue = panel.querySelector("[data-remembrance-font-value]");
+      if (fontValue) fontValue.textContent = `${event.target.value} بكسل`;
     });
 
     panel.querySelector("#minyaAppearanceReset")?.addEventListener("click", () => {
