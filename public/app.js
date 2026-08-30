@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v17";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v18";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -114,7 +114,7 @@ document.documentElement.style.setProperty(
     #minyaLoadingScreen .minya-loading-message {
       margin: 0;
       color: #176b4f;
-      font-size: ${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px;
+      font-size: ${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px !important;
       font-weight: 900;
       line-height: 1.35;
       letter-spacing: -.4px;
@@ -154,7 +154,7 @@ document.documentElement.style.setProperty(
   screen.setAttribute("aria-live", "polite");
   screen.innerHTML = `
     <div class="minya-loading-card">
-      <p class="minya-loading-message">${chosen}</p>
+      <p class="minya-loading-message" style="font-size:${window.MINYA_APPEARANCE_SETTINGS.remembranceFontSize}px !important">${chosen}</p>
       <div class="minya-loading-dot" aria-hidden="true"></div>
     </div>
   `;
