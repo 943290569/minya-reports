@@ -6,7 +6,8 @@
   const storageKey = "minya_appearance_settings_v1";
   const defaults = {
     loadingSeconds: 3,
-    remembranceFontSize: 48,
+    remembranceFontSize: 72,
+    remembranceFontRevision: 2,
     siteFontSize: 16,
     theme: "day",
     color: "green",
@@ -19,6 +20,7 @@
 
   const allowed = {
     loadingSeconds: [1, 2, 3, 4, 5],
+    remembranceFontRevision: [2],
     theme: ["day", "night", "auto"],
     color: ["green", "blue"],
     fontSize: ["small", "normal", "large", "xlarge"],
@@ -125,7 +127,7 @@
         <label class="appearance-range-field">حجم خط الأذكار
           <div class="appearance-range-row">
             <input type="range" min="11" max="72" step="1" data-appearance-key="remembranceFontSize" aria-label="حجم خط الأذكار">
-            <output data-remembrance-font-value>48 بكسل</output>
+            <output data-remembrance-font-value>72 بكسل</output>
           </div>
           <p class="appearance-remembrance-preview" data-remembrance-preview>سبحان الله وبحمده</p>
           <small>من 11 إلى 72 بكسل. يعرض المثال الحجم المختار.</small>
