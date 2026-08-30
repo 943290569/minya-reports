@@ -247,14 +247,14 @@ async function saveReport() {
       await loadArchive(false);
 
       showMessage(
-        `تم تحديث التقرير بنجاح. رقم التقرير: ${
+        `${data.message || "تم تحديث التقرير بنجاح"}. رقم التقرير: ${
           data.report.report_no ||
           data.report.id
         }`
       );
     } else {
       showMessage(
-        `تم حفظ التقرير بنجاح. رقم التقرير: ${
+        `${data.message || "تم حفظ التقرير بنجاح"}. رقم التقرير: ${
           data.report.report_no ||
           data.report.id
         }`
