@@ -1,5 +1,5 @@
 /* =========================================================
-   إعدادات المظهر المحلية لكل جهاز
+   إعدادات المظهر المشتركة لكل المستخدمين
 ========================================================= */
 
 (function () {
@@ -73,6 +73,8 @@
     root.dataset.motion = settings.motion;
     root.style.setProperty("--appearance-font-size", `${settings.siteFontSize}px`);
     window.MINYA_APPEARANCE_SETTINGS = { ...settings };
+    const loadingMessage = document.querySelector("#minyaLoadingScreen .minya-loading-message");
+    if (loadingMessage) loadingMessage.style.setProperty("font-size", `${settings.remembranceFontSize}px`, "important");
   }
 
   function option(value, label) {
@@ -92,7 +94,37 @@
     }
   }
 
-  function mount() {
+  async function putSharedSettings(settings) {
+    const response = await fetch("/api/appearance-settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: normalize(settings) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.ok) throw new Error(data?.message || "تعذر حفظ إعدادات المظهر");
+    return normalize(data.settings);
+  }
+
+  async function loadSharedSettings(adminUser) {
+    const localSettings = read();
+    try {
+      const response = await fetch("/api/appearance-settings", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data?.ok) return localSettings;
+      const sharedSettings = data.configured
+        ? normalize(data.settings)
+        : adminUser
+          ? await putSharedSettings(localSettings)
+          : normalize(data.settings);
+      save(sharedSettings);
+      apply(sharedSettings);
+      return sharedSettings;
+    } catch (_) {
+      return localSettings;
+    }
+  }
+
+  function mount(initialSettings) {
     if (document.getElementById("minyaAppearanceButton")) return;
 
     const button = document.createElement("button");
@@ -114,7 +146,7 @@
     panel.setAttribute("aria-labelledby", "minyaAppearanceTitle");
     panel.innerHTML = `
       <div class="appearance-head">
-        <div><small>إعدادات هذا الجهاز</small><h2 id="minyaAppearanceTitle">المظهر وسهولة الاستخدام</h2></div>
+        <div><small>إعدادات مشتركة لكل المستخدمين</small><h2 id="minyaAppearanceTitle">المظهر وسهولة الاستخدام</h2></div>
         <button type="button" id="minyaAppearanceClose" aria-label="إغلاق">×</button>
       </div>
       <div class="appearance-grid">
@@ -179,8 +211,10 @@
 
     document.body.append(button, backdrop, panel);
 
-    let settings = read();
+    let settings = normalize(initialSettings || read());
     apply(settings);
+    let sharedSaveTimer = null;
+    let pendingSharedSettings = null;
 
     const syncControls = () => {
       panel.querySelectorAll("[data-appearance-key]").forEach((control) => {
@@ -191,6 +225,32 @@
       });
       const preview = panel.querySelector("[data-remembrance-preview]");
       if (preview) preview.style.fontSize = `${settings.remembranceFontSize}px`;
+    };
+
+    const flushSharedSave = async () => {
+      if (sharedSaveTimer) clearTimeout(sharedSaveTimer);
+      sharedSaveTimer = null;
+      const snapshot = pendingSharedSettings || settings;
+      pendingSharedSettings = null;
+      const status = panel.querySelector("#minyaAppearanceStatus");
+      if (status) status.textContent = "جاري حفظ الإعدادات لجميع المستخدمين...";
+      try {
+        settings = await putSharedSettings(snapshot);
+        save(settings);
+        apply(settings);
+        syncControls();
+        if (status) status.textContent = "تم حفظ الإعدادات لجميع المستخدمين والأجهزة.";
+        return true;
+      } catch (error) {
+        if (status) status.textContent = error.message || "تعذر حفظ الإعدادات على السيرفر.";
+        return false;
+      }
+    };
+
+    const queueSharedSave = () => {
+      pendingSharedSettings = { ...settings };
+      if (sharedSaveTimer) clearTimeout(sharedSaveTimer);
+      sharedSaveTimer = setTimeout(flushSharedSave, 350);
     };
 
     const setOpen = (open) => {
@@ -207,7 +267,10 @@
     button.addEventListener("click", () => setOpen(true));
     backdrop.addEventListener("click", () => setOpen(false));
     panel.querySelector("#minyaAppearanceClose")?.addEventListener("click", () => setOpen(false));
-    panel.querySelector("#minyaAppearanceDone")?.addEventListener("click", () => setOpen(false));
+    panel.querySelector("#minyaAppearanceDone")?.addEventListener("click", async () => {
+      if (pendingSharedSettings) await flushSharedSave();
+      setOpen(false);
+    });
 
     panel.addEventListener("change", (event) => {
       const key = event.target?.dataset?.appearanceKey || event.target?.dataset?.appearanceNumber;
@@ -218,6 +281,7 @@
       save(settings);
       apply(settings);
       syncControls();
+      queueSharedSave();
       const status = panel.querySelector("#minyaAppearanceStatus");
       if (status) status.textContent = key === "remembranceFontSize"
         ? "حُفظ حجم الذكر وسيظهر في شاشة الانتظار التالية."
@@ -233,6 +297,7 @@
       save(settings);
       apply(settings);
       syncControls();
+      queueSharedSave();
       const status = panel.querySelector("#minyaAppearanceStatus");
       if (status) status.textContent = key === "remembranceFontSize"
         ? "حُفظ حجم الذكر وسيظهر في شاشة الانتظار التالية."
@@ -244,6 +309,7 @@
       save(settings);
       apply(settings);
       syncControls();
+      queueSharedSave();
       const status = panel.querySelector("#minyaAppearanceStatus");
       if (status) status.textContent = "تمت استعادة الإعدادات الافتراضية.";
     });
@@ -254,7 +320,9 @@
   }
 
   async function mountForAdmin() {
-    if (await isAdmin()) mount();
+    const adminUser = await isAdmin();
+    const sharedSettings = await loadSharedSettings(adminUser);
+    if (adminUser) mount(sharedSettings);
   }
 
   apply(read());
