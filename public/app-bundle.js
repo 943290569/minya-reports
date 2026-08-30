@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v20";
+const MINYA_ASSET_VERSION = "3.3.0-20260830-v21";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -694,14 +694,14 @@ async function saveReport() {
       await loadArchive(false);
 
       showMessage(
-        `تم تحديث التقرير بنجاح. رقم التقرير: ${
+        `${data.message || "تم تحديث التقرير بنجاح"}. رقم التقرير: ${
           data.report.report_no ||
           data.report.id
         }`
       );
     } else {
       showMessage(
-        `تم حفظ التقرير بنجاح. رقم التقرير: ${
+        `${data.message || "تم حفظ التقرير بنجاح"}. رقم التقرير: ${
           data.report.report_no ||
           data.report.id
         }`
@@ -5455,9 +5455,8 @@ window.loadArchivePage = loadArchivePage;
   function mount(){
     const c=document.getElementById("v3Content"); if(!c||document.getElementById("excelImportPanel"))return;
     const panel=document.createElement("div");panel.id="excelImportPanel";panel.className="v3-panel excel-import-panel";
-    panel.innerHTML=`<div class="excel-import-head"><div><span>EXCEL IMPORT</span><h3>استيراد التقارير القديمة من Excel</h3><p>اختر ملف شهر واحد. يتم تجاهل ورقة <b>summary</b> تلقائيًا، ثم تظهر المعاينة قبل أي حفظ.</p></div></div><div class="excel-import-picker"><input id="excelImportFile" type="file" accept=".xlsx,.xls"><button id="excelImportPreviewBtn" type="button" class="v3-primary">معاينة الملف</button></div><p id="excelImportMessage" class="excel-import-message">لم يتم اختيار ملف بعد.</p><div id="excelImportPreview"></div>`;
+    panel.innerHTML=`<div class="excel-import-head"><div><span>DRIVE & EXCEL IMPORT</span><h3>الاستيراد الموحد مع المعاينة</h3><p>ارفع Excel أو اختر ملفًا من Google Drive في صفحة واحدة، مع جودة القراءة والتطابق والاختلافات والتحديد قبل الاعتماد.</p></div></div><div class="excel-import-actions"><a class="v3-primary" href="/drive-import.html">فتح صفحة الاستيراد والمعاينة</a></div>`;
     c.prepend(panel);
-    document.getElementById("excelImportPreviewBtn")?.addEventListener("click",()=>{const f=document.getElementById("excelImportFile")?.files?.[0];if(!f){document.getElementById("excelImportMessage").textContent="اختر ملف Excel أولًا.";return;}previewFile(f);});
   }
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(mount,0)); else setTimeout(mount,0);
@@ -5521,7 +5520,7 @@ window.loadArchivePage = loadArchivePage;
   function applyReportLock(status) {
     const main = document.querySelector("main.container");
     if (!main) return;
-    const locked = status !== "draft";
+    const locked = status !== "draft" && window.MINYA_USER?.role !== "admin";
     main.classList.toggle("workflow-locked", locked);
 
     const editableSelectors = [
@@ -5543,7 +5542,7 @@ window.loadArchivePage = loadArchivePage;
       notice = document.createElement("div");
       notice.id = "workflowReadOnlyNotice";
       notice.className = "workflow-readonly-notice no-print";
-      notice.textContent = "التقرير للقراءة فقط. لإجراء تعديل يجب على المدير إعادة فتحه كمسودة.";
+      notice.textContent = "التقرير للقراءة فقط. يمكن للمدير تعديله مباشرة، أو إعادة فتحه كمسودة للمحرر.";
       const panel = document.getElementById("reportWorkflowPanel");
       panel?.after(notice);
     } else if (!locked && notice) notice.remove();
