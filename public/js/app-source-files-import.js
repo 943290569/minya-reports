@@ -7,6 +7,7 @@
   const fmt=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:2});
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 
+  const WEATHER_SOURCE='Open-Meteo';
   const WEATHER_LAT=31.6364;
   const WEATHER_LON=35.2145;
   const WEATHER_TZ='Asia/Hebron';
@@ -62,7 +63,7 @@
       stations:{yata:{trucks:0,tons:0},tarqumia:{trucks:0,tons:0},hebron:{trucks:0,tons:0},other:{trucks:0,tons:0}},
       azizAddedToYata:{trucks:0,tons:0},
       diesel:{},totalDiesel:0,
-      derived:{weather:'',temperature:null,humidity:null,isFriday:false,crewCounts:[],crewTotal:0,waterSprays:null,waterQuantity:null,waterRule:''}
+      derived:{weather:'',temperature:null,humidity:null,isFriday:false,crewCounts:[],crewTotal:0,waterSprays:null,waterQuantity:null,waterRule:'',weatherSource:WEATHER_SOURCE}
     });
     return state.daily.get(date);
   }
@@ -222,16 +223,16 @@
     else if(Number.isFinite(avgTemp)&&avgTemp<=COLD_TEMP_MAX) {sprays=4;rule='بارد';}
     else if(Number.isFinite(avgHumidity)&&avgHumidity>=HUMIDITY_MIN) {sprays=stableRange(day.date,2,3);rule='رطب';}
     else {sprays=stableRange(day.date,8,9);rule='جاف';}
-    day.derived={weather:weatherText,temperature:Number.isFinite(avgTemp)?Math.round(avgTemp):null,humidity:Number.isFinite(avgHumidity)?Math.round(avgHumidity):null,isFriday,crewCounts:[...crews],crewTotal:crews.reduce((a,b)=>a+b,0),waterSprays:sprays,waterQuantity:sprays*3,waterRule:rule};
+    day.derived={weather:weatherText,temperature:Number.isFinite(avgTemp)?Math.round(avgTemp):null,humidity:Number.isFinite(avgHumidity)?Math.round(avgHumidity):null,isFriday,crewCounts:[...crews],crewTotal:crews.reduce((a,b)=>a+b,0),waterSprays:sprays,waterQuantity:sprays*3,waterRule:rule,weatherSource:WEATHER_SOURCE};
   }
 
   async function enrichWeather(){
     const days=[...state.daily.values()].sort((a,b)=>a.date.localeCompare(b.date));if(!days.length)return;
     const start=days[0].date,end=days[days.length-1].date;
-    const url='https://archive-api.open-meteo.com/v1/archive?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON+'&start_date='+start+'&end_date='+end+'&hourly=temperature_2m,relative_humidity_2m,weathercode&timezone='+encodeURIComponent(WEATHER_TZ);
+    const url='https://archive-api.open-meteo.com/v1/archive?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON+'&start_date='+start+'&end_date='+end+'&hourly=temperature_2m,relative_humidity_2m,weather_code&timezone='+encodeURIComponent(WEATHER_TZ);
     try{
       const r=await fetch(url);if(!r.ok)throw new Error('weather');const data=await r.json();
-      const times=data?.hourly?.time||[],temps=data?.hourly?.temperature_2m||[],humidity=data?.hourly?.relative_humidity_2m||[],codes=data?.hourly?.weathercode||[];
+      const times=data?.hourly?.time||[],temps=data?.hourly?.temperature_2m||[],humidity=data?.hourly?.relative_humidity_2m||[],codes=data?.hourly?.weather_code||data?.hourly?.weathercode||[];
       const agg=new Map();
       for(let i=0;i<times.length;i++){
         const date=String(times[i]||'').slice(0,10),hh=Number(String(times[i]||'').slice(11,13));if(hh<9||hh>13)continue;
@@ -272,7 +273,7 @@
         <div><span>عزيز المضاف إلى يطا</span><strong>${fmt(aziz)} طن</strong></div>
         <div><span>سولار آليات المكب</span><strong>${fmt(diesel)} لتر</strong></div>
       </div>
-      <div class="drive-preview-note">هذه معاينة فقط. لم يتم حفظ أي بيانات في التقارير. الطقس والحرارة محسوبان للفترة 09:00–13:00 حسب إحداثيات تقوع/بيت لحم المستخدمة في سكربت التقرير القديم.</div>
+      <div class="drive-preview-note">هذه معاينة فقط. لم يتم حفظ أي بيانات في التقارير. مصدر الطقس المعتمد: ${WEATHER_SOURCE}. الحرارة والرطوبة محسوبتان للفترة 09:00–13:00 على الإحداثيات ${WEATHER_LAT}, ${WEATHER_LON} والمنطقة الزمنية ${WEATHER_TZ}.</div>
       ${ignored.length?`<div class="drive-preview-note">تم تجاهل بنود سولار غير مرتبطة بآليات المكب: ${ignored.map(esc).join('، ')}${state.ignoredDieselNames.size>ignored.length?' ...':''}</div>`:''}
       <div class="source-import-table-wrap"><table class="v3-table source-import-table"><thead><tr><th>التاريخ</th><th>الطقس</th><th>°C</th><th>الطواقم</th><th>رش المياه</th><th>مياه/كوب</th><th>هيئات محلية</th><th>مستوطنات</th><th>أفراد</th><th>شركات</th><th>إجمالي الوارد</th><th>يطا</th><th>منها عزيز</th><th>ترقوميا</th><th>الخليل</th><th>السولار</th></tr></thead><tbody>${days.map(d=>{const t=totalsFor(d);return `<tr><td>${esc(d.date)}</td><td>${esc(d.derived.weather||'-')}${d.derived.isFriday?' · جمعة':''}</td><td>${d.derived.temperature??'-'}</td><td>${fmt(d.derived.crewTotal)}</td><td>${d.derived.waterSprays??'-'}</td><td>${d.derived.waterQuantity??'-'}</td><td>${fmt(d.landfill.localAuthorities.tons)}</td><td>${fmt(d.landfill.settlements.tons)}</td><td>${fmt(d.landfill.individuals.tons)}</td><td>${fmt(d.landfill.companies.tons)}</td><td><strong>${fmt(t.incoming.tons)}</strong></td><td>${fmt(d.stations.yata.tons)}</td><td>${fmt(d.azizAddedToYata.tons)}</td><td>${fmt(d.stations.tarqumia.tons)}</td><td>${fmt(d.stations.hebron.tons)}</td><td>${fmt(d.totalDiesel)}</td></tr>`;}).join('')}</tbody></table></div>`;
     $('sourceFilesPanel')?.classList.add('source-import-has-preview');
@@ -290,7 +291,7 @@
       if(!window.XLSX)throw new Error('قارئ Excel غير متاح');
       if(msg)msg.textContent='جاري قراءة الملفات وتجميع البيانات...';
       for(const [type,file] of files)await readFile(file,type);
-      if(msg)msg.textContent='تم تجميع الملفات. جاري حساب الطقس والحرارة والجمعة والطواقم ورش المياه...';
+      if(msg)msg.textContent='تم تجميع الملفات. جاري حساب الطقس والحرارة والجمعة والطواقم ورش المياه من Open-Meteo...';
       await enrichWeather();
       if(msg)msg.textContent=`تمت قراءة ${files.length} ملف/ملفات. راجع النتائج قبل أي خطوة حفظ.`;
       renderPreview();
