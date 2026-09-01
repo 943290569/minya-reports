@@ -1,1 +1,0 @@
-Fix summary blinking caused by MutationObserver feedback loop.
