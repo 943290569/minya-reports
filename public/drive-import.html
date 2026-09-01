@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="mobile-vertical-menu.css">
   <link rel="stylesheet" href="drive-import.css?v=3.3.0-drive-import-v4">
   <link rel="stylesheet" href="drive-folder-nav.css?v=3.3.0-drive-folders-v1">
+  <link rel="stylesheet" href="source-files-import.css?v=3.3.0-source-import-v2">
 </head>
 <body data-page="drive-import">
   <header class="top-header">
@@ -44,6 +45,20 @@
     </section>
 
     <section id="adminOnlyNotice" class="drive-notice hidden">هذه الصفحة متاحة للمدير فقط.</section>
+
+    <section id="sourceFilesPanel" class="drive-panel">
+      <div class="drive-panel-head"><div><small>مصادر الشهر</small><h3>تجميع ملفات المكب والمحطات وعزيز والسولار</h3></div><span class="drive-readonly">معاينة فقط في V2</span></div>
+      <p>ارفع الملفات كما تستخدمها حاليًا. النظام يتعرف على الأعمدة من العناوين ولا يعتمد على ترتيب ثابت. بيانات عزيز تضاف تلقائيًا إلى محطة يطا. الطقس والحرارة والرطوبة تُقرأ من Open-Meteo.</p>
+      <div class="source-import-grid">
+        <div class="source-file-card"><h4>ملف المكب</h4><input id="sourceFile_landfill" type="file" accept=".xlsx,.xls"><span id="sourceFileState_landfill" class="source-file-state">لم يتم اختيار ملف</span></div>
+        <div class="source-file-card"><h4>ملف المحطات</h4><input id="sourceFile_stations" type="file" accept=".xlsx,.xls"><span id="sourceFileState_stations" class="source-file-state">لم يتم اختيار ملف</span></div>
+        <div class="source-file-card"><h4>ملف عزيز</h4><input id="sourceFile_aziz" type="file" accept=".xlsx,.xls"><span id="sourceFileState_aziz" class="source-file-state">لم يتم اختيار ملف</span></div>
+        <div class="source-file-card"><h4>كشف السولار</h4><input id="sourceFile_diesel" type="file" accept=".xlsx,.xls"><span id="sourceFileState_diesel" class="source-file-state">لم يتم اختيار ملف</span></div>
+      </div>
+      <div class="source-import-toolbar"><button id="analyzeSourceFilesBtn" type="button" class="drive-primary">تحليل وتجميع الملفات</button><button id="clearSourceFilesBtn" type="button" class="drive-secondary">مسح الاختيار</button></div>
+      <div id="sourceFilesMessage" class="drive-state source-import-message">لم يتم تحليل ملفات بعد.</div>
+      <div id="sourceFilesPreview"></div>
+    </section>
 
     <section id="localExcelPanel" class="drive-panel">
       <div class="drive-panel-head"><div><small>رفع مباشر</small><h3>رفع ملف Excel من الجهاز</h3></div><span class="drive-readonly">معاينة قبل الحفظ</span></div>
@@ -97,6 +112,7 @@
   <script src="js/app-header-menu.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/app-source-files-import.js?v=3.3.0-source-import-v2"></script>
   <script src="js/app-drive-import.js?v=3.3.0-drive-import-v4"></script>
   <script src="js/app-drive-observer-stabilizer.js?v=3.3.0-drive-observer-fix-v1"></script>
   <script src="js/app-drive-quality.js?v=3.3.0-drive-quality-v2"></script>
