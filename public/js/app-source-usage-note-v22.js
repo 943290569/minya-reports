@@ -9,7 +9,11 @@
   }
   function schedule(){[150,400,900,1800,3500,6000,9500,12500].forEach(ms=>setTimeout(apply,ms));}
   function loadScript(src,key){if(document.querySelector(`script[data-${key}]`))return;const s=document.createElement('script');s.src=src;s.dataset[key.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]='1';document.body.appendChild(s);}
-  function loadApproval(){loadScript('js/app-source-approve-v4.js?v=3.3.0-source-approve-v4','source-approve-v4');loadScript('js/app-source-conflict-bulk-v5.js?v=3.3.0-source-conflict-bulk-v5','source-conflict-bulk-v5');}
+  function loadApproval(){
+    loadScript('js/app-source-approve-v4.js?v=3.3.0-source-approve-v4','source-approve-v4');
+    loadScript('js/app-source-conflict-bulk-v5.js?v=3.3.0-source-conflict-bulk-v5','source-conflict-bulk-v5');
+    loadScript('js/app-source-landfill-dedupe-v61.js?v=3.3.0-landfill-dedupe-v61','source-landfill-dedupe-v61');
+  }
   function init(){const btn=$('analyzeSourceFilesBtn');if(btn)btn.addEventListener('click',schedule);loadApproval();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
