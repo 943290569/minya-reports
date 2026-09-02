@@ -1,5 +1,23 @@
 /* Authentication guard */
 (function(){
+  /* Install the preview observer stabilizer before any source-import module creates
+     its own MutationObserver. The source import helpers only need to react when
+     the preview root is rebuilt; they must not react to every nested cell update,
+     otherwise V5 and the stations overlay can trigger each other continuously. */
+  if(!window.__MINYA_DRIVE_OBSERVER_STABILIZED__ && window.MutationObserver){
+    const NativeMutationObserver=window.MutationObserver;
+    window.__MINYA_DRIVE_OBSERVER_STABILIZED__=true;
+    window.MutationObserver=class MinyaStableMutationObserver extends NativeMutationObserver{
+      observe(target,options){
+        let safeOptions=options;
+        if((target?.id==='previewReports'||target?.id==='sourceFilesPreview')&&options?.subtree){
+          safeOptions={...options,subtree:false,childList:true};
+        }
+        return super.observe(target,safeOptions);
+      }
+    };
+  }
+
   const publicPages=["/login.html","/setup.html"];
 
   function applyRoleNavigation(user){
