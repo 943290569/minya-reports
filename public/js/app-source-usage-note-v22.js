@@ -8,6 +8,7 @@
     note.innerHTML='<strong>القراءة الانتقائية:</strong> المكب: التاريخ + الجهة/نوع الوارد + الكمية + العدد/المركبات — المحطات: التاريخ + المحطة + الكمية + عدد الشاحنات — عزيز: التاريخ + الكمية + عدد الشاحنات — السولار: التاريخ + أعمدة آليات المكب فقط. بقية الأعمدة تم تجاهلها.';
   }
   function schedule(){[150,400,900,1800,3500,6000,9500,12500].forEach(ms=>setTimeout(apply,ms));}
-  function init(){const btn=$('analyzeSourceFilesBtn');if(!btn)return;btn.addEventListener('click',schedule);}
+  function loadApproval(){if(document.querySelector('script[data-source-approve-v2]'))return;const s=document.createElement('script');s.src='js/app-source-approve-v2.js?v=3.3.0-source-approve-v2';s.dataset.sourceApproveV2='1';document.body.appendChild(s);}
+  function init(){const btn=$('analyzeSourceFilesBtn');if(btn)btn.addEventListener('click',schedule);loadApproval();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
