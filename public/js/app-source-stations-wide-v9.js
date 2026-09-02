@@ -1,4 +1,4 @@
-/* V21 Pivot adapter: recurring landfill/stations/Aziz exports with quantity + vehicle counts, including leachate and stable station totals. */
+/* V32 Pivot adapter: single source of truth for landfill/stations/Aziz. Supports flat landfill pivots (date row carries quantity/count) and grouped pivots. */
 (function(){
   const $=id=>document.getElementById(id);
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -27,7 +27,25 @@
   function assign(input,file){const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));}
   function expand(rows,date,label,tons,trucks){trucks=Math.max(0,Math.round(num(trucks)));tons=num(tons);if(!trucks)return;const each=tons/trucks;for(let i=0;i<trucks;i++)rows.push([date,label,each]);}
 
-  async function normalizeLandfill(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','الاسم','الكمية']],map=new Map();let d='';for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(date){d=date;if(!map.has(d))map.set(d,emptyLand());continue;}if(!d||norm(row[0]).includes('الاجمالي الكلي'))continue;const label=clean(row[0]);if(!label)continue;const k=bucket(label),x=map.get(d);x[k].tons+=num(row[1]);x[k].trucks+=num(row[2]);expand(out,d,label,row[1],row[2]);}state.landfill=map;assign(input,makeFile(out,'مكب-pivot-normalized.xlsx'));return true;}
+  async function normalizeLandfill(input){
+    const p=await pivot(input.files?.[0]);if(!p)return false;
+    const out=[['التاريخ','الاسم','الكمية']],map=new Map();let d='';
+    for(let r=p.h+1;r<p.rows.length;r++){
+      const row=p.rows[r]||[],date=iso(row[0]);
+      if(date){
+        d=date;if(!map.has(d))map.set(d,emptyLand());
+        /* Flat landfill Pivot: date row itself carries the daily quantity + vehicle count.
+           The uploaded landfill export is filtered to local-authority waste, so record it as local. */
+        const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));
+        if(tons!==0||trucks!==0){const x=map.get(d).local;x.tons+=tons;x.trucks+=trucks;expand(out,d,'هيئات محلية',tons,trucks);}
+        continue;
+      }
+      if(!d||norm(row[0]).includes('الاجمالي الكلي')||norm(row[0]).includes('grand total'))continue;
+      const label=clean(row[0]);if(!label)continue;
+      const k=bucket(label),x=map.get(d);x[k].tons+=num(row[1]);x[k].trucks+=num(row[2]);expand(out,d,label,row[1],row[2]);
+    }
+    state.landfill=map;assign(input,makeFile(out,'مكب-pivot-normalized.xlsx'));return true;
+  }
   async function normalizeStations(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','المحطة','الكمية']],map=new Map();let d='';for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(date){d=date;if(!map.has(d))map.set(d,emptyStations());continue;}if(!d||norm(row[0]).includes('الاجمالي الكلي'))continue;const k=stationKey(row[0]);if(!k)continue;const x=map.get(d)[k];x.tons+=num(row[1]);x.trucks+=num(row[2]);expand(out,d,clean(row[0]),row[1],row[2]);}state.stations=map;assign(input,makeFile(out,'محطات-pivot-normalized.xlsx'));return true;}
   async function normalizeAziz(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','الكمية']],map=new Map();for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(!date)continue;const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));map.set(date,{tons,trucks});if(trucks){const each=tons/trucks;for(let i=0;i<trucks;i++)out.push([date,each]);}}state.aziz=map;assign(input,makeFile(out,'عبد العزيز-pivot-normalized.xlsx'));return true;}
   function text(x){return `${fmt(x.tons)} طن · ${fmt(x.trucks)} شاحنة`;}
@@ -48,7 +66,7 @@
     for(const x of state.aziz.values()){at.tons+=x.tons;at.trucks+=x.trucks;}
     const stationAll={tons:st.tons+at.tons,trucks:st.trucks+at.trucks};
     let box=root.querySelector('#pivotTotalsV18');if(!box){box=document.createElement('div');box.id='pivotTotalsV18';box.className='source-import-summary';root.prepend(box);}const html=`<div><span>مجموع وارد المكب</span><strong>${text(lt)}</strong></div><div><span>مجموع المحطات</span><strong>${text(stationAll)}</strong></div><div><span>مجموع عبد العزيز</span><strong>${text(at)}</strong></div>`;if(box.innerHTML!==html)box.innerHTML=html;
-    const summaries=[...root.querySelectorAll('.source-import-summary')].filter(x=>x.id!=='pivotTotalsV18'&&!x.closest('#specialCategoriesV16'));const core=summaries.find(x=>x.querySelectorAll(':scope > div').length>=5);const cards=core?.querySelectorAll(':scope > div');if(cards?.[2]){const s=cards[2].querySelector('strong');if(s)s.textContent=text(stationAll);}if(cards?.[3]){const s=cards[3].querySelector('strong');if(s)s.textContent=text(at);}
+    const summaries=[...root.querySelectorAll('.source-import-summary')].filter(x=>x.id!=='pivotTotalsV18'&&!x.closest('#specialCategoriesV16'));const core=summaries.find(x=>x.querySelectorAll(':scope > div').length>=5);const cards=core?.querySelectorAll(':scope > div');if(cards?.[1]){const s=cards[1].querySelector('strong');if(s)s.textContent=text(lt);}if(cards?.[2]){const s=cards[2].querySelector('strong');if(s)s.textContent=text(stationAll);}if(cards?.[3]){const s=cards[3].querySelector('strong');if(s)s.textContent=text(at);}
     applyLeachate(root);
   }
   function schedule(){state.timers.forEach(clearTimeout);state.timers=[250,700,1400,2600,4500,7000,10000,12100].map(ms=>setTimeout(apply,ms));}
