@@ -10,6 +10,36 @@ function isArchivePage() {
   return (location.pathname.replace(/\/+$/, "") || "/") === "/archive";
 }
 
+async function archiveDeleteReport(id) {
+  if (!confirm("هل تريد حذف هذا التقرير نهائيًا؟")) return;
+  try {
+    let response = await fetch(`${API}/api/reports/${id}`, { method: "DELETE" });
+    let data = await response.json().catch(() => ({}));
+
+    if (response.status === 423) {
+      const proceed = confirm("هذا التقرير معتمد أو مرسل للمراجعة. سيتم إعادته إلى مسودة ثم حذفه نهائيًا. هل تريد المتابعة؟");
+      if (!proceed) return;
+      const reopen = await fetch(`${API}/api/reports/${id}/reopen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "حذف من الأرشيف بواسطة المدير" })
+      });
+      const reopenData = await reopen.json().catch(() => ({}));
+      if (!reopen.ok || !reopenData.ok) throw new Error(reopenData.message || "تعذر إعادة فتح التقرير للحذف");
+      response = await fetch(`${API}/api/reports/${id}`, { method: "DELETE" });
+      data = await response.json().catch(() => ({}));
+    }
+
+    if (!response.ok || !data.ok) throw new Error(data.message || "فشل حذف التقرير");
+    if (typeof showMessage === "function") showMessage("تم حذف التقرير بنجاح");
+    await loadArchivePage(archivePage);
+  } catch (error) {
+    console.error(error);
+    if (typeof showMessage === "function") showMessage(error.message || "حدث خطأ أثناء حذف التقرير");
+    else alert(error.message || "حدث خطأ أثناء حذف التقرير");
+  }
+}
+
 function setupArchivePagination() {
   if (!isArchivePage()) return;
 
@@ -92,7 +122,7 @@ async function loadArchivePage(page = 1) {
             <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
             <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
             <button class="archive-print" onclick="printReport(${report.id})">طباعة</button>
-            <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
+            <button class="role-admin-action" onclick="archiveDeleteReport(${report.id})" style="background:#b91c1c">حذف</button>
           </td>
         </tr>
       `).join("")
@@ -113,6 +143,21 @@ async function loadArchivePage(page = 1) {
   }
 }
 
+/* Imported source reports: show unavailable values as '-' in the official daily report. */
+(function installUnavailableDash(){
+  if (typeof buildFullReportHtml !== "function" || window.__MINYA_DASH_PRINT__) return;
+  window.__MINYA_DASH_PRINT__ = true;
+  const original = buildFullReportHtml;
+  buildFullReportHtml = function(data, autoPrint = false) {
+    let html = original(data, autoPrint);
+    html = html.replaceAll('<td>غير محدد</td><td>حالة الآلية غير متوفرة في ملفات المصدر</td><td>0</td>', '<td>-</td><td>-</td><td>-</td>');
+    html = html.replaceAll('<td>0</td><td>التفصيل غير متوفر في ملفات المصدر</td>', '<td>-</td><td>-</td>');
+    html = html.replace(/<tr><td>خط الفرز<\/td><td>0<\/td><td>0<\/td><td>طن<\/td><\/tr>/g, '<tr><td>خط الفرز</td><td>-</td><td>-</td><td>طن</td></tr>');
+    html = html.replace(/<tr><td>\( طمم\) خارجي<\/td><td>0<\/td><td>0<\/td><td>طن<\/td><\/tr>/g, '<tr><td>( طمم) خارجي</td><td>-</td><td>-</td><td>طن</td></tr>');
+    return html;
+  };
+})();
+
 if (isArchivePage()) {
   setupArchivePagination();
 
@@ -128,3 +173,4 @@ if (isArchivePage()) {
 }
 
 window.loadArchivePage = loadArchivePage;
+window.archiveDeleteReport = archiveDeleteReport;
