@@ -1,0 +1,1 @@
+V24 disabled; superseded by V25 capture-on-change to avoid summary overwrite races.
