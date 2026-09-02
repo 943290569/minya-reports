@@ -1,4 +1,4 @@
-/* Source import V16 stable overlay: one parser/renderer for stations, Aziz and special categories. */
+/* Source import V17 stable overlay: special categories only; stations and Aziz stay on the canonical parser. */
 (function(){
   const $=id=>document.getElementById(id);
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -49,19 +49,18 @@
   function render(){
     if(state.busy||!state.ready)return;const root=$('sourceFilesPreview'),table=mainTable();if(!root||!table)return;state.busy=true;
     try{
-      let stationMonth=0,azizMonth=0;
-      table.querySelectorAll('tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c.length<16)return;const date=clean(c[0].textContent);const s=state.stations.get(date)||{yata:{trucks:0,tons:0},tarqumia:{trucks:0,tons:0},hebron:{trucks:0,tons:0}},a=state.aziz.get(date)||{trucks:0,tons:0};if(state.stations.has(date)||state.aziz.has(date)){const yata={trucks:s.yata.trucks+a.trucks,tons:s.yata.tons+a.tons};[[11,yata],[12,a],[13,s.tarqumia],[14,s.hebron]].forEach(([i,v])=>{const t=cellText(v);if(clean(c[i].textContent)!==t)c[i].textContent=t;});stationMonth+=yata.tons+s.tarqumia.tons+s.hebron.tons;azizMonth+=a.tons;}if(state.landfill.has(date)){const x=specialFor(date);c[10].innerHTML=`<strong>${fmt(x.incoming)}</strong>`;}});
-      const cards=root.querySelector('.source-import-summary')?.querySelectorAll(':scope > div');if(cards?.[2])cards[2].querySelector('strong').textContent=`${fmt(stationMonth)} طن`;if(cards?.[3])cards[3].querySelector('strong').textContent=`${fmt(azizMonth)} طن`;
+      table.querySelectorAll('tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c.length<16)return;const date=clean(c[0].textContent);if(state.landfill.has(date)){const x=specialFor(date);c[10].innerHTML=`<strong>${fmt(x.incoming)}</strong>`;}});
+      const cards=root.querySelector('.source-import-summary')?.querySelectorAll(':scope > div');
       const dates=[...new Set([...state.landfill.keys(),...state.cover.keys()])].sort();if(dates.length){const monthIncoming=dates.reduce((s,d)=>s+specialFor(d).incoming,0);if(cards?.[1])cards[1].querySelector('strong').textContent=`${fmt(monthIncoming)} طن`;const totals=dates.reduce((a,d)=>{const x=specialFor(d);a.leachate+=x.leachate;a.tamm+=x.tamm;a.landfillCover+=x.landfillCover;a.coverTamm+=x.coverTamm;a.coverAslob+=x.coverAslob;return a;},{leachate:0,tamm:0,landfillCover:0,coverTamm:0,coverAslob:0});const html=`<div class="drive-preview-note"><strong>البنود الخاصة المعتمدة:</strong> العصارة وطمم ومواد لتغطية المكب من ملف المكب، ولا تدخل في إجمالي النفايات. مواد التغطية (طمم) ومواد التغطية (اسلوب) من الملف الخارجي فقط.</div><div class="source-import-summary"><div><span>العصارة - المكب</span><strong>${fmt(totals.leachate)}</strong></div><div><span>طمم - المكب</span><strong>${fmt(totals.tamm)}</strong></div><div><span>مواد لتغطية المكب</span><strong>${fmt(totals.landfillCover)}</strong></div><div><span>مواد التغطية (طمم) - خارجي</span><strong>${fmt(totals.coverTamm)}</strong></div><div><span>مواد التغطية (اسلوب) - خارجي</span><strong>${fmt(totals.coverAslob)}</strong></div></div><div class="source-import-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>العصارة</th><th>طمم - المكب</th><th>مواد لتغطية المكب</th><th>مواد التغطية (طمم) خارجي</th><th>مواد التغطية (اسلوب) خارجي</th></tr></thead><tbody>${dates.map(d=>{const x=specialFor(d);return `<tr><td>${esc(d)}</td><td>${fmt(x.leachate)}</td><td>${fmt(x.tamm)}</td><td>${fmt(x.landfillCover)}</td><td>${fmt(x.coverTamm)}</td><td>${fmt(x.coverAslob)}</td></tr>`;}).join('')}</tbody></table></div>`;let box=$('specialCategoriesV16');if(!box){box=document.createElement('div');box.id='specialCategoriesV16';root.appendChild(box);}if(box.innerHTML!==html)box.innerHTML=html;}
-      let note=$('sourceStableV16');if(!note){note=document.createElement('div');note.id='sourceStableV16';note.className='drive-preview-note';note.innerHTML='<strong>معاينة مستقرة V16:</strong> تم توحيد المحطات وعبد العزيز والبنود الخاصة في مسار واحد بدون مراقبات متداخلة.';root.prepend(note);}
+      let note=$('sourceStableV16');if(!note){note=document.createElement('div');note.id='sourceStableV16';note.className='drive-preview-note';note.innerHTML='<strong>معاينة مستقرة V17:</strong> تُقرأ المحطات وعزيز من القارئ الأساسي مرة واحدة، ويعالج هذا المسار البنود الخاصة فقط.';root.prepend(note);}
       state.lastMain=table;
     }finally{state.busy=false;}
   }
   function scheduleRender(){[80,250,700,1500,3000,5500,8500,11500].forEach(ms=>setTimeout(render,ms));}
   async function refresh(){
     try{
-      state.ready=false;const tasks=[];const sf=$('sourceFile_stations')?.files?.[0],af=$('sourceFile_aziz')?.files?.[0],lf=$('sourceFile_landfill')?.files?.[0],cf=$('sourceFile_cover')?.files?.[0];
-      if(sf)tasks.push(parseStations(sf));else state.stations.clear();if(af)tasks.push(parseAziz(af));else state.aziz.clear();if(lf)tasks.push(parseLandfill(lf));else state.landfill.clear();if(cf)tasks.push(parseCover(cf));else state.cover.clear();await Promise.all(tasks);state.ready=true;scheduleRender();
+      state.ready=false;const tasks=[];const lf=$('sourceFile_landfill')?.files?.[0],cf=$('sourceFile_cover')?.files?.[0];
+      state.stations.clear();state.aziz.clear();if(lf)tasks.push(parseLandfill(lf));else state.landfill.clear();if(cf)tasks.push(parseCover(cf));else state.cover.clear();await Promise.all(tasks);state.ready=true;scheduleRender();
     }catch(e){console.error(e);const m=$('sourceFilesMessage');if(m)m.textContent=`تنبيه المعاينة المستقرة: ${e.message||'تعذر القراءة'}`;}
   }
   function init(){const btn=$('analyzeSourceFilesBtn'),root=$('sourceFilesPreview');if(!btn||!root)return;btn.addEventListener('click',()=>setTimeout(refresh,0));$('clearSourceFilesBtn')?.addEventListener('click',()=>{state.ready=false;state.stations.clear();state.aziz.clear();state.landfill.clear();state.cover.clear();$('specialCategoriesV16')?.remove();});let timer=null;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{const t=mainTable();if(state.ready&&t&&t!==state.lastMain)render();},60);}).observe(root,{childList:true});}
