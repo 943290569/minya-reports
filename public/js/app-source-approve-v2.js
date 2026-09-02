@@ -1,4 +1,4 @@
-/* Source preview -> daily reports approval V2. No MutationObserver; per-date replace/skip conflict handling. */
+/* Source preview -> daily reports approval V3. Complete standard rows, no MutationObserver, per-date replace/skip handling. */
 (function(){
   const $=id=>document.getElementById(id), clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const num=v=>{const n=Number(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0;};
@@ -8,11 +8,22 @@
   function crewsFor(date,total){const names=['عمال المكب','سائقو الآليات','الإدارة','الحراسة','الميزان','الفرز'],counts=isFriday(date)?[2,0,0,1,0,0]:[4,2,1,2,4,5],known=counts.reduce((a,b)=>a+b,0);if(total&&total!==known)return[{crew_name:'إجمالي طواقم العمل',crew_count:total,notes:'مستورد من المعاينة'}];return names.map((crew_name,i)=>({crew_name,crew_count:counts[i],notes:'مستورد من المعاينة'}));}
   function payloadFromRow(tr){
     const c=tr.querySelectorAll('td');if(c.length<16)return null;const report_date=clean(c[0].textContent);if(!/^\d{4}-\d{2}-\d{2}$/.test(report_date))return null;
-    const local=pair(c[6].textContent),sett=pair(c[7].textContent),ind=pair(c[8].textContent),comp=pair(c[9].textContent),incoming=pair(c[10].textContent),yata=pair(c[11].textContent),tarq=pair(c[13].textContent),heb=pair(c[14].textContent);
+    const local=pair(c[6].textContent),sett=pair(c[7].textContent),ind=pair(c[8].textContent),comp=pair(c[9].textContent),incoming=pair(c[10].textContent),yata=pair(c[11].textContent),aziz=pair(c[12].textContent),tarq=pair(c[13].textContent),heb=pair(c[14].textContent);
     const sprays=num(c[4].textContent),water=num(c[5].textContent),diesel=num(c[15].textContent),crewTotal=num(c[3].textContent);
-    const stations=[['يطا',yata],['ترقوميا',tarq],['الخليل',heb]].filter(([,v])=>v.tons||v.trucks).map(([station_name,v])=>({station_name,truck_count:v.trucks,waste_tons:v.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'}));
-    const operations=[['نفايات هيئات محلية',local],['نفايات مستوطنات',sett],['نفايات أفراد',ind],['نفايات شركات ومصانع',comp]].filter(([,v])=>v.tons||v.trucks).map(([operation_name,v])=>({operation_name,start_time:'',end_time:'',vehicle_count:v.trucks,quantity:v.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'}));
-    if(sprays||water)operations.push({operation_name:'رش المياه',start_time:'',end_time:'',vehicle_count:sprays,quantity:water,unit:'كوب',notes:'مستورد من المعاينة الشهرية'});
+
+    /* Keep all standard report rows even when the value is zero. This prevents imported daily reports from looking incomplete. */
+    const stations=[
+      {station_name:'يطا',truck_count:yata.trucks,waste_tons:yata.tons,unit:'طن',notes:aziz.tons||aziz.trucks?`منها عزيز: ${aziz.tons} طن · ${aziz.trucks} شاحنة`:'مستورد من المعاينة الشهرية'},
+      {station_name:'ترقوميا',truck_count:tarq.trucks,waste_tons:tarq.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'},
+      {station_name:'الخليل',truck_count:heb.trucks,waste_tons:heb.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'}
+    ];
+    const operations=[
+      {operation_name:'نفايات هيئات محلية',start_time:'',end_time:'',vehicle_count:local.trucks,quantity:local.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'},
+      {operation_name:'نفايات مستوطنات',start_time:'',end_time:'',vehicle_count:sett.trucks,quantity:sett.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'},
+      {operation_name:'نفايات أفراد',start_time:'',end_time:'',vehicle_count:ind.trucks,quantity:ind.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'},
+      {operation_name:'نفايات شركات ومصانع',start_time:'',end_time:'',vehicle_count:comp.trucks,quantity:comp.tons,unit:'طن',notes:'مستورد من المعاينة الشهرية'},
+      {operation_name:'رش المياه',start_time:'',end_time:'',vehicle_count:sprays,quantity:water,unit:'كوب',notes:'مستورد من المعاينة الشهرية'}
+    ];
     const stationTrucks=stations.reduce((s,x)=>s+x.truck_count,0),stationTons=stations.reduce((s,x)=>s+x.waste_tons,0);
     return{report_date,weather:clean(c[1].textContent).replace(/\s*·\s*جمعة/g,'').replace('جاري...',''),temperature:num(c[2].textContent),start_time:'04:00',end_time:'19:00',total_trucks:incoming.trucks+stationTrucks,total_waste_tons:incoming.tons+stationTons,total_diesel:diesel,notes:'تم إنشاؤه من معاينة ملفات المصدر الشهرية.',crews:crewsFor(report_date,crewTotal),operations,stations,equipment:[]};
   }
