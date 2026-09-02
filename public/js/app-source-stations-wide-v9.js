@@ -1,4 +1,4 @@
-/* V19 Pivot adapter: recurring landfill/stations/Aziz exports with quantity + vehicle counts, including leachate. */
+/* V21 Pivot adapter: recurring landfill/stations/Aziz exports with quantity + vehicle counts, including leachate and stable station totals. */
 (function(){
   const $=id=>document.getElementById(id);
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -38,9 +38,17 @@
     const summary=box.querySelector('.source-import-summary');const first=summary?.querySelector('div:first-child strong');if(first){const next=text(total);if(clean(first.textContent)!==next)first.textContent=next;}
     box.querySelectorAll('table tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c.length<2)return;const d=clean(c[0].textContent),l=state.landfill.get(d);if(!l)return;const next=text(l.leachate);if(clean(c[1].textContent)!==next)c[1].textContent=next;});
   }
-  function apply(){const root=$('sourceFilesPreview');if(!root)return;const table=[...root.querySelectorAll('.source-import-table')].find(t=>t.querySelector('tbody tr td:nth-child(16)'));if(!table)return;table.querySelectorAll('tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c.length<15)return;const d=clean(c[0].textContent),l=state.landfill.get(d),s=state.stations.get(d),a=state.aziz.get(d)||{tons:0,trucks:0};if(l){[[6,l.local],[7,l.settlements],[8,l.individuals],[9,l.companies],[10,totalLand(l)]].forEach(([i,v])=>{if(c[i])c[i].textContent=text(v);});}if(s||state.aziz.has(d)){const ss=s||emptyStations(),yata={tons:ss.yata.tons+a.tons,trucks:ss.yata.trucks+a.trucks};[[11,yata],[12,a],[13,ss.tarqumia],[14,ss.hebron]].forEach(([i,v])=>{if(c[i])c[i].textContent=text(v);});}});
-    let lt={tons:0,trucks:0},st={tons:0,trucks:0},at={tons:0,trucks:0};for(const x of state.landfill.values()){const t=totalLand(x);lt.tons+=t.tons;lt.trucks+=t.trucks;}for(const x of state.stations.values())for(const k of ['yata','tarqumia','hebron']){st.tons+=x[k].tons;st.trucks+=x[k].trucks;}for(const x of state.aziz.values()){at.tons+=x.tons;at.trucks+=x.trucks;}
-    let box=root.querySelector('#pivotTotalsV18');if(!box){box=document.createElement('div');box.id='pivotTotalsV18';box.className='source-import-summary';root.prepend(box);}const html=`<div><span>مجموع وارد المكب</span><strong>${text(lt)}</strong></div><div><span>مجموع المحطات</span><strong>${text(st)}</strong></div><div><span>مجموع عبد العزيز</span><strong>${text(at)}</strong></div>`;if(box.innerHTML!==html)box.innerHTML=html;
+  function apply(){
+    const root=$('sourceFilesPreview');if(!root)return;
+    const table=[...root.querySelectorAll('.source-import-table')].find(t=>t.querySelector('tbody tr td:nth-child(16)'));if(!table)return;
+    table.querySelectorAll('tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c.length<15)return;const d=clean(c[0].textContent),l=state.landfill.get(d),s=state.stations.get(d),a=state.aziz.get(d)||{tons:0,trucks:0};if(l){[[6,l.local],[7,l.settlements],[8,l.individuals],[9,l.companies],[10,totalLand(l)]].forEach(([i,v])=>{if(c[i])c[i].textContent=text(v);});}if(s||state.aziz.has(d)){const ss=s||emptyStations(),yata={tons:ss.yata.tons+a.tons,trucks:ss.yata.trucks+a.trucks};[[11,yata],[12,a],[13,ss.tarqumia],[14,ss.hebron]].forEach(([i,v])=>{if(c[i])c[i].textContent=text(v);});}});
+    let lt={tons:0,trucks:0},st={tons:0,trucks:0},at={tons:0,trucks:0};
+    for(const x of state.landfill.values()){const t=totalLand(x);lt.tons+=t.tons;lt.trucks+=t.trucks;}
+    for(const x of state.stations.values())for(const k of ['yata','tarqumia','hebron']){st.tons+=x[k].tons;st.trucks+=x[k].trucks;}
+    for(const x of state.aziz.values()){at.tons+=x.tons;at.trucks+=x.trucks;}
+    const stationAll={tons:st.tons+at.tons,trucks:st.trucks+at.trucks};
+    let box=root.querySelector('#pivotTotalsV18');if(!box){box=document.createElement('div');box.id='pivotTotalsV18';box.className='source-import-summary';root.prepend(box);}const html=`<div><span>مجموع وارد المكب</span><strong>${text(lt)}</strong></div><div><span>مجموع المحطات</span><strong>${text(stationAll)}</strong></div><div><span>مجموع عبد العزيز</span><strong>${text(at)}</strong></div>`;if(box.innerHTML!==html)box.innerHTML=html;
+    const summaries=[...root.querySelectorAll('.source-import-summary')].filter(x=>x.id!=='pivotTotalsV18'&&!x.closest('#specialCategoriesV16'));const core=summaries.find(x=>x.querySelectorAll(':scope > div').length>=5);const cards=core?.querySelectorAll(':scope > div');if(cards?.[2]){const s=cards[2].querySelector('strong');if(s)s.textContent=text(stationAll);}if(cards?.[3]){const s=cards[3].querySelector('strong');if(s)s.textContent=text(at);}
     applyLeachate(root);
   }
   function schedule(){state.timers.forEach(clearTimeout);state.timers=[250,700,1400,2600,4500,7000,10000,12100].map(ms=>setTimeout(apply,ms));}
