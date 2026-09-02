@@ -1,100 +1,43 @@
-/* Source stations V12: exact parser for the recurring pivot-style station/Aziz files. */
+/* V18 Pivot adapter for recurring landfill/stations/Aziz exports. */
 (function(){
   const $=id=>document.getElementById(id);
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
   const norm=v=>clean(v).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ًٌٍَُِّْـ]/g,'').toLowerCase();
   const num=v=>{const n=Number(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0;};
   const fmt=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:2});
-  const state={stationsFile:null,azizFile:null,stations:new Map(),aziz:new Map(),busy:false};
-  let applyTimers=[];
+  const state={busy:false,bypass:false,landfill:new Map(),stations:new Map(),aziz:new Map(),timers:[]};
 
-  function excelDate(v){
+  function iso(v){
     if(v instanceof Date&&!Number.isNaN(v.getTime()))return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
     if(typeof v==='number'&&window.XLSX?.SSF){const d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;}
-    const s=clean(v);if(!s)return'';
-    let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[ T].*)?$/);if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
-    m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})(?:[ T].*)?$/);if(m)return `${m[3]}-${String(+m[2]).padStart(2,'0')}-${String(+m[1]).padStart(2,'0')}`;
-    return'';
+    const s=clean(v);let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+    m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);if(m)return `${m[3]}-${String(+m[2]).padStart(2,'0')}-${String(+m[1]).padStart(2,'0')}`;return'';
   }
-  function emptyStations(){return{yata:{trucks:0,tons:0},tarqumia:{trucks:0,tons:0},hebron:{trucks:0,tons:0}};}
-  function day(map,date){if(!map.has(date))map.set(date,emptyStations());return map.get(date);}
-  function stationKey(v){const n=norm(v);if(n.includes('يطا'))return'yata';if(n.includes('ترقوميا'))return'tarqumia';if(n.includes('الخليل'))return'hebron';return'';}
+  function bucket(label){const n=norm(label);if(n.includes('عصاره'))return'leachate';if(n.includes('مواد لتغطيه المكب'))return'cover';if(n.includes('طمم'))return'tamm';if(n.includes('هيئات محليه'))return'local';if(n.includes('اسرائيلي')||n.includes('مستوطن'))return'settlements';if(n.includes('افراد')||n.includes('نقديه'))return'individuals';if(n.includes('شركات')||n.includes('مصانع'))return'companies';return'other';}
+  function stationKey(label){const n=norm(label);if(n.includes('يطا'))return'yata';if(n.includes('ترقوميا'))return'tarqumia';if(n.includes('الخليل'))return'hebron';return'';}
+  function emptyLand(){return{local:{tons:0,trucks:0},settlements:{tons:0,trucks:0},individuals:{tons:0,trucks:0},companies:{tons:0,trucks:0},other:{tons:0,trucks:0},leachate:{tons:0,trucks:0},tamm:{tons:0,trucks:0},cover:{tons:0,trucks:0}};}
+  function emptyStations(){return{yata:{tons:0,trucks:0},tarqumia:{tons:0,trucks:0},hebron:{tons:0,trucks:0}};}
 
-  async function pivotRows(file){
-    const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true,cellStyles:false,cellNF:false,cellHTML:false});
-    let best=null;
-    for(const name of wb.SheetNames){
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:'',blankrows:false});
-      let header=-1;
-      for(let r=0;r<Math.min(rows.length,20);r++){
-        const a=norm(rows[r]?.[0]),b=norm(rows[r]?.[1]),c=norm(rows[r]?.[2]);
-        if((a.includes('row labels')||a.includes('تسميات')||a.includes('الاسم')) && (b.includes('كمي')||b.includes('مجموع')) && (c.includes('عدد')||c.includes('وحد'))){header=r;break;}
-      }
-      if(header>=0&&(!best||rows.length>best.rows.length))best={rows,header,name};
-    }
-    if(!best)throw new Error('لم أجد جدول Row Labels / الكمية / العدد في الملف');
+  async function pivot(file){
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true,cellStyles:false,cellNF:false,cellHTML:false});let best=null;
+    for(const name of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:'',blankrows:false});for(let h=0;h<Math.min(rows.length,20);h++){const a=norm(rows[h]?.[0]),b=norm(rows[h]?.[1]),c=norm(rows[h]?.[2]);if((a.includes('row labels')||a.includes('تسميات'))&&(b.includes('كمي')||b.includes('مجموع'))&&(c.includes('عدد')||c.includes('وحد')||c.includes('مركبات'))){if(!best||rows.length>best.rows.length)best={rows,h};break;}}}
     return best;
   }
+  function makeFile(rows,name){const ws=XLSX.utils.aoa_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'بيانات');const ab=XLSX.write(wb,{bookType:'xlsx',type:'array'});return new File([ab],name,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});}
+  function assign(input,file){const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));}
+  function expand(rows,date,label,tons,trucks){trucks=Math.max(0,Math.round(num(trucks)));tons=num(tons);if(!trucks)return;const each=tons/trucks;for(let i=0;i<trucks;i++)rows.push([date,label,each]);}
 
-  async function parseStations(file){
-    const {rows,header}=await pivotRows(file),out=new Map();let currentDate='';
-    for(let r=header+1;r<rows.length;r++){
-      const row=rows[r]||[],date=excelDate(row[0]);
-      if(date){currentDate=date;continue;}
-      if(!currentDate)continue;
-      const key=stationKey(row[0]);if(!key)continue;
-      const d=day(out,currentDate);d[key].tons+=num(row[1]);d[key].trucks+=num(row[2]);
-    }
-    if(!out.size)throw new Error('ملف المحطات: لم أجد بيانات يومية للمحطات');
-    state.stations=out;
+  async function normalizeLandfill(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','الاسم','الكمية']],map=new Map();let d='';for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(date){d=date;if(!map.has(d))map.set(d,emptyLand());continue;}if(!d||norm(row[0]).includes('الاجمالي الكلي'))continue;const label=clean(row[0]);if(!label)continue;const k=bucket(label),x=map.get(d);x[k].tons+=num(row[1]);x[k].trucks+=num(row[2]);expand(out,d,label,row[1],row[2]);}state.landfill=map;assign(input,makeFile(out,'مكب-pivot-normalized.xlsx'));return true;}
+  async function normalizeStations(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','المحطة','الكمية']],map=new Map();let d='';for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(date){d=date;if(!map.has(d))map.set(d,emptyStations());continue;}if(!d||norm(row[0]).includes('الاجمالي الكلي'))continue;const k=stationKey(row[0]);if(!k)continue;const x=map.get(d)[k];x.tons+=num(row[1]);x.trucks+=num(row[2]);expand(out,d,clean(row[0]),row[1],row[2]);}state.stations=map;assign(input,makeFile(out,'محطات-pivot-normalized.xlsx'));return true;}
+  async function normalizeAziz(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','الكمية']],map=new Map();for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(!date)continue;const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));map.set(date,{tons,trucks});if(trucks){const each=tons/trucks;for(let i=0;i<trucks;i++)out.push([date,each]);}}state.aziz=map;assign(input,makeFile(out,'عبد العزيز-pivot-normalized.xlsx'));return true;}
+  function text(x){return `${fmt(x.tons)} طن · ${fmt(x.trucks)} شاحنة`;}
+  function totalLand(x){const ks=['local','settlements','individuals','companies','other'];return ks.reduce((a,k)=>({tons:a.tons+x[k].tons,trucks:a.trucks+x[k].trucks}),{tons:0,trucks:0});}
+  function apply(){const root=$('sourceFilesPreview');if(!root)return;const table=[...root.querySelectorAll('.source-import-table')].find(t=>t.querySelector('tbody tr td:nth-child(16)'));if(!table)return;table.querySelectorAll('tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c.length<15)return;const d=clean(c[0].textContent),l=state.landfill.get(d),s=state.stations.get(d),a=state.aziz.get(d)||{tons:0,trucks:0};if(l){[[6,l.local],[7,l.settlements],[8,l.individuals],[9,l.companies],[10,totalLand(l)]].forEach(([i,v])=>{if(c[i])c[i].textContent=text(v);});}if(s||state.aziz.has(d)){const ss=s||emptyStations(),yata={tons:ss.yata.tons+a.tons,trucks:ss.yata.trucks+a.trucks};[[11,yata],[12,a],[13,ss.tarqumia],[14,ss.hebron]].forEach(([i,v])=>{if(c[i])c[i].textContent=text(v);});}});
+    let lt={tons:0,trucks:0},st={tons:0,trucks:0},at={tons:0,trucks:0};for(const x of state.landfill.values()){const t=totalLand(x);lt.tons+=t.tons;lt.trucks+=t.trucks;}for(const x of state.stations.values())for(const k of ['yata','tarqumia','hebron']){st.tons+=x[k].tons;st.trucks+=x[k].trucks;}for(const x of state.aziz.values()){at.tons+=x.tons;at.trucks+=x.trucks;}
+    let box=root.querySelector('#pivotTotalsV18');if(!box){box=document.createElement('div');box.id='pivotTotalsV18';box.className='source-import-summary';root.prepend(box);}const html=`<div><span>مجموع وارد المكب</span><strong>${text(lt)}</strong></div><div><span>مجموع المحطات</span><strong>${text(st)}</strong></div><div><span>مجموع عبد العزيز</span><strong>${text(at)}</strong></div>`;if(box.innerHTML!==html)box.innerHTML=html;
   }
-
-  async function parseAziz(file){
-    const {rows,header}=await pivotRows(file),out=new Map();
-    for(let r=header+1;r<rows.length;r++){
-      const row=rows[r]||[],date=excelDate(row[0]);if(!date)continue;
-      out.set(date,{tons:num(row[1]),trucks:num(row[2])});
-    }
-    if(!out.size)throw new Error('ملف عبد العزيز: لم أجد بيانات يومية');
-    state.aziz=out;
-  }
-
-  function mainTable(){const root=$('sourceFilesPreview');return root?[...root.querySelectorAll('.source-import-table')].find(t=>t.querySelector('tbody tr td:nth-child(16)'))||null:null;}
-  function cellText(tons,trucks){return `${fmt(tons)} طن · ${fmt(trucks)} شاحنة`;}
-  function totals(){
-    let stationTons=0,stationTrucks=0,azizTons=0,azizTrucks=0;
-    for(const s of state.stations.values())for(const k of ['yata','tarqumia','hebron']){stationTons+=s[k].tons;stationTrucks+=s[k].trucks;}
-    for(const a of state.aziz.values()){azizTons+=a.tons;azizTrucks+=a.trucks;}
-    return{stationTons,stationTrucks,azizTons,azizTrucks};
-  }
-  function renderTotals(root){
-    if(!root)return;const t=totals();let box=root.querySelector('#stationsTotalsV12');
-    if(!box){box=document.createElement('div');box.id='stationsTotalsV12';box.className='source-import-summary';const anchor=root.querySelector('.source-import-summary');if(anchor?.nextSibling)anchor.parentNode.insertBefore(box,anchor.nextSibling);else root.prepend(box);}
-    const html=`<div><span>مجموع المحطات</span><strong>${cellText(t.stationTons,t.stationTrucks)}</strong></div><div><span>مجموع عبد العزيز</span><strong>${cellText(t.azizTons,t.azizTrucks)}</strong></div>`;
-    if(box.innerHTML!==html)box.innerHTML=html;
-  }
-  function apply(){
-    if(state.busy)return;const root=$('sourceFilesPreview'),table=mainTable();if(!root||(!state.stations.size&&!state.aziz.size))return;state.busy=true;
-    try{
-      if(table)table.querySelectorAll('tbody tr').forEach(tr=>{
-        const c=tr.querySelectorAll('td');if(c.length<15)return;const date=clean(c[0].textContent),s=state.stations.get(date)||emptyStations(),a=state.aziz.get(date)||{tons:0,trucks:0};
-        const yata={tons:s.yata.tons+a.tons,trucks:s.yata.trucks+a.trucks};
-        [[11,yata],[12,a],[13,s.tarqumia],[14,s.hebron]].forEach(([idx,v])=>{const next=cellText(v.tons,v.trucks);if(c[idx]&&clean(c[idx].textContent)!==next)c[idx].textContent=next;});
-      });
-      renderTotals(root);
-    }finally{state.busy=false;}
-  }
-  function scheduleApply(){applyTimers.forEach(clearTimeout);applyTimers=[80,350,900,1800,3500,6000].map(ms=>setTimeout(apply,ms));}
-  async function refresh(){
-    try{
-      const tasks=[];if(state.stationsFile)tasks.push(parseStations(state.stationsFile));else state.stations.clear();if(state.azizFile)tasks.push(parseAziz(state.azizFile));else state.aziz.clear();await Promise.all(tasks);scheduleApply();
-    }catch(e){console.error(e);const m=$('sourceFilesMessage');if(m)m.textContent=`تنبيه المحطات: ${e.message||'تعذر القراءة'}`;}
-  }
-  function init(){
-    const sf=$('sourceFile_stations'),af=$('sourceFile_aziz'),btn=$('analyzeSourceFilesBtn'),clearBtn=$('clearSourceFilesBtn');if(!sf||!btn)return;
-    sf.addEventListener('change',e=>state.stationsFile=e.target.files?.[0]||null);af?.addEventListener('change',e=>state.azizFile=e.target.files?.[0]||null);
-    btn.addEventListener('click',()=>{state.stationsFile=sf.files?.[0]||null;state.azizFile=af?.files?.[0]||null;setTimeout(refresh,0);});
-    clearBtn?.addEventListener('click',()=>{state.stations.clear();state.aziz.clear();applyTimers.forEach(clearTimeout);});
-  }
+  function schedule(){state.timers.forEach(clearTimeout);state.timers=[250,700,1400,2600,4500,7000,10000].map(ms=>setTimeout(apply,ms));}
+  async function intercept(e){if(state.bypass){state.bypass=false;schedule();return;}if(state.busy)return;e.preventDefault();e.stopImmediatePropagation();state.busy=true;try{const tasks=[];const lf=$('sourceFile_landfill'),sf=$('sourceFile_stations'),af=$('sourceFile_aziz');if(lf?.files?.[0])tasks.push(normalizeLandfill(lf));if(sf?.files?.[0])tasks.push(normalizeStations(sf));if(af?.files?.[0])tasks.push(normalizeAziz(af));await Promise.all(tasks);}catch(err){console.error(err);const m=$('sourceFilesMessage');if(m)m.textContent=`تعذر تجهيز Pivot: ${err.message||err}`;}finally{state.busy=false;state.bypass=true;$('analyzeSourceFilesBtn')?.click();}}
+  function init(){const btn=$('analyzeSourceFilesBtn');if(!btn)return;btn.addEventListener('click',intercept,true);$('clearSourceFilesBtn')?.addEventListener('click',()=>{state.landfill.clear();state.stations.clear();state.aziz.clear();state.timers.forEach(clearTimeout);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
