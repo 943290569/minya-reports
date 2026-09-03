@@ -1,0 +1,21 @@
+name: Fix driver attachment actions
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[attachment-fix-auto]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node scripts/fix-driver-attachment-actions.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/js/app-driver-licenses.js
+          git diff --cached --quiet || git commit -m "[attachment-fix-auto] إصلاح فتح وحذف مرفق الرخصة"
+          git push
