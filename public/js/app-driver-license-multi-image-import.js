@@ -4,74 +4,47 @@
   function dataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);});}
   function normToken(v){return String(v||'').toUpperCase().replace(/0/g,'O').replace(/1/g,'I').replace(/5/g,'S').replace(/[^A-Z]/g,'');}
   function nameTokens(v){return String(v||'').toUpperCase().split(/[^A-Z]+/).map(normToken).filter(x=>x.length>=2);}
-  function ocrWords(text){return new Set(String(text||'').toUpperCase().replace(/0/g,'O').replace(/1/g,'I').replace(/5/g,'S').split(/[^A-Z]+/).map(normToken).filter(x=>x.length>=2));}
+  function ocrWords(text){return [...new Set(String(text||'').toUpperCase().replace(/0/g,'O').replace(/1/g,'I').replace(/5/g,'S').split(/[^A-Z]+/).map(normToken).filter(x=>x.length>=2))];}
+  function distance(a,b){a=normToken(a);b=normToken(b);if(a===b)return 0;if(!a||!b)return 99;const m=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));for(let i=0;i<=a.length;i++)m[i][0]=i;for(let j=0;j<=b.length;j++)m[0][j]=j;for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return m[a.length][b.length];}
+  function tokenSeen(token,words){const t=normToken(token);if(words.includes(t))return true;if(t.length<4)return false;return words.some(w=>Math.abs(w.length-t.length)<=1&&distance(t,w)<=1);}
   function matchByEnglishName(text,employees){
     const words=ocrWords(text),prepared=employees.map(e=>({e,t:nameTokens(e.name_en)})).filter(x=>x.t.length);
-    let candidates=prepared.filter(x=>words.has(x.t[0]));
+    // أقوى تطابق: وجود أول مقطعين من الاسم، بأي ترتيب على الرخصة.
+    const pair=prepared.filter(x=>x.t[0]&&x.t[1]&&tokenSeen(x.t[0],words)&&tokenSeen(x.t[1],words));
+    if(pair.length===1)return {employee:pair[0].e,matched:`${pair[0].t[0]} + ${pair[0].t[1]}`,level:2};
+    // الاسم الأول كما هو مخزن في Excel/القاعدة.
+    let candidates=prepared.filter(x=>tokenSeen(x.t[0],words));
     if(candidates.length===1)return {employee:candidates[0].e,matched:candidates[0].t[0],level:1};
-    if(candidates.length>1){const second=candidates.filter(x=>x.t[1]&&words.has(x.t[1]));if(second.length===1)return {employee:second[0].e,matched:`${second[0].t[0]} ${second[0].t[1]}`,level:2};return {employee:null,ambiguous:candidates.map(x=>x.e.name_en)};}
-    const bySecond=prepared.filter(x=>x.t[1]&&words.has(x.t[1]));
-    if(bySecond.length===1){const token=bySecond[0].t[1],owners=prepared.filter(x=>x.t[1]===token);if(owners.length===1)return {employee:bySecond[0].e,matched:token,level:2};}
+    if(candidates.length>1){
+      const second=candidates.filter(x=>x.t[1]&&tokenSeen(x.t[1],words));
+      if(second.length===1)return {employee:second[0].e,matched:`${second[0].t[0]} + ${second[0].t[1]}`,level:2};
+      return {employee:null,ambiguous:candidates.map(x=>x.e.name_en)};
+    }
+    // بعض الرخص تعرض اللقب أولاً (البند 1) والاسم الشخصي ثانياً (البند 2).
+    const surname=prepared.filter(x=>x.t[1]&&tokenSeen(x.t[1],words));
+    if(surname.length===1)return {employee:surname[0].e,matched:surname[0].t[1],level:2};
+    if(surname.length>1){
+      const resolved=surname.filter(x=>x.t[0]&&tokenSeen(x.t[0],words));
+      if(resolved.length===1)return {employee:resolved[0].e,matched:`${resolved[0].t[1]} + ${resolved[0].t[0]}`,level:2};
+      return {employee:null,ambiguous:surname.map(x=>x.e.name_en)};
+    }
     return {employee:null};
   }
   function normalizeDateText(v){return String(v||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[Oo]/g,'0').replace(/[Il|]/g,'1');}
   function toIsoDate(raw){const m=String(raw||'').match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})/);if(!m)return '';const d=Number(m[1]),mo=Number(m[2]),y=Number(m[3]);if(y<1940||y>2100||mo<1||mo>12||d<1||d>31)return '';const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return '';return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
-  function extractDateField(text,label){
-    const raw=normalizeDateText(text),date='(\\d{1,2}[\\/\\.\\-]\\d{1,2}[\\/\\.\\-]\\d{4})';
-    const lab=label==='3'?'3':`4\\s*${label.slice(1)}`;
-    const patterns=[new RegExp(`${date}\\s*[.,:;]?\\s*${lab}(?:\\D|$)`,'i'),new RegExp(`(?:^|\\D)${lab}\\s*[.,:;]?\\s*${date}`,'i')];
-    for(const re of patterns){const m=raw.match(re);if(m){const value=toIsoDate(m[1]);if(value)return value;}}
-    return '';
-  }
+  function extractDateField(text,label){const raw=normalizeDateText(text),date='(\\d{1,2}[\\/\\.\\-]\\d{1,2}[\\/\\.\\-]\\d{4})',lab=label==='3'?'3':`4\\s*${label.slice(1)}`,patterns=[new RegExp(`${date}\\s*[.,:;]?\\s*${lab}(?:\\D|$)`,'i'),new RegExp(`(?:^|\\D)${lab}\\s*[.,:;]?\\s*${date}`,'i')];for(const re of patterns){const m=raw.match(re);if(m){const value=toIsoDate(m[1]);if(value)return value;}}return '';}
   function extractDates(text){return {birth_date:extractDateField(text,'3'),card_issue_date:extractDateField(text,'4a'),expiry_date:extractDateField(text,'4b'),first_issue_date:extractDateField(text,'4d')};}
   function newer(a,b){return a&&(!b||a>b);}
-  function chooseDateUpdates(employee,dates){
-    const payload={},notes=[];let renewed=false;
-    if(dates.birth_date){if(!employee.birth_date){payload.birth_date=dates.birth_date;notes.push(`تاريخ الميلاد ${dates.birth_date}`);}else if(employee.birth_date!==dates.birth_date){notes.push(`تحقق: الميلاد المقروء ${dates.birth_date} يختلف عن المحفوظ ${employee.birth_date}`);}}
-    if(dates.expiry_date){
-      if(newer(dates.expiry_date,employee.expiry_date)){payload.expiry_date=dates.expiry_date;renewed=true;notes.push(`الانتهاء ${employee.expiry_date||'-'} ← ${dates.expiry_date}`);}
-      else if(employee.expiry_date&&dates.expiry_date<employee.expiry_date){notes.push(`تم تجاهل انتهاء أقدم ${dates.expiry_date}`);}
-    }
-    if(renewed&&dates.card_issue_date){if(!employee.card_issue_date||dates.card_issue_date>=employee.card_issue_date){payload.card_issue_date=dates.card_issue_date;notes.push(`الإصدار ${employee.card_issue_date||'-'} ← ${dates.card_issue_date}`);}}
-    if(dates.first_issue_date){if(!employee.first_issue_date){payload.first_issue_date=dates.first_issue_date;notes.push(`أول إصدار ${dates.first_issue_date}`);}else if(employee.first_issue_date!==dates.first_issue_date){notes.push(`أول إصدار محفوظ كما هو: ${employee.first_issue_date}`);}}
-    return {payload,notes,renewed};
-  }
+  function chooseDateUpdates(employee,dates){const payload={},notes=[];let renewed=false;if(dates.birth_date){if(!employee.birth_date){payload.birth_date=dates.birth_date;notes.push(`تاريخ الميلاد ${dates.birth_date}`);}else if(employee.birth_date!==dates.birth_date){notes.push(`تحقق: الميلاد المقروء ${dates.birth_date} يختلف عن المحفوظ ${employee.birth_date}`);}}if(dates.expiry_date){if(newer(dates.expiry_date,employee.expiry_date)){payload.expiry_date=dates.expiry_date;renewed=true;notes.push(`الانتهاء ${employee.expiry_date||'-'} ← ${dates.expiry_date}`);}else if(employee.expiry_date&&dates.expiry_date<employee.expiry_date){notes.push(`تم تجاهل انتهاء أقدم ${dates.expiry_date}`);}}if(renewed&&dates.card_issue_date){if(!employee.card_issue_date||dates.card_issue_date>=employee.card_issue_date){payload.card_issue_date=dates.card_issue_date;notes.push(`الإصدار ${employee.card_issue_date||'-'} ← ${dates.card_issue_date}`);}}if(dates.first_issue_date){if(!employee.first_issue_date){payload.first_issue_date=dates.first_issue_date;notes.push(`أول إصدار ${dates.first_issue_date}`);}else if(employee.first_issue_date!==dates.first_issue_date){notes.push(`أول إصدار محفوظ كما هو: ${employee.first_issue_date}`);}}return {payload,notes,renewed};}
   async function imageCanvas(file,maxSide=2600){const bitmap=await createImageBitmap(file),scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height)),w=Math.max(1,Math.round(bitmap.width*scale)),h=Math.max(1,Math.round(bitmap.height*scale)),c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(bitmap,0,0,w,h);bitmap.close?.();return c;}
   function rotateCanvas(src,deg){const swap=Math.abs(deg)%180===90,c=document.createElement('canvas');c.width=swap?src.height:src.width;c.height=swap?src.width:src.height;const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.translate(c.width/2,c.height/2);ctx.rotate(deg*Math.PI/180);ctx.drawImage(src,-src.width/2,-src.height/2);return c;}
   function preprocess(src){const c=document.createElement('canvas');c.width=src.width;c.height=src.height;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);const img=ctx.getImageData(0,0,c.width,c.height),d=img.data;for(let i=0;i<d.length;i+=4){const g=.299*d[i]+.587*d[i+1]+.114*d[i+2],v=Math.max(0,Math.min(255,(g-128)*1.55+128));d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}ctx.putImageData(img,0,0);return c;}
   async function ocr(canvas){const result=await window.Tesseract.recognize(canvas,'eng',{logger:()=>{}});return result?.data?.text||'';}
-  async function recognizeEmployee(canvas,employees,msg){
-    if(!window.Tesseract)throw new Error('خدمة قراءة الاسم الإنجليزي لم تُحمّل. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.');
-    let ambiguous=[];
-    for(const angle of [0,90,270,180]){if(msg)msg.textContent=`جاري قراءة الاسم والتواريخ — تدوير ${angle}°`;const text=await ocr(rotateCanvas(canvas,angle)),m=matchByEnglishName(text,employees);if(m.employee)return {...m,text,angle};if(m.ambiguous?.length)ambiguous=m.ambiguous;}
-    for(const angle of [0,90,270]){if(msg)msg.textContent=`تحسين قراءة الاسم والتواريخ — تدوير ${angle}°`;const text=await ocr(preprocess(rotateCanvas(canvas,angle))),m=matchByEnglishName(text,employees);if(m.employee)return {...m,text,angle,enhanced:true};if(m.ambiguous?.length)ambiguous=m.ambiguous;}
-    return {employee:null,ambiguous};
-  }
-  async function readDates(canvas,match,msg){
-    let dates=extractDates(match.text||'');
-    if(dates.expiry_date&&dates.card_issue_date)return dates;
-    if(msg)msg.textContent='جاري التحقق من تواريخ 3 و4a و4b و4d...';
-    const extra=await ocr(preprocess(rotateCanvas(canvas,match.angle||0))),d2=extractDates(extra);
-    return {...dates,...Object.fromEntries(Object.entries(d2).filter(([,v])=>v))};
-  }
+  async function recognizeEmployee(canvas,employees,msg){if(!window.Tesseract)throw new Error('خدمة قراءة الاسم الإنجليزي لم تُحمّل. تحقق من اتصال الإنترنت ثم أعد فتح الصفحة.');let ambiguous=[];for(const angle of [0,90,270,180]){if(msg)msg.textContent=`جاري قراءة الاسم والتواريخ — تدوير ${angle}°`;const text=await ocr(rotateCanvas(canvas,angle)),m=matchByEnglishName(text,employees);if(m.employee)return {...m,text,angle};if(m.ambiguous?.length)ambiguous=m.ambiguous;}for(const angle of [0,90,270]){if(msg)msg.textContent=`تحسين قراءة الاسم والتواريخ — تدوير ${angle}°`;const text=await ocr(preprocess(rotateCanvas(canvas,angle))),m=matchByEnglishName(text,employees);if(m.employee)return {...m,text,angle,enhanced:true};if(m.ambiguous?.length)ambiguous=m.ambiguous;}return {employee:null,ambiguous};}
+  async function readDates(canvas,match,msg){let dates=extractDates(match.text||'');if(dates.expiry_date&&dates.card_issue_date)return dates;if(msg)msg.textContent='جاري التحقق من تواريخ 3 و4a و4b و4d...';const extra=await ocr(preprocess(rotateCanvas(canvas,match.angle||0))),d2=extractDates(extra);return {...dates,...Object.fromEntries(Object.entries(d2).filter(([,v])=>v))};}
   async function compressCanvas(c,target=260*1024){let q=.84,blob=null;for(let i=0;i<9;i++){blob=await new Promise(resolve=>c.toBlob(resolve,'image/webp',q));if(blob&&blob.size<=target)break;q=Math.max(.46,q-.05);}if(!blob)throw new Error('تعذر ضغط الصورة');return blob;}
-  async function uploadOne(file,employees,msg){
-    const canvas=await imageCanvas(file),match=await recognizeEmployee(canvas,employees,msg);
-    if(!match.employee){if(match.ambiguous?.length)return {ok:false,file:file.name,message:`الاسم الأول مكرر ولم ينجح المقطع الثاني في الحسم: ${match.ambiguous.join(' / ')}`};return {ok:false,file:file.name,message:'لم يتم التعرف على اسم إنجليزي مطابق لسجل الموظفين'};}
-    const employee=match.employee,dates=await readDates(canvas,match,msg),decision=chooseDateUpdates(employee,dates),blob=await compressCanvas(canvas),image_base64=await dataUrl(blob);
-    const body={image_base64,image_name:file.name.replace(/\.[^.]+$/,'')+'.webp',image_mime:'image/webp',...decision.payload};
-    const r=await fetch(`/api/driver-licenses/${employee.id}/renew`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));
-    if(!r.ok)return {ok:false,file:file.name,name_ar:employee.name_ar,name_en:employee.name_en,message:d.message||`HTTP ${r.status}`};
-    return {ok:true,file:file.name,name_ar:employee.name_ar,name_en:employee.name_en,matched:match.matched,before:file.size,after:blob.size,dates,notes:decision.notes,renewed:decision.renewed};
-  }
-  async function run(){
-    const input=$('licenseImagesFile'),btn=$('licenseImagesImportBtn'),msg=$('licenseImagesMsg'),results=$('licenseImagesResults'),files=[...(input?.files||[])].filter(f=>String(f.type||'').startsWith('image/'));
-    if(!files.length){msg.textContent='اختر صورة واحدة أو أكثر أولًا';return;}
-    let employees=[];try{const r=await fetch('/api/driver-licenses',{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.message||'تعذر تحميل سجل الموظفين');employees=d.rows||[];}catch(e){msg.textContent=e.message;return;}
-    if(!confirm(`سيتم التعرف على الموظف من الاسم الإنجليزي، ثم فحص التواريخ وتحديث الرخصة تلقائيًا فقط إذا كان تاريخ الانتهاء أحدث. عدد الصور: ${files.length}. متابعة؟`))return;
-    btn.disabled=true;results.innerHTML='';let success=0,failed=0,renewed=0;
-    try{for(let i=0;i<files.length;i++){msg.textContent=`جاري معالجة الصورة ${i+1} من ${files.length}: ${files[i].name}`;let out;try{out=await uploadOne(files[i],employees,msg);}catch(e){out={ok:false,file:files[i].name,message:e.message||'فشل المعالجة'};}const row=document.createElement('div');row.style.cssText='padding:7px 0;border-bottom:1px solid #e5e7eb';if(out.ok){success++;if(out.renewed)renewed++;const dates=[out.dates?.card_issue_date?`4a: ${out.dates.card_issue_date}`:'',out.dates?.expiry_date?`4b: ${out.dates.expiry_date}`:'',out.dates?.first_issue_date?`4d: ${out.dates.first_issue_date}`:''].filter(Boolean).join('، ');row.innerHTML=`✅ <strong>${out.name_ar}</strong> — ${out.name_en} — تطابق: ${out.matched} — ${bytes(out.before)} ← ${bytes(out.after)}${out.renewed?' — <strong>تم تحديث التجديد</strong>':''}${dates?' — '+dates:''}${out.notes?.length?'<br><small>'+out.notes.join(' | ')+'</small>':''}`;}else{failed++;row.innerHTML=`❌ <strong>${out.file}</strong> — ${out.message}`;}results.appendChild(row);}msg.textContent=`اكتمل: ${success} صورة تم ربطها، ${renewed} رخصة تم تحديث تواريخ تجديدها، ${failed} تحتاج مراجعة.`;if(success){window.dispatchEvent(new Event('driver-licenses-updated'));setTimeout(()=>location.reload(),2600);}}finally{btn.disabled=false;}
-  }
+  async function uploadOne(file,employees,msg){const canvas=await imageCanvas(file),match=await recognizeEmployee(canvas,employees,msg);if(!match.employee){if(match.ambiguous?.length)return {ok:false,file:file.name,message:`الاسم المقروء يطابق أكثر من سجل ولم ينجح المقطع الآخر في الحسم: ${match.ambiguous.join(' / ')}`};return {ok:false,file:file.name,message:'لم يتم التعرف على اسم إنجليزي مطابق لسجل الموظفين'};}const employee=match.employee,dates=await readDates(canvas,match,msg),decision=chooseDateUpdates(employee,dates),blob=await compressCanvas(canvas),image_base64=await dataUrl(blob),body={image_base64,image_name:file.name.replace(/\.[^.]+$/,'')+'.webp',image_mime:'image/webp',...decision.payload};const r=await fetch(`/api/driver-licenses/${employee.id}/renew`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)return {ok:false,file:file.name,name_ar:employee.name_ar,name_en:employee.name_en,message:d.message||`HTTP ${r.status}`};return {ok:true,file:file.name,name_ar:employee.name_ar,name_en:employee.name_en,matched:match.matched,before:file.size,after:blob.size,dates,notes:decision.notes,renewed:decision.renewed};}
+  async function run(){const input=$('licenseImagesFile'),btn=$('licenseImagesImportBtn'),msg=$('licenseImagesMsg'),results=$('licenseImagesResults'),files=[...(input?.files||[])].filter(f=>String(f.type||'').startsWith('image/'));if(!files.length){msg.textContent='اختر صورة واحدة أو أكثر أولًا';return;}let employees=[];try{const r=await fetch('/api/driver-licenses',{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.message||'تعذر تحميل سجل الموظفين');employees=d.rows||[];}catch(e){msg.textContent=e.message;return;}if(!confirm(`سيتم التعرف على الموظف من الاسم الإنجليزي سواء ظهر الاسم أو اللقب أولًا، ثم فحص التواريخ وتحديث الرخصة تلقائيًا فقط إذا كان تاريخ الانتهاء أحدث. عدد الصور: ${files.length}. متابعة؟`))return;btn.disabled=true;results.innerHTML='';let success=0,failed=0,renewed=0;try{for(let i=0;i<files.length;i++){msg.textContent=`جاري معالجة الصورة ${i+1} من ${files.length}: ${files[i].name}`;let out;try{out=await uploadOne(files[i],employees,msg);}catch(e){out={ok:false,file:files[i].name,message:e.message||'فشل المعالجة'};}const row=document.createElement('div');row.style.cssText='padding:7px 0;border-bottom:1px solid #e5e7eb';if(out.ok){success++;if(out.renewed)renewed++;const dates=[out.dates?.card_issue_date?`4a: ${out.dates.card_issue_date}`:'',out.dates?.expiry_date?`4b: ${out.dates.expiry_date}`:'',out.dates?.first_issue_date?`4d: ${out.dates.first_issue_date}`:''].filter(Boolean).join('، ');row.innerHTML=`✅ <strong>${out.name_ar}</strong> — ${out.name_en} — تطابق: ${out.matched} — ${bytes(out.before)} ← ${bytes(out.after)}${out.renewed?' — <strong>تم تحديث التجديد</strong>':''}${dates?' — '+dates:''}${out.notes?.length?'<br><small>'+out.notes.join(' | ')+'</small>':''}`;}else{failed++;row.innerHTML=`❌ <strong>${out.file}</strong> — ${out.message}`;}results.appendChild(row);}msg.textContent=`اكتمل: ${success} صورة تم ربطها، ${renewed} رخصة تم تحديث تواريخ تجديدها، ${failed} تحتاج مراجعة.`;if(success){window.dispatchEvent(new Event('driver-licenses-updated'));setTimeout(()=>location.reload(),2600);}}finally{btn.disabled=false;}}
   function init(){const btn=$('licenseImagesImportBtn');if(btn)btn.onclick=run;}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
