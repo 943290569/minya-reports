@@ -13,7 +13,7 @@
     if(!rows.length){alert('لا توجد بيانات للطباعة');return;}
     const header=new URL('assets/header.png',location.href).href;
     const footer=new URL('assets/footer.png',location.href).href;
-    const perPage=18,pages=[];
+    const perPage=17,pages=[];
     for(let i=0;i<rows.length;i+=perPage){
       const part=rows.slice(i,i+perPage);
       pages.push(`<section class="sheet"><header><img src="${header}" alt="هيدر المجلس"><h1>سجل رخص السائقين والموظفين</h1><p>قاعدة الموظفين المعتمدة ومتابعة انتهاء الرخص</p></header><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>الاسم</th><th>العنوان</th><th>الفئة</th><th>نوع الرخصة</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الحالة</th></tr></thead><tbody>${pageRows(part,i)}</tbody></table></div><footer><img src="${footer}" alt="تذييل المجلس"><div class="page-no">صفحة ${pages.length+1}</div></footer></section>`);
@@ -32,13 +32,13 @@ header img{display:block;width:210mm;height:auto;max-height:29mm;object-fit:fill
 h1{font-size:14pt;margin:0 0 .6mm;font-weight:800}
 header p{font-size:8.2pt;margin:0 0 2mm;color:#555}
 .table-wrap{width:100%;overflow:visible}
-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8pt}
-th,td{border:1px solid #333;text-align:center;vertical-align:middle;padding:1.1mm .7mm;line-height:1.1;height:9.25mm;white-space:normal;overflow-wrap:normal;word-break:normal}
-th{background:#eef2f6;font-weight:800;height:8mm;font-size:8.1pt}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.1pt}
+th,td{border:1px solid #333;text-align:center;vertical-align:middle;padding:1.2mm .7mm;line-height:1.12;height:9.7mm;white-space:normal;overflow-wrap:normal;word-break:normal}
+th{background:#eef2f6;font-weight:800;height:8.3mm;font-size:8.2pt}
 .no{font-weight:700}
 .name{white-space:normal!important;overflow:visible!important}
-.name strong{display:block;font-size:8.4pt;line-height:1.08;white-space:normal}
-.name small{display:block;margin-top:.4mm;font-size:6.1pt;line-height:1;color:#777;direction:ltr;white-space:nowrap}
+.name strong{display:block;font-size:8.5pt;line-height:1.08;white-space:normal}
+.name small{display:block;margin-top:.4mm;font-size:6.2pt;line-height:1;color:#777;direction:ltr;white-space:nowrap}
 .warn{font-weight:800;color:#b91c1c;background:#fff2f2}
 th:nth-child(1),td:nth-child(1){width:7%}
 th:nth-child(2),td:nth-child(2){width:23%}
