@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260830-v25";
+const MINYA_ASSET_VERSION = "3.3.0-20260903-v26";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -188,6 +188,7 @@ document.documentElement.style.setProperty(
   "js/app-system-link.js",
   "js/app-credit.js",
   "js/app-v3-pages.js",
+  "js/app-driver-license-badge.js",
   "js/app-report-attachments.js",
   "js/app-permissions-ui.js",
   "js/app-admin-audit.js",
