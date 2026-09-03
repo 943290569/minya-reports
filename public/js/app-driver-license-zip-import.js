@@ -15,8 +15,15 @@
         headers:{'Content-Type':'application/zip'},
         body:file
       });
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(d.message||'فشل رفع ملف ZIP');
+      const text=await r.text();
+      let d={};
+      try{d=text?JSON.parse(text):{};}catch{}
+      if(!r.ok){
+        if(r.status===413)throw new Error('حجم الطلب مرفوض من خادم الويب (413). سنحوّل الرفع إلى أجزاء صغيرة.');
+        if(r.status===401)throw new Error('انتهت جلسة تسجيل الدخول. سجّل الدخول ثم أعد المحاولة.');
+        if(r.status===403)throw new Error('ليس لديك صلاحية رفع صور الرخص.');
+        throw new Error(d.message||`فشل رفع ملف ZIP — HTTP ${r.status}${text&&!d.message?' — '+text.slice(0,120):''}`);
+      }
       const extra=[];
       if(d.missing?.length)extra.push(`ملفات غير موجودة: ${d.missing.length}`);
       if(d.skipped?.length)extra.push(`تم تجاوز: ${d.skipped.length}`);
