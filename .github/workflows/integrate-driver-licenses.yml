@@ -1,0 +1,23 @@
+name: Integrate driver licenses
+on:
+  push:
+    branches: [feat/driver-licenses-v1]
+permissions:
+  contents: write
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, '[driver-license-auto]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: feat/driver-licenses-v1}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node scripts/install-driver-licenses.js
+      - run: node scripts/build-app-bundle.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server.js public/js/app-v3-pages.js public/app-bundle.js
+          git diff --cached --quiet || git commit -m "[driver-license-auto] دمج صفحة رخص السائقين"
+          git push
