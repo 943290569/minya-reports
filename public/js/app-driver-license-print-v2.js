@@ -25,10 +25,10 @@
 @page{size:A4 portrait;margin:0}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Tahoma,"Noto Kufi Arabic",Arial,sans-serif}
-.sheet{width:210mm;height:297mm;padding:8mm 9mm 7mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden}
+.sheet{width:210mm;height:297mm;padding:0 9mm 0;display:flex;flex-direction:column;page-break-after:always;overflow:hidden}
 .sheet:last-child{page-break-after:auto}
 header{flex:0 0 auto;text-align:center}
-header img{display:block;width:100%;height:24mm;object-fit:contain;margin:0 auto 1.5mm}
+header img{display:block;width:210mm;height:auto;max-height:31mm;object-fit:fill;margin:0 -9mm 2mm}
 h1{font-size:15pt;margin:0 0 1mm;font-weight:800}
 header p{font-size:8.7pt;margin:0 0 3mm;color:#555}
 table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.6pt;flex:0 0 auto}
@@ -46,8 +46,8 @@ th:nth-child(6),td:nth-child(6){width:13%}
 th:nth-child(7),td:nth-child(7){width:9%}
 th:nth-child(8),td:nth-child(8){width:9%}
 footer{margin-top:auto;flex:0 0 auto;position:relative;padding-top:2.5mm}
-footer img{display:block;width:100%;height:10mm;object-fit:contain}
-.page-no{position:absolute;left:0;bottom:0;font-size:7pt;color:#666}
+footer img{display:block;width:210mm;height:auto;max-height:14mm;object-fit:fill;margin:0 -9mm}
+.page-no{position:absolute;left:0;bottom:1mm;font-size:7pt;color:#666}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.sheet{break-after:page}.sheet:last-child{break-after:auto}}
 </style></head><body>${pages.join('')}<script>window.onload=()=>setTimeout(()=>window.print(),350);<\/script></body></html>`);
     w.document.close();
