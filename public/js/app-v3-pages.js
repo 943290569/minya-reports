@@ -16,7 +16,7 @@
   }
   function addGlobalNav(){
     const nav=document.querySelector(".top-header nav"); if(!nav)return;
-    const items=[["/equipment","المعدات"],["/weekly","الأسبوعي"],["/search","بحث متقدم"],["/managerial","تقرير إداري"],["/admin","الإدارة"]];
+    const items=[["/equipment","المعدات"],["/drivers-licenses.html","رخص السائقين"],["/weekly","الأسبوعي"],["/search","بحث متقدم"],["/managerial","تقرير إداري"],["/admin","الإدارة"]];
     items.forEach(([href,label])=>{if(!nav.querySelector(`a[href="${href}"]`)){const a=document.createElement("a");a.href=href;a.className="app-nav-link";a.textContent=label;nav.appendChild(a);}});
   }
   async function api(url,options){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"فشل الطلب");return d;}
