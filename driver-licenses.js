@@ -35,7 +35,9 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
 
   const cols=new Set(db.pragma('table_info(driver_licenses)').map(x=>x.name));
   if(!cols.has('identity_number')) db.exec(`ALTER TABLE driver_licenses ADD COLUMN identity_number TEXT DEFAULT ''`);
+  if(!cols.has('license_number')) db.exec(`ALTER TABLE driver_licenses ADD COLUMN license_number TEXT DEFAULT ''`);
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_license_identity_unique ON driver_licenses(identity_number) WHERE identity_number IS NOT NULL AND trim(identity_number)<>''`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_driver_license_number_unique ON driver_licenses(license_number) WHERE license_number IS NOT NULL AND trim(license_number)<>''`);
 
   const seed=[
     ['إسماعيل الفروخ','ISMAIL ALFROUK','تقوع','1995-12-31','2025-07-17','2019-10-10','2026-10-15','C','شحن ثقيل'],
@@ -76,7 +78,9 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
 
   const days=e=>e?Math.ceil((new Date(e+'T00:00:00Z')-new Date())/86400000):null;
   const status=d=>d==null?'غير محدد':d<0?'منتهية':d<=60?'تنتهي قريبًا':'سارية';
-  const cleanIdentity=v=>String(v||'').replace(/\D/g,'').slice(0,9);
+  const cleanDigits=(v,max=12)=>String(v||'').replace(/\D/g,'').slice(0,max);
+  const validIdentity=v=>!v||/^\d{6,12}$/.test(v);
+  const validLicenseNo=v=>!v||/^\d{5,12}$/.test(v);
   const trimEvents=id=>db.prepare(`DELETE FROM driver_license_events WHERE driver_id=? AND id NOT IN (SELECT id FROM driver_license_events WHERE driver_id=? ORDER BY id DESC LIMIT 3)`).run(id,id);
   const addEvent=(id,type,details,userId)=>{db.prepare(`INSERT INTO driver_license_events(driver_id,event_type,details,created_by) VALUES(?,?,?,?)`).run(id,type,details,userId);trimEvents(id);};
   const saveImage=(driver,buf,original,mime)=>{
@@ -85,7 +89,6 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
     fs.writeFileSync(path.join(dir,stored),buf);
     if(driver.image_name){try{fs.unlinkSync(path.join(dir,path.basename(driver.image_name)));}catch{}}
     db.prepare(`UPDATE driver_licenses SET image_name=?,image_original=?,image_mime=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(stored,String(original||'رخصة'),mime,driver.id);
-    return stored;
   };
 
   app.get('/api/driver-licenses',requireAuth,(req,res)=>{
@@ -104,12 +107,15 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
     try{
       const id=Number(req.params.id),b=req.body||{},old=db.prepare('SELECT * FROM driver_licenses WHERE id=?').get(id);
       if(!old)return res.status(404).json({ok:false,message:'الموظف غير موجود'});
-      const identity=cleanIdentity(b.identity_number??old.identity_number);
-      if(identity&&identity.length!==9)return res.status(400).json({ok:false,message:'رقم الهوية يجب أن يتكون من 9 أرقام'});
-      const dup=identity?db.prepare('SELECT id,name_ar FROM driver_licenses WHERE identity_number=? AND id<>?').get(identity,id):null;
-      if(dup)return res.status(409).json({ok:false,message:`رقم الهوية مستخدم لسجل ${dup.name_ar}`});
+      const identity=cleanDigits(b.identity_number??old.identity_number),licenseNo=cleanDigits(b.license_number??old.license_number);
+      if(!validIdentity(identity))return res.status(400).json({ok:false,message:'رقم الهوية / البند 6 غير صالح'});
+      if(!validLicenseNo(licenseNo))return res.status(400).json({ok:false,message:'رقم الرخصة / البند 5 غير صالح'});
+      const dupI=identity?db.prepare('SELECT id,name_ar FROM driver_licenses WHERE identity_number=? AND id<>?').get(identity,id):null;
+      if(dupI)return res.status(409).json({ok:false,message:`رقم الهوية مستخدم لسجل ${dupI.name_ar}`});
+      const dupL=licenseNo?db.prepare('SELECT id,name_ar FROM driver_licenses WHERE license_number=? AND id<>?').get(licenseNo,id):null;
+      if(dupL)return res.status(409).json({ok:false,message:`رقم الرخصة مستخدم لسجل ${dupL.name_ar}`});
       const vals=['name_ar','name_en','address','birth_date','card_issue_date','first_issue_date','expiry_date','license_class','license_type'].map(k=>String(b[k]??old[k]??'').trim());
-      db.prepare(`UPDATE driver_licenses SET name_ar=?,name_en=?,address=?,birth_date=?,card_issue_date=?,first_issue_date=?,expiry_date=?,license_class=?,license_type=?,identity_number=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(...vals,identity,id);
+      db.prepare(`UPDATE driver_licenses SET name_ar=?,name_en=?,address=?,birth_date=?,card_issue_date=?,first_issue_date=?,expiry_date=?,license_class=?,license_type=?,identity_number=?,license_number=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(...vals,identity,licenseNo,id);
       addEvent(id,'تعديل بيانات','تم تحديث بيانات الرخصة',req.user.id);
       audit?.(req.user,'UPDATE_DRIVER_LICENSE','driver_license',id,vals[0]);
       res.json({ok:true});
@@ -137,30 +143,40 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
   app.post('/api/driver-licenses/import-image',requireRole('admin','editor'),(req,res)=>{
     try{
       const b=req.body||{};
-      const identity=cleanIdentity(b.identity_number);
-      if(identity.length!==9)return res.status(400).json({ok:false,message:'لم يتم التعرف على رقم هوية صحيح من الصورة'});
-      let driver=db.prepare('SELECT * FROM driver_licenses WHERE identity_number=?').get(identity);
-      let identityAdded=false;
+      const licenseNo=cleanDigits(b.license_number),identity=cleanDigits(b.identity_number);
+      if(!validLicenseNo(licenseNo)||!licenseNo)return res.status(400).json({ok:false,message:'لم يتم التعرف على رقم الرخصة من البند 5'});
+      if(identity&&!validIdentity(identity))return res.status(400).json({ok:false,message:'رقم الهوية المقروء من البند 6 غير صالح'});
+
+      let driver=db.prepare('SELECT * FROM driver_licenses WHERE license_number=?').get(licenseNo);
+      let licenseAdded=false,identityAdded=false;
       if(!driver&&b.bootstrap_name_ar){
         const candidate=db.prepare('SELECT * FROM driver_licenses WHERE name_ar=?').get(String(b.bootstrap_name_ar));
-        if(candidate&&!String(candidate.identity_number||'').trim()){
-          const used=db.prepare('SELECT id FROM driver_licenses WHERE identity_number=?').get(identity);
+        if(candidate&&!String(candidate.license_number||'').trim()){
+          const used=db.prepare('SELECT id FROM driver_licenses WHERE license_number=?').get(licenseNo);
           if(!used){
-            db.prepare('UPDATE driver_licenses SET identity_number=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(identity,candidate.id);
-            driver={...candidate,identity_number:identity};
-            identityAdded=true;
+            db.prepare('UPDATE driver_licenses SET license_number=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(licenseNo,candidate.id);
+            driver={...candidate,license_number:licenseNo};
+            licenseAdded=true;
           }
         }
       }
-      if(!driver)return res.status(404).json({ok:false,message:`رقم الهوية ${identity} غير موجود في سجل الموظفين`});
+      if(!driver)return res.status(404).json({ok:false,message:`رقم الرخصة ${licenseNo} غير موجود في سجل الموظفين`});
+
+      if(identity&&!String(driver.identity_number||'').trim()){
+        const used=db.prepare('SELECT id FROM driver_licenses WHERE identity_number=? AND id<>?').get(identity,driver.id);
+        if(!used){db.prepare('UPDATE driver_licenses SET identity_number=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(identity,driver.id);identityAdded=true;driver={...driver,identity_number:identity};}
+      }else if(identity&&String(driver.identity_number||'').trim()&&String(driver.identity_number)!==identity){
+        return res.status(409).json({ok:false,message:'رقم الهوية المقروء لا يطابق رقم الهوية المحفوظ لهذا الموظف'});
+      }
+
       const text=String(b.image_base64||'').replace(/^data:[^;]+;base64,/,'');
       const buf=Buffer.from(text,'base64');
       if(!buf.length||buf.length>700*1024)return res.status(400).json({ok:false,message:'الصورة بعد الضغط أكبر من الحد المسموح'});
       const mime=['image/webp','image/jpeg','image/png'].includes(String(b.image_mime))?String(b.image_mime):'image/webp';
       saveImage(driver,buf,b.image_name,mime);
-      addEvent(driver.id,'رفع مرفق',identityAdded?'تم اعتماد رقم الهوية من البند 6 ورفع صورة الرخصة':'تمت مطابقة صورة الرخصة تلقائيًا بواسطة رقم الهوية',req.user.id);
-      audit?.(req.user,'IMPORT_DRIVER_LICENSE_IMAGE','driver_license',driver.id,`${driver.name_ar} | ${identity}`);
-      res.json({ok:true,driver_id:driver.id,name_ar:driver.name_ar,identity_number:identity,identity_added:identityAdded});
+      addEvent(driver.id,'رفع مرفق',`مطابقة بالبند 5: ${licenseNo}${identity?` | البند 6: ${identity}`:''}`,req.user.id);
+      audit?.(req.user,'IMPORT_DRIVER_LICENSE_IMAGE','driver_license',driver.id,`${driver.name_ar} | رخصة ${licenseNo}`);
+      res.json({ok:true,driver_id:driver.id,name_ar:driver.name_ar,license_number:licenseNo,identity_number:identity||driver.identity_number||'',license_added:licenseAdded,identity_added:identityAdded});
     }catch(e){res.status(500).json({ok:false,message:'فشل رفع صورة الرخصة',error:e.message});}
   });
 
