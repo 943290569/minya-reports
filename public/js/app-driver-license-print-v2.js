@@ -28,7 +28,7 @@ html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Tahoma,"Noto
 .sheet{width:210mm;height:297mm;padding:0 8mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden}
 .sheet:last-child{page-break-after:auto}
 header{flex:0 0 auto;text-align:center}
-header img{display:block;width:210mm;height:auto;max-height:29mm;object-fit:fill;margin:0 -8mm 1.2mm}
+header img{display:block;width:210mm;height:auto;margin:0 -8mm 1.2mm}
 h1{font-size:14pt;margin:0 0 .6mm;font-weight:800}
 header p{font-size:8.2pt;margin:0 0 2mm;color:#555}
 .table-wrap{width:100%;overflow:visible}
@@ -48,8 +48,8 @@ th:nth-child(5),td:nth-child(5){width:18%}
 th:nth-child(6),td:nth-child(6){width:14%}
 th:nth-child(7),td:nth-child(7){width:9%}
 th:nth-child(8),td:nth-child(8){width:9%}
-footer{margin-top:auto;flex:0 0 auto;position:relative;padding-top:1.5mm}
-footer img{display:block;width:210mm;height:auto;max-height:13mm;object-fit:fill;margin:0 -8mm}
+footer{margin-top:auto;flex:0 0 auto;position:relative;padding-top:2mm}
+footer img{display:block;width:210mm;height:auto;margin:0 -8mm}
 .page-no{position:absolute;left:0;bottom:1mm;font-size:7pt;color:#666}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.sheet{break-after:page}.sheet:last-child{break-after:auto}}
 </style></head><body>${pages.join('')}<script>window.onload=()=>setTimeout(()=>window.print(),350);<\/script></body></html>`);
