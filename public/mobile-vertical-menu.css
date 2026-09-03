@@ -49,14 +49,19 @@
   }
 
   #minyaHeaderMenu {
-    position: absolute !important;
-    top: 38px !important;
-    left: 0 !important;
-    width: min(290px, calc(100vw - 22px)) !important;
-    max-height: 72vh !important;
+    position: fixed !important;
+    top: 72px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-height: calc(100vh - 86px) !important;
+    max-height: calc(100dvh - 86px) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 7px !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-gutter: stable !important;
+    padding: 7px 7px 18px !important;
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 4px !important;
@@ -84,6 +89,7 @@
     font-size: 13px !important;
     font-weight: 700 !important;
     border: 1px solid transparent !important;
+    flex: 0 0 auto !important;
   }
 
   .minya-menu-item b {
