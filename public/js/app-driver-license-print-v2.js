@@ -16,7 +16,7 @@
     const perPage=18,pages=[];
     for(let i=0;i<rows.length;i+=perPage){
       const part=rows.slice(i,i+perPage);
-      pages.push(`<section class="sheet"><header><img src="${header}" alt="هيدر المجلس"><h1>سجل رخص السائقين والموظفين</h1><p>قاعدة الموظفين المعتمدة ومتابعة انتهاء الرخص</p></header><div class="table-wrap"><table><thead><tr><th>م</th><th>الاسم</th><th>العنوان</th><th>الفئة</th><th>نوع الرخصة</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الحالة</th></tr></thead><tbody>${pageRows(part,i)}</tbody></table></div><footer><img src="${footer}" alt="تذييل المجلس"><div class="page-no">صفحة ${pages.length+1}</div></footer></section>`);
+      pages.push(`<section class="sheet"><header><img src="${header}" alt="هيدر المجلس"><h1>سجل رخص السائقين والموظفين</h1><p>قاعدة الموظفين المعتمدة ومتابعة انتهاء الرخص</p></header><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>الاسم</th><th>العنوان</th><th>الفئة</th><th>نوع الرخصة</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الحالة</th></tr></thead><tbody>${pageRows(part,i)}</tbody></table></div><footer><img src="${footer}" alt="تذييل المجلس"><div class="page-no">صفحة ${pages.length+1}</div></footer></section>`);
     }
     const w=window.open('','_blank','width=900,height=1000');
     if(!w){alert('تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة للموقع.');return;}
@@ -40,13 +40,13 @@ th{background:#eef2f6;font-weight:800;height:8mm;font-size:8.1pt}
 .name strong{display:block;font-size:8.4pt;line-height:1.08;white-space:normal}
 .name small{display:block;margin-top:.4mm;font-size:6.1pt;line-height:1;color:#777;direction:ltr;white-space:nowrap}
 .warn{font-weight:800;color:#b91c1c;background:#fff2f2}
-th:nth-child(1),td:nth-child(1){width:5%}
-th:nth-child(2),td:nth-child(2){width:24%}
+th:nth-child(1),td:nth-child(1){width:7%}
+th:nth-child(2),td:nth-child(2){width:23%}
 th:nth-child(3),td:nth-child(3){width:12%}
 th:nth-child(4),td:nth-child(4){width:8%}
 th:nth-child(5),td:nth-child(5){width:18%}
 th:nth-child(6),td:nth-child(6){width:14%}
-th:nth-child(7),td:nth-child(7){width:10%}
+th:nth-child(7),td:nth-child(7){width:9%}
 th:nth-child(8),td:nth-child(8){width:9%}
 footer{margin-top:auto;flex:0 0 auto;position:relative;padding-top:1.5mm}
 footer img{display:block;width:210mm;height:auto;max-height:13mm;object-fit:fill;margin:0 -8mm}
