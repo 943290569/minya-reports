@@ -1,0 +1,16 @@
+const fs=require('fs');
+const htmlPath='public/drivers-licenses.html';
+const jsPath='public/js/app-driver-licenses.js';
+let html=fs.readFileSync(htmlPath,'utf8');
+let js=fs.readFileSync(jsPath,'utf8');
+html=html.replace('<button id="renewLicenseBtn">تجديد الرخصة</button>','');
+html=html.replaceAll('drivers-v3','drivers-v5');
+const oldSave="async function save(){if(!current)return;try{await api(`/api/driver-licenses/${current.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body())});$('licenseMsg').textContent='تم حفظ البيانات';await load();await openOne(current.id);}catch(e){$('licenseMsg').textContent=e.message;}}";
+const newSave="async function save(){if(!current)return;try{const data=body(),selected=$('licenseImage').files?.[0];$('licenseMsg').textContent='جاري حفظ البيانات...';if(selected){const p={...data,...(await filePayload())};await api(`/api/driver-licenses/${current.id}/renew`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});}await api(`/api/driver-licenses/${current.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});$('licenseImage').value='';await load();await openOne(current.id);$('licenseMsg').textContent=selected?'تم حفظ البيانات واعتماد مرفق الرخصة الجديد':'تم حفظ البيانات';}catch(e){$('licenseMsg').textContent=e.message;}}";
+if(!js.includes(oldSave)) throw new Error('save function pattern not found');
+js=js.replace(oldSave,newSave);
+js=js.replace("$('renewLicenseBtn').onclick=renew;",'');
+js=js.replaceAll('عند تجديد الرخصة ستُضغط تلقائيًا','عند حفظ البيانات ستُضغط تلقائيًا');
+fs.writeFileSync(htmlPath,html);
+fs.writeFileSync(jsPath,js);
+console.log('Unified driver license save installed');
