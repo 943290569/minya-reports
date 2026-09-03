@@ -13,10 +13,13 @@
     if(!rows.length){alert('لا توجد بيانات للطباعة');return;}
     const header=new URL('assets/header.png',location.href).href;
     const footer=new URL('assets/footer.png',location.href).href;
-    const perPage=17,pages=[];
-    for(let i=0;i<rows.length;i+=perPage){
-      const part=rows.slice(i,i+perPage);
-      pages.push(`<section class="sheet"><header><img src="${header}" alt="هيدر المجلس"><h1>سجل رخص السائقين والموظفين</h1><p>قاعدة الموظفين المعتمدة ومتابعة انتهاء الرخص</p></header><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>الاسم</th><th>العنوان</th><th>الفئة</th><th>نوع الرخصة</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الحالة</th></tr></thead><tbody>${pageRows(part,i)}</tbody></table></div><footer><img src="${footer}" alt="تذييل المجلس"><div class="page-no">صفحة ${pages.length+1}</div></footer></section>`);
+    const pages=[];
+    let start=0;
+    while(start<rows.length){
+      const pageSize=start===0?20:17;
+      const part=rows.slice(start,start+pageSize);
+      pages.push(`<section class="sheet"><header><img src="${header}" alt="هيدر المجلس"><h1>سجل رخص السائقين والموظفين</h1><p>قاعدة الموظفين المعتمدة ومتابعة انتهاء الرخص</p></header><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>الاسم</th><th>العنوان</th><th>الفئة</th><th>نوع الرخصة</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الحالة</th></tr></thead><tbody>${pageRows(part,start)}</tbody></table></div><footer><img src="${footer}" alt="تذييل المجلس"><div class="page-no">صفحة ${pages.length+1}</div></footer></section>`);
+      start+=pageSize;
     }
     const w=window.open('','_blank','width=900,height=1000');
     if(!w){alert('تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة للموقع.');return;}
