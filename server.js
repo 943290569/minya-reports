@@ -268,6 +268,7 @@ app.use((req,res,next) => {
 });
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
+require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
