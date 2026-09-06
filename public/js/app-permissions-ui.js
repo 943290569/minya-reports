@@ -42,8 +42,18 @@
   }
 
   function applyNavigationPermissions() {
-    document.querySelectorAll('a[href="/admin"], a[href="/admin.html"]').forEach(link => {
-      if (role !== "admin") hide(link);
+    const adminOnlyHrefs = [
+      "/admin",
+      "/admin.html",
+      "/system.html",
+      "/drive-import.html",
+      "/reviews"
+    ];
+
+    adminOnlyHrefs.forEach((href) => {
+      document.querySelectorAll(`a[href="${href}"]`).forEach(link => {
+        if (role !== "admin") hide(link);
+      });
     });
 
     if (role === "viewer") {
