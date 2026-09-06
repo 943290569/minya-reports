@@ -42,6 +42,13 @@ async function login(username,password){
   if(!cookie) throw new Error(`login did not return a session cookie for ${username}`);
   return cookie;
 }
+function reportPayload(overrides={}){
+  return {
+    report_date:'2099-12-28',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
+    total_trucks:1,total_waste_tons:1,total_diesel:1,notes:'runtime payload validation',
+    crews:[],operations:[],stations:[],equipment:[],...overrides
+  };
+}
 
 (async () => {
   const child = spawn(process.execPath, ['scripts/start-server.js'], {
@@ -81,12 +88,17 @@ async function login(username,password){
 
     x=await json('/api/reports',auth(viewerCookie));
     expectStatus(x,200,'viewer could not read reports');
-    x=await json('/api/reports',auth(viewerCookie,'POST',{
-      report_date:'2099-12-29',weather:'صحو',temperature:18,start_time:'04:00',end_time:'19:00',
-      total_trucks:1,total_waste_tons:1,total_diesel:1,notes:'viewer must not create',
-      crews:[],operations:[],stations:[],equipment:[]
-    }));
+    x=await json('/api/reports',auth(viewerCookie,'POST',reportPayload({report_date:'2099-12-29',notes:'viewer must not create'})));
     expectStatus(x,403,'viewer was allowed to create a report');
+
+    x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-02-31'})));
+    expectStatus(x,400,'impossible report date was accepted');
+    x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-12-27',total_trucks:1.5})));
+    expectStatus(x,400,'fractional truck total was accepted');
+    x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-12-26',total_waste_tons:'abc'})));
+    expectStatus(x,400,'non-numeric waste total was accepted');
+    x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-12-25',total_diesel:-1})));
+    expectStatus(x,400,'negative diesel total was accepted');
 
     x=await json('/api/reports',auth(adminCookie,'POST',{
       report_date:'2099-12-31',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
@@ -96,6 +108,13 @@ async function login(username,password){
     expectStatus(x,200,'runtime report creation failed');
     const reportId=Number(x.data?.report?.id||0);
     if(!reportId) throw new Error('runtime report id missing');
+
+    x=await json(`/api/reports/${reportId}`,auth(adminCookie,'PUT',{
+      report_date:'2099-12-31',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
+      total_trucks:1,total_waste_tons:1,total_diesel:-5,notes:'invalid update must fail',
+      crews:[],operations:[],stations:[],equipment:[]
+    }));
+    expectStatus(x,400,'invalid report update was accepted');
 
     x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'bad.txt',mime_type:'text/plain',data_base64:'%%%='}));
     expectStatus(x,400,'invalid Base64 attachment was not rejected');
@@ -171,7 +190,7 @@ async function login(username,password){
     x=await json('/api/reports',auth(editorCookie));
     expectStatus(x,200,'editor could not use a new session after password change');
 
-    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + role permissions + session invalidation + safe attachments + returned-report workflow ok.`);
+    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + report validation + role permissions + session invalidation + safe attachments + returned-report workflow ok.`);
   } catch (error) {
     console.error(output);
     throw error;
