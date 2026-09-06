@@ -1,10 +1,10 @@
-# Minya Landfill System V3.2 Stable
+# Minya Landfill System V3.3 Stable
 
 Operational and management reporting system for Al-Minya Landfill.
 
 ## Version
 
-Current stable version: **3.2.0**
+Current stable version: **3.3.0**
 
 ## Main features
 
@@ -47,6 +47,7 @@ The automated smoke test runs the server with an isolated temporary data directo
 ## Project structure
 
 - `server.js` — Express server, API routes, authentication and SQLite initialization.
+- `scripts/start-server.js` — runtime launcher that synchronizes the package version with health/backup metadata and applies the backup JSON request limit.
 - `public/index.html` — main multipage application shell.
 - `public/app.js` — application loader.
 - `public/js/` — application modules.
