@@ -26,7 +26,7 @@ const versionMatch = loader.match(/const\s+MINYA_ASSET_VERSION\s*=\s*["']([^"']+
 if (!versionMatch) {
   throw new Error("MINYA_ASSET_VERSION is missing from public/app.js");
 }
-const assetVersion = `${versionMatch[1]}-wa4`;
+const assetVersion = `${versionMatch[1]}-wa5`;
 
 const loaderBlock = loader.slice(start, end + endMarker.length);
 const styleBlock = loader.slice(styleStart, styleEnd + styleEndMarker.length);
@@ -50,6 +50,11 @@ const returnedReportModule = "js/app-returned-report-notice.js";
 if (!modulePaths.includes(returnedReportModule)) {
   const workflowIndex = modulePaths.indexOf("js/app-report-workflow.js");
   modulePaths.splice(workflowIndex >= 0 ? workflowIndex + 1 : modulePaths.length, 0, returnedReportModule);
+}
+const adminWorkflowSummaryModule = "js/app-admin-workflow-summary.js";
+if (!modulePaths.includes(adminWorkflowSummaryModule)) {
+  const reviewsIndex = modulePaths.indexOf("js/app-reviews.js");
+  modulePaths.splice(reviewsIndex >= 0 ? reviewsIndex + 1 : modulePaths.length, 0, adminWorkflowSummaryModule);
 }
 const stylePaths = [...styleBlock.matchAll(/"([^"]+\.css)"/g)].map((match) => match[1]);
 
