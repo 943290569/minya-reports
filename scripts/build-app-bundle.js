@@ -26,7 +26,7 @@ const versionMatch = loader.match(/const\s+MINYA_ASSET_VERSION\s*=\s*["']([^"']+
 if (!versionMatch) {
   throw new Error("MINYA_ASSET_VERSION is missing from public/app.js");
 }
-const assetVersion = versionMatch[1];
+const assetVersion = `${versionMatch[1]}-wa1`;
 
 const loaderBlock = loader.slice(start, end + endMarker.length);
 const styleBlock = loader.slice(styleStart, styleEnd + styleEndMarker.length);
@@ -40,6 +40,11 @@ const monthlyUnitModule = "js/app-monthly-unit-compat.js";
 if (!modulePaths.includes(monthlyUnitModule)) {
   const printMonthlyIndex = modulePaths.indexOf("js/app-print-monthly.js");
   modulePaths.splice(printMonthlyIndex >= 0 ? printMonthlyIndex + 1 : modulePaths.length, 0, monthlyUnitModule);
+}
+const adminWhatsAppModule = "js/app-admin-whatsapp.js";
+if (!modulePaths.includes(adminWhatsAppModule)) {
+  const adminUsersIndex = modulePaths.indexOf("js/app-admin-users.js");
+  modulePaths.splice(adminUsersIndex >= 0 ? adminUsersIndex + 1 : modulePaths.length, 0, adminWhatsAppModule);
 }
 const stylePaths = [...styleBlock.matchAll(/"([^"]+\.css)"/g)].map((match) => match[1]);
 
