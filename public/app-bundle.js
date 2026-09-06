@@ -3011,6 +3011,48 @@ window.setupArchiveQuickSearch = setupArchiveQuickSearch;
 let archivePage = 1;
 let archivePages = 1;
 const archivePageLimit = 50;
+const archiveSelectedReports = new Set();
+
+function updateArchiveSelectionUI() {
+  const checkboxes = Array.from(document.querySelectorAll(".archive-select-report"));
+  archiveSelectedReports.clear();
+  checkboxes.filter(box => box.checked).forEach(box => archiveSelectedReports.add(Number(box.value)));
+  const selectAll = document.getElementById("archiveSelectAll");
+  if (selectAll) {
+    selectAll.checked = checkboxes.length > 0 && checkboxes.every(box => box.checked);
+    selectAll.indeterminate = checkboxes.some(box => box.checked) && !selectAll.checked;
+  }
+  const count = document.getElementById("archiveSelectedCount");
+  if (count) count.textContent = `${archiveSelectedReports.size} محدد`;
+  const deleteButton = document.getElementById("archiveBulkDelete");
+  if (deleteButton) deleteButton.disabled = archiveSelectedReports.size === 0;
+}
+
+async function archiveBulkDelete() {
+  updateArchiveSelectionUI();
+  const ids = Array.from(archiveSelectedReports);
+  if (!ids.length) return;
+  if (!confirm(`سيتم حذف ${ids.length} تقرير نهائيًا. هل تريد المتابعة؟`)) return;
+  const button = document.getElementById("archiveBulkDelete");
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(`${API}/api/reports/bulk-delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.message || "فشل حذف التقارير المحددة");
+    archiveSelectedReports.clear();
+    if (typeof showMessage === "function") showMessage(data.message || `تم حذف ${ids.length} تقرير`);
+    await loadArchivePage(archivePage);
+  } catch (error) {
+    console.error(error);
+    if (typeof showMessage === "function") showMessage(error.message || "فشل حذف التقارير المحددة");
+    else alert(error.message || "فشل حذف التقارير المحددة");
+    updateArchiveSelectionUI();
+  }
+}
 
 function isArchivePage() {
   return (location.pathname.replace(/\/+$/, "") || "/") === "/archive";
@@ -3049,6 +3091,39 @@ function setupArchivePagination() {
 
   const table = document.getElementById("archiveTable");
   if (!table || document.getElementById("archivePagination")) return;
+
+  const headerRow = table.querySelector("thead tr");
+  if (headerRow && !headerRow.querySelector(".archive-select-column")) {
+    const header = document.createElement("th");
+    header.className = "archive-select-column";
+    header.innerHTML = '<input id="archiveSelectAll" type="checkbox" aria-label="تحديد كل التقارير الظاهرة">';
+    headerRow.insertBefore(header, headerRow.firstChild);
+  }
+
+  const toolbar = document.createElement("div");
+  toolbar.id = "archiveBulkActions";
+  toolbar.style.cssText = "display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;";
+  toolbar.innerHTML = `
+    <button type="button" id="archiveSelectAllButton">تحديد الكل</button>
+    <button type="button" id="archiveClearSelection">إلغاء التحديد</button>
+    <strong id="archiveSelectedCount">0 محدد</strong>
+    <button type="button" id="archiveBulkDelete" class="role-admin-action" style="background:#b91c1c" disabled>حذف المحدد</button>
+  `;
+  table.insertAdjacentElement("beforebegin", toolbar);
+
+  document.getElementById("archiveSelectAll").addEventListener("change", (event) => {
+    document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = event.target.checked; });
+    updateArchiveSelectionUI();
+  });
+  document.getElementById("archiveSelectAllButton").onclick = () => {
+    document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = true; });
+    updateArchiveSelectionUI();
+  };
+  document.getElementById("archiveClearSelection").onclick = () => {
+    document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = false; });
+    updateArchiveSelectionUI();
+  };
+  document.getElementById("archiveBulkDelete").onclick = archiveBulkDelete;
 
   const box = document.createElement("div");
   box.id = "archivePagination";
@@ -3101,7 +3176,7 @@ async function loadArchivePage(page = 1) {
       params.set("to", `${monthValue}-${String(lastDay).padStart(2, "0")}`);
     }
 
-    tbody.innerHTML = `<tr><td colspan="6">جاري تحميل الأرشيف...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">جاري تحميل الأرشيف...</td></tr>`;
 
     const response = await fetch(`${API}/api/archive?${params}`);
     const data = await response.json();
@@ -3117,6 +3192,7 @@ async function loadArchivePage(page = 1) {
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
         <tr>
+          <td class="archive-select-column"><input class="archive-select-report" type="checkbox" value="${report.id}" aria-label="تحديد التقرير ${escapeHtml(report.report_no)}"></td>
           <td>${escapeHtml(report.report_no)}</td>
           <td>${formatDate(report.report_date)}</td>
           <td>${formatNumber(report.total_waste_tons)}</td>
@@ -3130,7 +3206,7 @@ async function loadArchivePage(page = 1) {
           </td>
         </tr>
       `).join("")
-      : `<tr><td colspan="6">لا توجد تقارير مطابقة</td></tr>`;
+      : `<tr><td colspan="7">لا توجد تقارير مطابقة</td></tr>`;
 
     const info = document.getElementById("archivePageInfo");
     if (info) info.textContent = `صفحة ${archivePage} من ${archivePages} — ${data.count} تقرير`;
@@ -3140,10 +3216,13 @@ async function loadArchivePage(page = 1) {
     if (prev) prev.disabled = archivePage <= 1;
     if (next) next.disabled = archivePage >= archivePages;
 
+    archiveSelectedReports.clear();
+    tbody.querySelectorAll(".archive-select-report").forEach(box => box.addEventListener("change", updateArchiveSelectionUI));
+    updateArchiveSelectionUI();
     if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
     console.error(error);
-    tbody.innerHTML = `<tr><td colspan="6">تعذر تحميل الأرشيف</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">تعذر تحميل الأرشيف</td></tr>`;
   }
 }
 
@@ -3178,6 +3257,7 @@ if (isArchivePage()) {
 
 window.loadArchivePage = loadArchivePage;
 window.archiveDeleteReport = archiveDeleteReport;
+window.archiveBulkDelete = archiveBulkDelete;
 
 ;
 
