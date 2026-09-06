@@ -15,6 +15,10 @@ const replacements = [
     'const backupJsonParser = express.json({ limit: "64mb" });'
   ],
   [
+    'if(!r.report_date){ invalidReports++; return; }\n    dates.push(String(r.report_date));',
+    'const reportDate=String(r.report_date||"").trim();if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(reportDate)){errors.push(`تاريخ تقرير غير صالح: ${reportDate||"فارغ"}`);invalidReports++;return;}const parsedDate=new Date(`${reportDate}T00:00:00Z`);if(Number.isNaN(parsedDate.getTime())||parsedDate.toISOString().slice(0,10)!==reportDate){errors.push(`تاريخ تقرير غير موجود في التقويم: ${reportDate}`);invalidReports++;return;}const numericChecks=[["temperature",false],["total_trucks",true],["total_waste_tons",true],["total_diesel",true]];for(const [field,nonNegative] of numericChecks){if(r[field]===undefined||r[field]===null||r[field]==="")continue;const n=Number(r[field]);if(!Number.isFinite(n)||(nonNegative&&n<0)||(field==="total_trucks"&&!Number.isInteger(n)))errors.push(`قيمة رقمية غير صالحة ${field} في تقرير ${reportDate}`);}dates.push(reportDate);'
+  ],
+  [
     '["approved_by_name", "TEXT DEFAULT \'\'"]\n].forEach(([name, definition]) => {',
     '["approved_by_name", "TEXT DEFAULT \'\'"],\n  ["returned_reason", "TEXT DEFAULT \'\'"],\n  ["returned_at", "TEXT"],\n  ["returned_by", "INTEGER"],\n  ["returned_to", "INTEGER"]\n].forEach(([name, definition]) => {'
   ],
