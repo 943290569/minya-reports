@@ -6588,6 +6588,7 @@ ${payload.sections.join("\n")}
     {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
     {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
+    {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"التقرير الأسبوعي", href:"/weekly", icon:"≋"},
     {label:"البحث المتقدم", href:"/search", icon:"⌕"},
     {label:"التقرير الإداري", href:"/managerial", icon:"▧"},
@@ -6601,13 +6602,35 @@ ${payload.sections.join("\n")}
     return location.pathname.replace(/\/+$/,"") || "/";
   }
 
+  function currentRole(){
+    return (window.MINYA_USER && window.MINYA_USER.role) || document.documentElement.dataset.userRole || "";
+  }
+
+  function renderItems(menu){
+    if(!menu) return;
+    const role=currentRole();
+    const path=currentPath();
+    menu.dataset.renderedRole=role;
+    menu.innerHTML=items.filter(item=>{
+      if(item.adminOnly && role!=="admin") return false;
+      if(item.hideFor && item.hideFor.includes(role)) return false;
+      return true;
+    }).map(item=>{
+      const active=(path===item.href || (item.href!=="/" && path.startsWith(item.href))) ? " active" : "";
+      return `<a class="minya-menu-item${active}" href="${item.href}"><span class="minya-menu-label"><i class="minya-menu-symbol" aria-hidden="true">${item.icon}</i><span>${item.label}</span></span><b aria-hidden="true">‹</b></a>`;
+    }).join("");
+  }
+
   function build(){
     if(!window.matchMedia("(max-width: 760px)").matches) return;
     const header=document.querySelector(".top-header");
-    if(!header || document.getElementById("minyaMenuButton")) return;
+    if(!header) return;
 
-    const role=(window.MINYA_USER && window.MINYA_USER.role) || document.documentElement.dataset.userRole || "";
-    const path=currentPath();
+    const existing=document.getElementById("minyaHeaderMenu");
+    if(existing){
+      if(existing.dataset.renderedRole!==currentRole()) renderItems(existing);
+      return;
+    }
 
     const wrap=document.createElement("div");
     wrap.className="minya-header-menu-wrap";
@@ -6624,15 +6647,7 @@ ${payload.sections.join("\n")}
     menu.id="minyaHeaderMenu";
     menu.className="minya-header-menu";
     menu.hidden=true;
-
-    menu.innerHTML=items.filter(item=>{
-      if(item.adminOnly && role!=="admin") return false;
-      if(item.hideFor && item.hideFor.includes(role)) return false;
-      return true;
-    }).map(item=>{
-      const active=(path===item.href || (item.href!=="/" && path.startsWith(item.href))) ? " active" : "";
-      return `<a class="minya-menu-item${active}" href="${item.href}"><span class="minya-menu-label"><i class="minya-menu-symbol" aria-hidden="true">${item.icon}</i><span>${item.label}</span></span><b aria-hidden="true">‹</b></a>`;
-    }).join("");
+    renderItems(menu);
 
     wrap.append(btn,menu);
     header.appendChild(wrap);
@@ -6645,10 +6660,12 @@ ${payload.sections.join("\n")}
 
     btn.addEventListener("click",(event)=>{
       event.stopPropagation();
+      renderItems(menu);
       const open=menu.hidden;
       menu.hidden=!open;
       wrap.classList.toggle("open",open);
       btn.setAttribute("aria-expanded",String(open));
+      if(open) menu.scrollTop=0;
     });
 
     document.addEventListener("click",(event)=>{
@@ -6660,14 +6677,14 @@ ${payload.sections.join("\n")}
   }
 
   function start(){
-    let tries=0;
+    build();
+    let tries=0,lastRole=currentRole();
     const timer=setInterval(()=>{
-      tries += 1;
-      if(document.documentElement.dataset.userRole || tries>=8){
-        clearInterval(timer);
-        build();
-      }
-    },80);
+      tries+=1;
+      const role=currentRole();
+      if(role!==lastRole){lastRole=role;build();}
+      if(tries>=24) clearInterval(timer);
+    },250);
   }
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start,{once:true});
