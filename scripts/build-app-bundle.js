@@ -61,6 +61,11 @@ if (!modulePaths.includes(adminTodayOpsModule)) {
   const workflowSummaryIndex = modulePaths.indexOf(adminWorkflowSummaryModule);
   modulePaths.splice(workflowSummaryIndex >= 0 ? workflowSummaryIndex + 1 : modulePaths.length, 0, adminTodayOpsModule);
 }
+const adminSystemHealthModule = "js/app-admin-system-health.js";
+if (!modulePaths.includes(adminSystemHealthModule)) {
+  const todayOpsIndex = modulePaths.indexOf(adminTodayOpsModule);
+  modulePaths.splice(todayOpsIndex >= 0 ? todayOpsIndex + 1 : modulePaths.length, 0, adminSystemHealthModule);
+}
 const stylePaths = [...styleBlock.matchAll(/"([^"]+\.css)"/g)].map((match) => match[1]);
 
 if (!modulePaths.length || !stylePaths.length) {
