@@ -1,10 +1,10 @@
-# Minya Landfill System V3.4 Stable
+# Minya Landfill System V3.5 Stable
 
 Operational and management reporting system for Al-Minya Landfill.
 
 ## Version
 
-Current stable version: **3.4.0**
+Current stable version: **3.5.0**
 
 ## Main features
 
@@ -21,6 +21,7 @@ Current stable version: **3.4.0**
 - Admin review dashboard with pending, overdue, returned and approved-today indicators.
 - Daily operational KPI dashboard with waste, trucks, diesel and equipment status.
 - Today-versus-yesterday operational comparison.
+- Admin system-health dashboard with SQLite integrity, backup age, storage usage and attachment-problem indicators.
 - Manual SMS and WhatsApp message preparation for users and review actions.
 - User roles: viewer, editor and admin.
 - Admin user management, sessions, audit log and security controls.
@@ -49,7 +50,7 @@ Open `http://localhost:5001`.
 npm test
 ```
 
-The automated tests build and validate the frontend, scan JavaScript syntax, run UI regression checks, run an isolated server smoke test, and launch the same production runtime path used by Railway to verify the package version and SQLite integrity without touching production data.
+The automated tests build and validate the frontend, scan JavaScript syntax, run UI regression checks, run V3.4 compatibility checks, run V3.5 system-health regression checks, run an isolated server smoke test, and launch the same production runtime path used by Railway to verify the package version and SQLite integrity without touching production data.
 
 ## Project structure
 
