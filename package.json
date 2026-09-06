@@ -18,7 +18,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.0",
     "better-sqlite3": "^13.0.3",
     "express": "^5.2.1"
   }
