@@ -15,8 +15,10 @@ assert(health.includes("api('/api/backups')"),'system health dashboard does not 
 assert(health.includes("integrity.missing_attachments?.length"),'missing attachment problems are not included');
 assert(health.includes("integrity.invalid_attachment_paths?.length"),'invalid attachment paths are not included');
 assert(health.includes("integrity.orphan_files?.length"),'orphan attachment files are not included');
-assert(health.includes("integrity.reports_without_operations?.length"),'reports without operations are not included');
-assert(health.includes("integrity.reports_without_equipment?.length"),'reports without equipment are not included');
+assert(health.includes("integrity.reports_without_operations"),'reports without operations are not included');
+assert(health.includes("integrity.reports_without_equipment"),'reports without equipment are not included');
+assert(health.includes("metric('تقارير بدون عمليات'"),'reports-without-operations metric is missing');
+assert(health.includes("metric('تقارير بدون معدات'"),'reports-without-equipment metric is missing');
 assert(health.includes("href=\"/system.html\""),'system health dashboard does not link to system management');
 assert(build.includes('const adminSystemHealthModule = "js/app-admin-system-health.js"'),'system health module is not registered in the build');
 assert(build.includes('modulePaths.splice(todayOpsIndex >= 0 ? todayOpsIndex + 1'),'system health module order is not deterministic');
