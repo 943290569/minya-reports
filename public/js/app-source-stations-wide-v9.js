@@ -1,4 +1,4 @@
-/* V32 Pivot adapter: single source of truth for landfill/stations/Aziz. Supports flat landfill pivots (date row carries quantity/count) and grouped pivots. */
+/* V33 Pivot adapter: single source of truth for landfill/stations/Aziz. Supports flat landfill pivots (date row carries quantity/count) and grouped pivots without double counting date totals. */
 (function(){
   const $=id=>document.getElementById(id);
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -29,21 +29,30 @@
 
   async function normalizeLandfill(input){
     const p=await pivot(input.files?.[0]);if(!p)return false;
-    const out=[['التاريخ','الاسم','الكمية']],map=new Map();let d='';
+    const out=[['التاريخ','الاسم','الكمية']],map=new Map();
+    let section=null;
+    const finish=()=>{
+      if(!section)return;
+      const {date,dateTons,dateTrucks,children}=section,x=emptyLand();
+      let childCount=0;
+      for(const row of children){
+        const label=clean(row[0]),n=norm(label);
+        if(!label||n.includes('الاجمالي الكلي')||n.includes('grand total'))continue;
+        const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));
+        if(tons===0&&trucks===0)continue;
+        const k=bucket(label);x[k].tons+=tons;x[k].trucks+=trucks;expand(out,date,label,tons,trucks);childCount++;
+      }
+      if(childCount===0&&(dateTons!==0||dateTrucks!==0)){
+        x.local.tons+=dateTons;x.local.trucks+=dateTrucks;expand(out,date,'هيئات محلية',dateTons,dateTrucks);
+      }
+      map.set(date,x);section=null;
+    };
     for(let r=p.h+1;r<p.rows.length;r++){
       const row=p.rows[r]||[],date=iso(row[0]);
-      if(date){
-        d=date;if(!map.has(d))map.set(d,emptyLand());
-        /* Flat landfill Pivot: date row itself carries the daily quantity + vehicle count.
-           The uploaded landfill export is filtered to local-authority waste, so record it as local. */
-        const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));
-        if(tons!==0||trucks!==0){const x=map.get(d).local;x.tons+=tons;x.trucks+=trucks;expand(out,d,'هيئات محلية',tons,trucks);}
-        continue;
-      }
-      if(!d||norm(row[0]).includes('الاجمالي الكلي')||norm(row[0]).includes('grand total'))continue;
-      const label=clean(row[0]);if(!label)continue;
-      const k=bucket(label),x=map.get(d);x[k].tons+=num(row[1]);x[k].trucks+=num(row[2]);expand(out,d,label,row[1],row[2]);
+      if(date){finish();section={date,dateTons:num(row[1]),dateTrucks:Math.max(0,Math.round(num(row[2]))),children:[]};continue;}
+      if(section)section.children.push(row);
     }
+    finish();
     state.landfill=map;assign(input,makeFile(out,'مكب-pivot-normalized.xlsx'));return true;
   }
   async function normalizeStations(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','المحطة','الكمية']],map=new Map();let d='';for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(date){d=date;if(!map.has(d))map.set(d,emptyStations());continue;}if(!d||norm(row[0]).includes('الاجمالي الكلي'))continue;const k=stationKey(row[0]);if(!k)continue;const x=map.get(d)[k];x.tons+=num(row[1]);x.trucks+=num(row[2]);expand(out,d,clean(row[0]),row[1],row[2]);}state.stations=map;assign(input,makeFile(out,'محطات-pivot-normalized.xlsx'));return true;}
