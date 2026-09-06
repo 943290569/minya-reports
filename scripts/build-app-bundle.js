@@ -36,6 +36,11 @@ if (!modulePaths.includes(compatibilityModule)) {
   const monthlyIndex = modulePaths.indexOf("js/app-monthly.js");
   modulePaths.splice(monthlyIndex >= 0 ? monthlyIndex + 1 : modulePaths.length, 0, compatibilityModule);
 }
+const monthlyUnitModule = "js/app-monthly-unit-compat.js";
+if (!modulePaths.includes(monthlyUnitModule)) {
+  const printMonthlyIndex = modulePaths.indexOf("js/app-print-monthly.js");
+  modulePaths.splice(printMonthlyIndex >= 0 ? printMonthlyIndex + 1 : modulePaths.length, 0, monthlyUnitModule);
+}
 const stylePaths = [...styleBlock.matchAll(/"([^"]+\.css)"/g)].map((match) => match[1]);
 
 if (!modulePaths.length || !stylePaths.length) {
