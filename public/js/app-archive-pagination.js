@@ -13,21 +13,14 @@ function isArchivePage() {
 async function archiveDeleteReport(id) {
   if (!confirm("هل تريد حذف هذا التقرير نهائيًا؟")) return;
   try {
-    let response = await fetch(`${API}/api/reports/${id}`, { method: "DELETE" });
-    let data = await response.json().catch(() => ({}));
+    const response = await fetch(`${API}/api/reports/${id}`, { method: "DELETE" });
+    const data = await response.json().catch(() => ({}));
 
     if (response.status === 423) {
-      const proceed = confirm("هذا التقرير معتمد أو مرسل للمراجعة. سيتم إعادته إلى مسودة ثم حذفه نهائيًا. هل تريد المتابعة؟");
-      if (!proceed) return;
-      const reopen = await fetch(`${API}/api/reports/${id}/reopen`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "حذف من الأرشيف بواسطة المدير" })
-      });
-      const reopenData = await reopen.json().catch(() => ({}));
-      if (!reopen.ok || !reopenData.ok) throw new Error(reopenData.message || "تعذر إعادة فتح التقرير للحذف");
-      response = await fetch(`${API}/api/reports/${id}`, { method: "DELETE" });
-      data = await response.json().catch(() => ({}));
+      const message = data.message || "لا يمكن حذف تقرير مرسل للمراجعة أو معتمد. أعد فتحه كمسودة أولًا من صفحة المراجعة أو من أدوات المدير، ثم احذفه إذا كان ذلك مقصودًا.";
+      if (typeof showMessage === "function") showMessage(message);
+      else alert(message);
+      return;
     }
 
     if (!response.ok || !data.ok) throw new Error(data.message || "فشل حذف التقرير");
