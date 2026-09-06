@@ -91,9 +91,9 @@
     }
 
     document.getElementById("restoreFileName").textContent = `${file.name} · ${formatBytes(file.size)}`;
-    if (file.size > 40 * 1024 * 1024) {
+    if (file.size > 60 * 1024 * 1024) {
       setStatus("danger", "الملف كبير جدًا");
-      if (errors) { errors.classList.remove("hidden"); errors.textContent = "الحد الآمن للاستعادة من الواجهة هو 40MB."; }
+      if (errors) { errors.classList.remove("hidden"); errors.textContent = "الحد الآمن لملف الاستعادة من الواجهة هو 60MB."; }
       return;
     }
 
