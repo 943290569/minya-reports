@@ -9,6 +9,7 @@ const port = 5100;
 const base = `http://127.0.0.1:${port}`;
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'minya-runtime-smoke-'));
 const testPassword = `T-${crypto.randomBytes(8).toString('hex')}-9a`;
+const nextPassword = `N-${crypto.randomBytes(8).toString('hex')}-8b`;
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 async function waitForHealth() {
@@ -72,7 +73,7 @@ async function login(username,password){
     expectStatus(x,200,'runtime editor creation failed');
     const editorId=Number(x.data?.id||0);
     if(!editorId) throw new Error('runtime editor id missing');
-    const editorCookie=await login('runtimeeditor',testPassword);
+    let editorCookie=await login('runtimeeditor',testPassword);
 
     x=await json('/api/users',auth(adminCookie,'POST',{username:'runtimeviewer',display_name:'Runtime Viewer',password:testPassword,role:'viewer'}));
     expectStatus(x,200,'runtime viewer creation failed');
@@ -157,7 +158,20 @@ async function login(username,password){
     expectStatus(x,200,'admin could not approve a pending report');
     if(x.data?.workflow_status!=='approved') throw new Error('admin approval did not set approved status');
 
-    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + role permissions + safe attachments + returned-report workflow ok.`);
+    x=await json('/api/auth/logout',auth(viewerCookie,'POST',{}));
+    expectStatus(x,200,'viewer logout failed');
+    x=await json('/api/reports',auth(viewerCookie));
+    expectStatus(x,401,'viewer session remained valid after logout');
+
+    x=await json(`/api/users/${editorId}`,auth(adminCookie,'PUT',{password:nextPassword}));
+    expectStatus(x,200,'admin could not change editor password');
+    x=await json('/api/reports',auth(editorCookie));
+    expectStatus(x,401,'old editor session remained valid after password change');
+    editorCookie=await login('runtimeeditor',nextPassword);
+    x=await json('/api/reports',auth(editorCookie));
+    expectStatus(x,200,'editor could not use a new session after password change');
+
+    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + role permissions + session invalidation + safe attachments + returned-report workflow ok.`);
   } catch (error) {
     console.error(output);
     throw error;
