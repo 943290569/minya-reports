@@ -30,5 +30,8 @@ assert(startServer.includes('try{encodeURIComponent(cleanName);}catch'), 'produc
 assert(startServer.includes('if(!validateMimeType(cleanMime))'), 'production attachment upload does not validate MIME type');
 assert(startServer.includes('const buffer=decodeStrictBase64(rawBase64)'), 'production attachment upload does not strictly validate Base64');
 assert(startServer.includes('if(buffer.length>MAX_ATTACHMENT_BYTES)'), 'production attachment upload does not use the shared attachment size limit');
+assert(startServer.includes('new Set(["application/pdf","image/jpeg","image/png","image/gif","image/webp","text/plain"])'), 'safe inline attachment MIME allowlist is missing');
+assert(startServer.includes('safeInline?requestedMime:"application/octet-stream"'), 'unsafe attachment MIME types are not forced to binary download');
+assert(startServer.includes('safeInline?"inline":"attachment"'), 'unsafe attachment MIME types are not forced to attachment disposition');
 
 console.log('V3.5 regression checks passed: admin health + report quality + strict production attachments.');
