@@ -3028,6 +3028,21 @@ function updateArchiveSelectionUI() {
   if (deleteButton) deleteButton.disabled = archiveSelectedReports.size === 0;
 }
 
+function archiveSelectAllReports() {
+  document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = true; });
+  updateArchiveSelectionUI();
+}
+
+function archiveClearSelection() {
+  document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = false; });
+  updateArchiveSelectionUI();
+}
+
+function archiveToggleSelectAll(checked) {
+  document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = Boolean(checked); });
+  updateArchiveSelectionUI();
+}
+
 async function archiveBulkDelete() {
   updateArchiveSelectionUI();
   const ids = Array.from(archiveSelectedReports);
@@ -3096,7 +3111,7 @@ function setupArchivePagination() {
   if (headerRow && !headerRow.querySelector(".archive-select-column")) {
     const header = document.createElement("th");
     header.className = "archive-select-column";
-    header.innerHTML = '<input id="archiveSelectAll" type="checkbox" aria-label="تحديد كل التقارير الظاهرة">';
+    header.innerHTML = '<input id="archiveSelectAll" type="checkbox" aria-label="تحديد كل التقارير الظاهرة" onchange="archiveToggleSelectAll(this.checked)">';
     headerRow.insertBefore(header, headerRow.firstChild);
   }
 
@@ -3104,26 +3119,12 @@ function setupArchivePagination() {
   toolbar.id = "archiveBulkActions";
   toolbar.style.cssText = "display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;";
   toolbar.innerHTML = `
-    <button type="button" id="archiveSelectAllButton">تحديد الكل</button>
-    <button type="button" id="archiveClearSelection">إلغاء التحديد</button>
+    <button type="button" id="archiveSelectAllButton" onclick="archiveSelectAllReports()">تحديد الكل</button>
+    <button type="button" id="archiveClearSelection" onclick="archiveClearSelection()">إلغاء التحديد</button>
     <strong id="archiveSelectedCount">0 محدد</strong>
-    <button type="button" id="archiveBulkDelete" class="role-admin-action" style="background:#b91c1c" disabled>حذف المحدد</button>
+    <button type="button" id="archiveBulkDelete" class="role-admin-action" style="background:#b91c1c" onclick="archiveBulkDelete()" disabled>حذف المحدد</button>
   `;
   table.insertAdjacentElement("beforebegin", toolbar);
-
-  document.getElementById("archiveSelectAll").addEventListener("change", (event) => {
-    document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = event.target.checked; });
-    updateArchiveSelectionUI();
-  });
-  document.getElementById("archiveSelectAllButton").onclick = () => {
-    document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = true; });
-    updateArchiveSelectionUI();
-  };
-  document.getElementById("archiveClearSelection").onclick = () => {
-    document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = false; });
-    updateArchiveSelectionUI();
-  };
-  document.getElementById("archiveBulkDelete").onclick = archiveBulkDelete;
 
   const box = document.createElement("div");
   box.id = "archivePagination";
@@ -3192,7 +3193,7 @@ async function loadArchivePage(page = 1) {
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
         <tr>
-          <td class="archive-select-column"><input class="archive-select-report" type="checkbox" value="${report.id}" aria-label="تحديد التقرير ${escapeHtml(report.report_no)}"></td>
+          <td class="archive-select-column"><input class="archive-select-report" type="checkbox" value="${report.id}" aria-label="تحديد التقرير ${escapeHtml(report.report_no)}" onchange="updateArchiveSelectionUI()"></td>
           <td>${escapeHtml(report.report_no)}</td>
           <td>${formatDate(report.report_date)}</td>
           <td>${formatNumber(report.total_waste_tons)}</td>
@@ -3258,6 +3259,10 @@ if (isArchivePage()) {
 window.loadArchivePage = loadArchivePage;
 window.archiveDeleteReport = archiveDeleteReport;
 window.archiveBulkDelete = archiveBulkDelete;
+window.archiveSelectAllReports = archiveSelectAllReports;
+window.archiveClearSelection = archiveClearSelection;
+window.archiveToggleSelectAll = archiveToggleSelectAll;
+window.updateArchiveSelectionUI = updateArchiveSelectionUI;
 
 ;
 
