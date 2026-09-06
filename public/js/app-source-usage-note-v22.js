@@ -1,4 +1,4 @@
-/* V22: clarify Pivot quantity + vehicle-count fields in selective-reading note. */
+/* V23: clarify Pivot quantity + vehicle-count fields in selective-reading note. Approval/conflict helpers only; landfill corrections are handled by the canonical V33 Pivot adapter. */
 (function(){
   const $=id=>document.getElementById(id);
   function apply(){
@@ -12,7 +12,6 @@
   function loadApproval(){
     loadScript('js/app-source-approve-v4.js?v=3.3.0-source-approve-v4','source-approve-v4');
     loadScript('js/app-source-conflict-bulk-v5.js?v=3.3.0-source-conflict-bulk-v5','source-conflict-bulk-v5');
-    loadScript('js/app-source-landfill-dedupe-v61.js?v=3.3.0-landfill-dedupe-v61','source-landfill-dedupe-v61');
   }
   function init(){const btn=$('analyzeSourceFilesBtn');if(btn)btn.addEventListener('click',schedule);loadApproval();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
