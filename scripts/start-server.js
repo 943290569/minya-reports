@@ -31,6 +31,10 @@ const replacements = [
     'const {name,mime_type,data_base64}=req.body;const cleanName=String(name||"").trim();const cleanMime=String(mime_type||"application/octet-stream").trim();if(!cleanName||!data_base64)return res.status(400).json({ok:false,message:"الملف مطلوب"});if(cleanName.length>255)return res.status(400).json({ok:false,message:"اسم الملف طويل جدًا"});if(/[\\/\u0000-\u001F\u007F]/.test(cleanName))return res.status(400).json({ok:false,message:"اسم الملف يحتوي محارف غير صالحة"});try{encodeURIComponent(cleanName);}catch{return res.status(400).json({ok:false,message:"اسم الملف غير قابل للترميز"});}if(!validateMimeType(cleanMime))return res.status(400).json({ok:false,message:"نوع الملف غير صالح"});const rawBase64=String(data_base64).replace(/^data:[^;]+;base64,/,"");const buffer=decodeStrictBase64(rawBase64);if(!buffer)return res.status(400).json({ok:false,message:"بيانات الملف غير صالحة"});if(buffer.length>MAX_ATTACHMENT_BYTES)return res.status(413).json({ok:false,message:"الحد الأقصى للملف 8MB"});'
   ],
   [
+    'res.type(a.mime_type);res.setHeader("Content-Disposition",`inline; filename*=UTF-8\'\'${encodeURIComponent(a.original_name)}`);res.sendFile(file);',
+    'const requestedMime=String(a.mime_type||"").toLowerCase();const safeInline=new Set(["application/pdf","image/jpeg","image/png","image/gif","image/webp","text/plain"]).has(requestedMime);res.setHeader("Content-Type",safeInline?requestedMime:"application/octet-stream");res.setHeader("Content-Disposition",`${safeInline?"inline":"attachment"}; filename*=UTF-8\'\'${encodeURIComponent(a.original_name)}`);res.sendFile(file);'
+  ],
+  [
     'app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{\n  try {',
     'app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{\n  const restoreCreatedFiles=[];\n  try {'
   ],
