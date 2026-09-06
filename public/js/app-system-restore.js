@@ -116,7 +116,7 @@
       document.getElementById("restoreAttachmentsCount").textContent = formatNumber(s.attachments_count);
       document.getElementById("restoreAttachmentsSize").textContent = formatBytes(s.attachments_bytes);
       document.getElementById("restoreMaintenanceCount").textContent = formatNumber(s.maintenance_count);
-      document.getElementById("restoreDateRange").textContent = s.first_date && s.last_date ? `${s.first_date} — ${s.last_date}` : "-";
+      document.getElementById("restoreDateRange").textContent = s.from_date && s.to_date ? `${s.from_date} — ${s.to_date}` : "-";
       document.getElementById("restoreExportedAt").textContent = formatDateTime(s.exported_at);
       if (preview) preview.classList.remove("hidden");
 
