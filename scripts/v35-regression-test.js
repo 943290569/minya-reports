@@ -38,5 +38,7 @@ assert(startServer.includes('const reportDate=String(r.report_date||"").trim()')
 assert(startServer.includes('parsedDate.toISOString().slice(0,10)!==reportDate'), 'backup validation does not reject impossible calendar dates');
 assert(startServer.includes('const numericChecks=[["temperature",false],["total_trucks",true],["total_waste_tons",true],["total_diesel",true]]'), 'backup validation numeric field checks are missing');
 assert(startServer.includes('field==="total_trucks"&&!Number.isInteger(n)'), 'backup validation does not require integer truck totals');
+assert(startServer.includes('approved_by_name,returned_reason,returned_at,returned_by,returned_to)'), 'restore insert does not include returned-report fields');
+assert(startServer.includes('r.returned_reason||"",r.returned_at||null,r.returned_by||null,r.returned_to||null'), 'restore does not write returned-report metadata values');
 
-console.log('V3.5 regression checks passed: admin health + report quality + strict attachments + safe backup validation.');
+console.log('V3.5 regression checks passed: admin health + report quality + strict attachments + safe backup/restore.');
