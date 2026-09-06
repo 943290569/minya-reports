@@ -25,11 +25,25 @@
     const msg=document.getElementById('securityMsg');
     if(!ub||!sb||!sessionsCount||!usersCount||!lastLogin||!lastFailed||!msg)return;
     try{
-      const d=await api('/api/security/sessions'); const users=d.users||[], sessions=d.sessions||[];
+      const [d,auditData]=await Promise.all([
+        api('/api/security/sessions'),
+        api('/api/audit?limit=1000').catch(()=>({logs:[]}))
+      ]);
+      const users=d.users||[], sessions=d.sessions||[], logs=auditData.logs||[];
+      const failedLogs=logs.filter(x=>x.action==='LOGIN_FAILED');
+      const failedByUser=new Map();
+      failedLogs.forEach(log=>{
+        const key=String(log.entity_id||'').trim().toLowerCase();
+        if(key&&!failedByUser.has(key)) failedByUser.set(key,log.created_at||null);
+      });
+      users.forEach(u=>{
+        const keys=[u.username,u.email].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+        u.last_failed_login=keys.map(k=>failedByUser.get(k)).filter(Boolean).sort().slice(-1)[0]||null;
+      });
       sessionsCount.textContent=sessions.length;
       usersCount.textContent=users.filter(x=>x.is_active).length;
       const last=users.map(x=>x.last_success_login).filter(Boolean).sort().slice(-1)[0];
-      const failed=users.map(x=>x.last_failed_login).filter(Boolean).sort().slice(-1)[0];
+      const failed=failedLogs.map(x=>x.created_at).filter(Boolean).sort().slice(-1)[0];
       lastLogin.textContent=dt(last); lastFailed.textContent=dt(failed);
       ub.innerHTML=users.length?users.map(u=>`<tr><td><strong>${esc(u.display_name)}</strong><small>${esc(u.username)}</small></td><td>${esc(u.role)}</td><td>${u.active_sessions||0}</td><td>${dt(u.last_success_login)}</td><td>${dt(u.last_failed_login)}</td><td><button class="logout-all" data-user="${u.id}" ${u.active_sessions?``:`disabled`}>خروج من كل الأجهزة</button></td></tr>`).join(''):`<tr><td colspan="6">لا توجد بيانات</td></tr>`;
       sb.innerHTML=sessions.length?sessions.map(s=>`<tr><td>${esc(s.display_name)}<small>${esc(s.username)}</small></td><td>${dt(s.created_at)}</td><td>${dt(s.expires_at)}</td><td><button class="revoke-session" data-session="${s.id}">إنهاء الجلسة</button></td></tr>`).join(''):`<tr><td colspan="4">لا توجد جلسات نشطة</td></tr>`;
