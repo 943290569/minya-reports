@@ -7,7 +7,7 @@
     "prestart": "npm run build:app",
     "start": "node scripts/start-server.js",
     "build:app": "node scripts/build-app-bundle.js",
-    "test": "npm run build:app && node scripts/build-app-bundle.js --check && node scripts/check-js.js && node scripts/ui-regression-test.js && node scripts/v34-regression-test.js && node scripts/v35-regression-test.js && node scripts/smoke-test.js && node scripts/runtime-smoke-v33.js"
+    "test": "npm run build:app && node scripts/build-app-bundle.js --check && node scripts/check-js.js && node scripts/ui-regression-test.js && node scripts/v34-regression-test.js && node scripts/v35-regression-test.js && node scripts/smoke-test.js && node scripts/runtime-smoke.js"
   },
   "keywords": [
     "minya-landfill",
