@@ -3023,8 +3023,6 @@ async function archiveDeleteReport(id) {
     let data = await response.json().catch(() => ({}));
 
     if (response.status === 423) {
-      const proceed = confirm("هذا التقرير معتمد أو مرسل للمراجعة. سيتم إعادته إلى مسودة ثم حذفه نهائيًا. هل تريد المتابعة؟");
-      if (!proceed) return;
       const reopen = await fetch(`${API}/api/reports/${id}/reopen`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
