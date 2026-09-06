@@ -5,7 +5,7 @@ const Module = require("module");
 const root = path.resolve(__dirname, "..");
 const serverPath = path.join(root, "server.js");
 const pkg = require(path.join(root, "package.json"));
-const version = String(pkg.version || "3.3.0");
+const version = String(pkg.version || "3.4.0");
 
 let source = fs.readFileSync(serverPath, "utf8");
 
