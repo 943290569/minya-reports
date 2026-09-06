@@ -14,9 +14,13 @@ assert(health.includes("api('/api/backups')"),'system health dashboard does not 
 assert(health.includes("integrity.missing_attachments?.length"),'missing attachment problems are not included');
 assert(health.includes("integrity.invalid_attachment_paths?.length"),'invalid attachment paths are not included');
 assert(health.includes("integrity.orphan_files?.length"),'orphan attachment files are not included');
+assert(health.includes('integrity.reports_without_operations'),'reports-without-operations quality signal is missing');
+assert(health.includes('integrity.reports_without_equipment'),'reports-without-equipment quality signal is missing');
+assert(health.includes("metric('تقارير بدون عمليات'"),'reports without operations metric is missing');
+assert(health.includes("metric('تقارير بدون معدات'"),'reports without equipment metric is missing');
 assert(health.includes("href=\"/system.html\""),'system health dashboard does not link to system management');
 assert(build.includes('const adminSystemHealthModule = "js/app-admin-system-health.js"'),'system health module is not registered in the build');
 assert(build.includes('modulePaths.splice(todayOpsIndex >= 0 ? todayOpsIndex + 1'),'system health module order is not deterministic');
 assert(bundle.includes('/* ===== js/app-admin-system-health.js ===== */'),'system health module is missing from generated bundle');
 
-console.log('V3.5 regression checks passed: admin-only health dashboard + integrity + backup + storage visibility.');
+console.log('V3.5 regression checks passed: admin-only health dashboard + integrity + backup + storage + report completeness visibility.');
