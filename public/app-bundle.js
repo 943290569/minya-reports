@@ -3126,6 +3126,16 @@ function setupArchivePagination() {
   `;
   table.insertAdjacentElement("beforebegin", toolbar);
 
+  if (!document.getElementById("archiveTableScroll")) {
+    const tableScroll = document.createElement("div");
+    tableScroll.id = "archiveTableScroll";
+    tableScroll.setAttribute("role", "region");
+    tableScroll.setAttribute("aria-label", "جدول أرشيف التقارير");
+    tableScroll.tabIndex = 0;
+    table.parentNode.insertBefore(tableScroll, table);
+    tableScroll.appendChild(table);
+  }
+
   const box = document.createElement("div");
   box.id = "archivePagination";
   box.style.cssText =
