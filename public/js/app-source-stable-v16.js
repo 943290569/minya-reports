@@ -1,8 +1,9 @@
 /* Source reader compatibility shim.
- * V30 is now the canonical landfill Pivot reader for both flat and hierarchical files.
- * The former V31 overlay was disabled because it duplicated parsing and rewrote preview values on delayed timers.
+ * The canonical V33 Pivot adapter owns landfill, stations and Aziz normalization.
+ * This compatibility layer stays intentionally lightweight so no delayed renderer
+ * can rewrite preview values after the canonical parser finishes.
  */
 (function(){
   const badge=document.querySelector('#sourceFilesPanel .drive-readonly');
-  if(badge) badge.textContent='معاينة مستقرة V30';
+  if(badge) badge.textContent='معاينة مستقرة V33';
 })();
