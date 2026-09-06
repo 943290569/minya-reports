@@ -16,15 +16,15 @@ const replacements = [
   ],
   [
     '["approved_by_name", "TEXT DEFAULT \'\'"]\n].forEach(([name, definition]) => {',
-    '["approved_by_name", "TEXT DEFAULT \'\'"],\n  ["returned_reason", "TEXT DEFAULT \'\'"],\n  ["returned_at", "TEXT"],\n  ["returned_by", "INTEGER"]\n].forEach(([name, definition]) => {'
+    '["approved_by_name", "TEXT DEFAULT \'\'"],\n  ["returned_reason", "TEXT DEFAULT \'\'"],\n  ["returned_at", "TEXT"],\n  ["returned_by", "INTEGER"],\n  ["returned_to", "INTEGER"]\n].forEach(([name, definition]) => {'
   ],
   [
     "db.prepare(`UPDATE daily_reports SET workflow_status='pending',submitted_at=?,submitted_by=?,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,id);",
-    "db.prepare(`UPDATE daily_reports SET workflow_status='pending',submitted_at=?,submitted_by=?,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason='',returned_at=NULL,returned_by=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,id);"
+    "db.prepare(`UPDATE daily_reports SET workflow_status='pending',submitted_at=?,submitted_by=?,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason='',returned_at=NULL,returned_by=NULL,returned_to=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,id);"
   ],
   [
     "const reason=String(req.body?.reason||\"\").trim().slice(0,500);db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(id);",
-    "const reason=String(req.body?.reason||\"\").trim().slice(0,500);const returnedAt=new Date().toISOString();db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason=?,returned_at=?,returned_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(reason,returnedAt,req.user.id,id);"
+    "const reason=String(req.body?.reason||\"\").trim().slice(0,500);const returnedAt=new Date().toISOString();const returnedTo=report.submitted_by||null;db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason=?,returned_at=?,returned_by=?,returned_to=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(reason,returnedAt,req.user.id,returnedTo,id);"
   ],
   [
     'return { system: "Minya Landfill System", version: "3.2.0", exported_at:',
