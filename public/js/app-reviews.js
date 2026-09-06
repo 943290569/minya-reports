@@ -48,13 +48,33 @@
     catch { return null; }
   }
 
+  function reviewAgeHours(report) {
+    const submitted = new Date(report?.submitted_at || 0).getTime();
+    if (!Number.isFinite(submitted) || submitted <= 0) return 0;
+    return Math.max(0, (Date.now() - submitted) / 3600000);
+  }
+
   async function addDashboardReviewCard() {
     if (currentPath !== "/" || window.MINYA_USER?.role !== "admin") return;
-    const count = await refreshGlobalReviewCount(); if (count === null) return;
+    let data;
+    try { data = await api("/api/reviews/pending"); }
+    catch { return; }
+    const reports = Array.isArray(data.reports) ? data.reports : [];
+    const count = reports.length;
+    addReviewNav(count);
+    const overdue = reports.filter((report) => reviewAgeHours(report) >= 24).sort((a, b) => reviewAgeHours(b) - reviewAgeHours(a));
     const grid = document.querySelector(".dashboard-grid, .home-dashboard-grid, [data-dashboard-grid]");
     if (!grid || document.getElementById("dashboardReviewCard")) return;
-    const card = document.createElement("a"); card.id = "dashboardReviewCard"; card.className = `dashboard-card review-dashboard-card${count ? " has-pending" : ""}`; card.href = "/reviews";
-    card.innerHTML = `<span class="dashboard-icon">✓</span><h3>مراجعة واعتماد التقارير</h3><p>${count ? `يوجد ${count} تقرير بانتظار المراجعة والاعتماد.` : "لا توجد تقارير بانتظار الاعتماد حاليًا."}</p><strong class="review-count">${count}</strong>`;
+    const card = document.createElement("div");
+    card.id = "dashboardReviewCard";
+    card.className = `dashboard-card review-dashboard-card${count ? " has-pending" : ""}${overdue.length ? " has-overdue" : ""}`;
+    card.style.position = "relative";
+    const overdueList = overdue.slice(0, 4).map((report) => {
+      const hours = Math.floor(reviewAgeHours(report));
+      const age = hours >= 48 ? `${Math.floor(hours / 24)} يوم` : `${hours} ساعة`;
+      return `<a href="/report?edit=${report.id}" style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;text-decoration:none"><span>${esc(report.report_no || report.report_date)}</span><small>${age}</small></a>`;
+    }).join("");
+    card.innerHTML = `<a href="/reviews" style="color:inherit;text-decoration:none;display:block"><span class="dashboard-icon">✓</span><h3>مراجعة واعتماد التقارير</h3><p>${count ? `يوجد ${count} تقرير بانتظار المراجعة والاعتماد.` : "لا توجد تقارير بانتظار الاعتماد حاليًا."}</p><strong class="review-count">${count}</strong></a>${overdue.length ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(160,90,0,.25)"><strong style="display:block;color:#9a5b00">متأخر أكثر من 24 ساعة: ${overdue.length}</strong>${overdueList}</div>` : ""}`;
     grid.appendChild(card);
   }
 
@@ -113,7 +133,7 @@
         const params = new URLSearchParams(); if (fromInput.value) params.set("from", fromInput.value); if (toInput.value) params.set("to", toInput.value);
         const data = await api(`/api/reviews/pending?${params}`); const reports = data.reports || []; countEl.textContent = reports.length; addReviewNav(reports.length);
         const reportsById = new Map(reports.map((report) => [String(report.id), report]));
-        body.innerHTML = reports.length ? reports.map((r) => `<tr><td><strong>${esc(r.report_no)}</strong><small>مرسل للمراجعة</small></td><td>${esc(r.report_date)}</td><td>${esc(r.submitted_by_name || "-")}</td><td>${dt(r.submitted_at)}</td><td>${fmt(r.total_waste_tons)} طن</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)} لتر</td><td class="review-row-actions"><a href="/report?edit=${r.id}">فتح ومراجعة</a><button class="review-approve" data-id="${r.id}" data-no="${esc(r.report_no)}">اعتماد</button><button class="review-return" data-id="${r.id}" data-no="${esc(r.report_no)}">إعادة كمسودة</button></td></tr>`).join("") : `<tr><td colspan="8" class="reviews-empty">لا توجد تقارير بانتظار الاعتماد.</td></tr>`;
+        body.innerHTML = reports.length ? reports.map((r) => `<tr><td><strong>${esc(r.report_no)}</strong><small>${reviewAgeHours(r) >= 24 ? `متأخر ${Math.floor(reviewAgeHours(r))} ساعة` : "مرسل للمراجعة"}</small></td><td>${esc(r.report_date)}</td><td>${esc(r.submitted_by_name || "-")}</td><td>${dt(r.submitted_at)}</td><td>${fmt(r.total_waste_tons)} طن</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)} لتر</td><td class="review-row-actions"><a href="/report?edit=${r.id}">فتح ومراجعة</a><button class="review-approve" data-id="${r.id}" data-no="${esc(r.report_no)}">اعتماد</button><button class="review-return" data-id="${r.id}" data-no="${esc(r.report_no)}">إعادة كمسودة</button></td></tr>`).join("") : `<tr><td colspan="8" class="reviews-empty">لا توجد تقارير بانتظار الاعتماد.</td></tr>`;
         body.querySelectorAll(".review-approve").forEach((button) => button.onclick = async () => {
           if (!confirm(`اعتماد التقرير ${button.dataset.no}؟`)) return;
           const report = reportsById.get(String(button.dataset.id));
