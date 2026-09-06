@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.3.0-20260903-v26";
+const MINYA_ASSET_VERSION = "3.5.0-20260906-stable3";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -1155,6 +1155,38 @@ window.loadMonthlyArchiveData = loadMonthlyArchiveData;
 
 ;
 
+/* ===== js/app-monthly-operation-aliases.js ===== */
+/* Normalize legacy/imported operation names in monthly aggregation. */
+(function(){
+  const original = window.calculateMonthlyOperations;
+  if (typeof original !== "function") return;
+
+  const canonical = (name) => {
+    const value = String(name || "").replace(/\s+/g, " ").trim();
+    const aliases = new Map([
+      ["مواد التغطية ( طمم)", "مواد التغطية (طمم)"],
+      ["كميات المياه", "كميات المياه للتعقيم والترطيب"],
+      ["كميات العصارة", "كميات العصارة المرحلة"],
+      ["( طمم) خارجي", "طمم خارجي"],
+      ["(طمم) خارجي", "طمم خارجي"]
+    ]);
+    return aliases.get(value) || value;
+  };
+
+  window.calculateMonthlyOperations = function(detailedReports){
+    const normalized = (detailedReports || []).map((data) => ({
+      ...data,
+      operations: (data.operations || []).map((item) => ({
+        ...item,
+        operation_name: canonical(item.operation_name)
+      }))
+    }));
+    return original(normalized);
+  };
+})();
+
+;
+
 /* ===== js/app-edit.js ===== */
 /* =========================================================
    تقرير كامل
@@ -1701,6 +1733,65 @@ async function printMonthlyReport() {
   popup.document.write(html);
   popup.document.close();
 }
+
+;
+
+/* ===== js/app-monthly-unit-compat.js ===== */
+/* Preserve operation units in monthly print and warn on mixed leachate units. */
+(function(){
+  const original = window.buildMonthlyReportHtml;
+  if (typeof original !== 'function') return;
+
+  function clean(v){ return String(v ?? '').replace(/\s+/g,' ').trim(); }
+  function canonical(name){
+    const v=clean(name);
+    const aliases=new Map([
+      ['كميات العصارة','كميات العصارة المرحلة'],
+      ['مواد التغطية ( طمم)','مواد التغطية (طمم)'],
+      ['كميات المياه','كميات المياه للتعقيم والترطيب'],
+      ['( طمم) خارجي','طمم خارجي'],
+      ['(طمم) خارجي','طمم خارجي']
+    ]);
+    return aliases.get(v)||v;
+  }
+
+  async function monthlyLeachateUnits(){
+    const monthValue=document.getElementById('archiveMonthFilter')?.value||'';
+    if(!monthValue || typeof window.getMonthlyDetailedReports!=='function') return [];
+    try{
+      const details=await window.getMonthlyDetailedReports(monthValue);
+      const units=new Set();
+      for(const data of details||[]){
+        for(const item of data.operations||[]){
+          if(canonical(item.operation_name)==='كميات العصارة المرحلة'){
+            const unit=clean(item.unit);
+            if(unit) units.add(unit);
+          }
+        }
+      }
+      return [...units];
+    }catch(_){ return []; }
+  }
+
+  window.buildMonthlyReportHtml = async function(){
+    let html=await original();
+    if(!html) return html;
+    const units=await monthlyLeachateUnits();
+    if(!units.length) return html;
+
+    if(units.length===1){
+      html=html.replace(/(<tr><td>كميات العصارة المرحلة<\/td><td>[^<]*<\/td><td>[^<]*<\/td><td>)([^<]*)(<\/td><\/tr>)/,
+        `$1${units[0]}$3`);
+      return html;
+    }
+
+    html=html.replace(/(<tr><td>كميات العصارة المرحلة<\/td><td>[^<]*<\/td><td>)([^<]*)(<\/td><td>)([^<]*)(<\/td><\/tr>)/,
+      '$1راجع التفاصيل$3وحدات مختلفة$5');
+    html=html.replace('<div class="section-title">ملخص العمليات الشهرية</div>',
+      '<div class="section-title">ملخص العمليات الشهرية</div><div class="comparison-empty">تنبيه: بيانات العصارة في هذا الشهر تحتوي أكثر من وحدة قياس، لذلك لم يتم اعتماد مجموع موحد لها.</div>');
+    return html;
+  };
+})();
 
 ;
 
@@ -2918,6 +3009,33 @@ window.loadAnnualArchiveData = loadAnnualArchiveData;
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
   const fmt=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
 
+  function canonicalOperationName(name){
+    const value=String(name||'').replace(/\s+/g,' ').trim();
+    const aliases=new Map([
+      ['مواد التغطية ( طمم)','مواد التغطية (طمم)'],
+      ['كميات المياه','كميات المياه للتعقيم والترطيب'],
+      ['كميات العصارة','كميات العصارة المرحلة'],
+      ['( طمم) خارجي','طمم خارجي'],
+      ['(طمم) خارجي','طمم خارجي']
+    ]);
+    return aliases.get(value)||value;
+  }
+
+  function mergeOperationRows(rows){
+    if(!Array.isArray(rows))return [];
+    const map=new Map();
+    rows.forEach(row=>{
+      const name=canonicalOperationName(row?.name);
+      if(!name)return;
+      const current=map.get(name)||{name,vehicles:0,quantity:0,unit:row?.unit||'',daily_average:0};
+      current.vehicles+=Number(row?.vehicles||0);
+      current.quantity+=Number(row?.quantity||0);
+      if(!current.unit&&row?.unit)current.unit=row.unit;
+      map.set(name,current);
+    });
+    return [...map.values()];
+  }
+
   function quantityTable(title,rows){
     if(!Array.isArray(rows)||!rows.length)return '';
     return `<section class="linked-summary-block"><h5>${esc(title)}</h5><div class="linked-summary-scroll"><table><thead><tr><th>البيان</th><th>المركبات / المرات</th><th>الكمية</th><th>المعدل اليومي</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.name)}</td><td>${fmt(row.vehicles)}</td><td>${fmt(row.quantity)} ${esc(row.unit||'')}</td><td>${fmt(row.daily_average)} ${esc(row.unit||'')}</td></tr>`).join('')}</tbody></table></div></section>`;
@@ -2942,9 +3060,10 @@ window.loadAnnualArchiveData = loadAnnualArchiveData;
       return;
     }
     const totals=details.totals||{};
+    const operations=mergeOperationRows(details.operations).map(row=>({...row,daily_average:Number(details.days||0)?row.quantity/Number(details.days):0}));
     const wasteDifference=Math.abs(Number(totals.recorded_waste_tons||0)-Number(totals.incoming_waste_tons||0));
     const differenceNotice=wasteDifference>0.01?`<div class="linked-summary-warning"><b>تنبيه اختلاف:</b> الإجمالي المسجل في التقارير اليومية هو ${fmt(totals.recorded_waste_tons)} طن، بينما مجموع المكب والمحطات هو ${fmt(totals.incoming_waste_tons)} طن. الفرق ${fmt(wasteDifference)} طن ويحتاج مراجعة التقارير اليومية.</div>`:'';
-    panel.innerHTML=`<div class="linked-summary-head"><div><span>SUMMARY LINK</span><h4>المجاميع المرتبطة بالتقارير اليومية</h4><p>تتحدث تلقائيًا من ${fmt(details.days)} تقريرًا دون جمع مكرر.</p></div><div class="linked-summary-kpis"><div><small>نفايات مكب المنيا</small><strong>${fmt(totals.landfill_waste_tons)} طن</strong><em>${fmt(totals.landfill_trucks)} مركبة</em></div><div><small>نفايات محطات الترحيل</small><strong>${fmt(totals.station_waste_tons)} طن</strong><em>${fmt(totals.station_trucks)} شاحنة</em></div><div class="linked-summary-grand"><small>إجمالي الوارد لمكب المنيا</small><strong>${fmt(totals.incoming_waste_tons)} طن</strong><em>${fmt(totals.incoming_trucks)} مركبة وشاحنة</em></div><div><small>إجمالي السولار</small><strong>${fmt(totals.diesel_liters)} لتر</strong></div></div></div><div class="linked-summary-formula"><b>طريقة الحساب:</b> إجمالي النفايات الواردة لمكب المنيا = نفايات مكب المنيا + نفايات جميع محطات الترحيل.</div>${differenceNotice}${quantityTable('عمليات مكب المنيا والخدمات',details.operations)}${quantityTable('محطات الترحيل — محسوبة بصورة مستقلة',details.stations)}${equipmentTable(details.equipment)}`;
+    panel.innerHTML=`<div class="linked-summary-head"><div><span>SUMMARY LINK</span><h4>المجاميع المرتبطة بالتقارير اليومية</h4><p>تتحدث تلقائيًا من ${fmt(details.days)} تقريرًا دون جمع مكرر.</p></div><div class="linked-summary-kpis"><div><small>نفايات مكب المنيا</small><strong>${fmt(totals.landfill_waste_tons)} طن</strong><em>${fmt(totals.landfill_trucks)} مركبة</em></div><div><small>نفايات محطات الترحيل</small><strong>${fmt(totals.station_waste_tons)} طن</strong><em>${fmt(totals.station_trucks)} شاحنة</em></div><div class="linked-summary-grand"><small>إجمالي الوارد لمكب المنيا</small><strong>${fmt(totals.incoming_waste_tons)} طن</strong><em>${fmt(totals.incoming_trucks)} مركبة وشاحنة</em></div><div><small>إجمالي السولار</small><strong>${fmt(totals.diesel_liters)} لتر</strong></div></div></div><div class="linked-summary-formula"><b>طريقة الحساب:</b> إجمالي النفايات الواردة لمكب المنيا = نفايات مكب المنيا + نفايات جميع محطات الترحيل.</div>${differenceNotice}${quantityTable('عمليات مكب المنيا والخدمات',operations)}${quantityTable('محطات الترحيل — محسوبة بصورة مستقلة',details.stations)}${equipmentTable(details.equipment)}`;
   }
 
   window.renderLinkedPeriodSummary=renderLinkedPeriodSummary;
@@ -3040,7 +3159,7 @@ function archiveSelectAllReports() {
   updateArchiveSelectionUI();
 }
 
-function archiveClearSelection() {
+function archiveClearSelectedReports() {
   document.querySelectorAll(".archive-select-report").forEach(box => { box.checked = false; });
   updateArchiveSelectionUI();
 }
@@ -3050,7 +3169,7 @@ function archiveToggleSelectAll(checked) {
   updateArchiveSelectionUI();
 }
 
-async function archiveBulkDelete() {
+async function archiveBulkDeleteSelected() {
   updateArchiveSelectionUI();
   const ids = Array.from(archiveSelectedReports);
   if (!ids.length) return;
@@ -3078,38 +3197,6 @@ async function archiveBulkDelete() {
 
 function isArchivePage() {
   return (location.pathname.replace(/\/+$/, "") || "/") === "/archive";
-}
-
-function installArchiveSelectionEvents() {
-  if (window.__MINYA_ARCHIVE_SELECTION_EVENTS__) return;
-  window.__MINYA_ARCHIVE_SELECTION_EVENTS__ = true;
-
-  document.addEventListener("change", (event) => {
-    const target = event.target;
-    if (target?.matches?.(".archive-select-report")) {
-      updateArchiveSelectionUI();
-      return;
-    }
-    if (target?.id === "archiveSelectAll") {
-      archiveToggleSelectAll(target.checked);
-    }
-  });
-
-  document.addEventListener("click", (event) => {
-    const button = event.target?.closest?.("button");
-    if (!button) return;
-
-    if (button.id === "archiveSelectAllButton") {
-      event.preventDefault();
-      archiveSelectAllReports();
-    } else if (button.id === "archiveClearSelection") {
-      event.preventDefault();
-      archiveClearSelection();
-    } else if (button.id === "archiveBulkDelete") {
-      event.preventDefault();
-      archiveBulkDelete();
-    }
-  });
 }
 
 async function archiveDeleteReport(id) {
@@ -3159,7 +3246,7 @@ function setupArchivePagination() {
   toolbar.style.cssText = "display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;";
   toolbar.innerHTML = `
     <button type="button" id="archiveSelectAllButton">تحديد الكل</button>
-    <button type="button" id="archiveClearSelection">إلغاء التحديد</button>
+    <button type="button" id="archiveClearSelectionButton">إلغاء التحديد</button>
     <strong id="archiveSelectedCount">0 محدد</strong>
     <button type="button" id="archiveBulkDelete" class="role-admin-action" style="background:#b91c1c" disabled>حذف المحدد</button>
   `;
@@ -3267,7 +3354,6 @@ async function loadArchivePage(page = 1) {
     if (next) next.disabled = archivePage >= archivePages;
 
     archiveSelectedReports.clear();
-    tbody.querySelectorAll(".archive-select-report").forEach(box => box.addEventListener("change", updateArchiveSelectionUI));
     updateArchiveSelectionUI();
     if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
@@ -3292,7 +3378,20 @@ async function loadArchivePage(page = 1) {
 })();
 
 if (isArchivePage()) {
-  installArchiveSelectionEvents();
+  document.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target?.matches?.(".archive-select-report")) updateArchiveSelectionUI();
+    if (target?.id === "archiveSelectAll") archiveToggleSelectAll(target.checked);
+  });
+
+  document.addEventListener("click", (event) => {
+    const button = event.target?.closest?.("button");
+    if (!button) return;
+    if (button.id === "archiveSelectAllButton") archiveSelectAllReports();
+    if (button.id === "archiveClearSelectionButton") archiveClearSelectedReports();
+    if (button.id === "archiveBulkDelete") archiveBulkDeleteSelected();
+  });
+
   setupArchivePagination();
   setTimeout(() => loadArchivePage(1), 0);
 
@@ -3309,10 +3408,6 @@ if (isArchivePage()) {
 
 window.loadArchivePage = loadArchivePage;
 window.archiveDeleteReport = archiveDeleteReport;
-window.archiveBulkDelete = archiveBulkDelete;
-window.archiveSelectAllReports = archiveSelectAllReports;
-window.archiveClearSelection = archiveClearSelection;
-window.archiveToggleSelectAll = archiveToggleSelectAll;
 window.updateArchiveSelectionUI = updateArchiveSelectionUI;
 
 ;
@@ -5034,8 +5129,18 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   }
 
   function applyNavigationPermissions() {
-    document.querySelectorAll('a[href="/admin"], a[href="/admin.html"]').forEach(link => {
-      if (role !== "admin") hide(link);
+    const adminOnlyHrefs = [
+      "/admin",
+      "/admin.html",
+      "/system.html",
+      "/drive-import.html",
+      "/reviews"
+    ];
+
+    adminOnlyHrefs.forEach((href) => {
+      document.querySelectorAll(`a[href="${href}"]`).forEach(link => {
+        if (role !== "admin") hide(link);
+      });
     });
 
     if (role === "viewer") {
@@ -5332,11 +5437,25 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const msg=document.getElementById('securityMsg');
     if(!ub||!sb||!sessionsCount||!usersCount||!lastLogin||!lastFailed||!msg)return;
     try{
-      const d=await api('/api/security/sessions'); const users=d.users||[], sessions=d.sessions||[];
+      const [d,auditData]=await Promise.all([
+        api('/api/security/sessions'),
+        api('/api/audit?limit=1000').catch(()=>({logs:[]}))
+      ]);
+      const users=d.users||[], sessions=d.sessions||[], logs=auditData.logs||[];
+      const failedLogs=logs.filter(x=>x.action==='LOGIN_FAILED');
+      const failedByUser=new Map();
+      failedLogs.forEach(log=>{
+        const key=String(log.entity_id||'').trim().toLowerCase();
+        if(key&&!failedByUser.has(key)) failedByUser.set(key,log.created_at||null);
+      });
+      users.forEach(u=>{
+        const keys=[u.username,u.email].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+        u.last_failed_login=keys.map(k=>failedByUser.get(k)).filter(Boolean).sort().slice(-1)[0]||null;
+      });
       sessionsCount.textContent=sessions.length;
       usersCount.textContent=users.filter(x=>x.is_active).length;
       const last=users.map(x=>x.last_success_login).filter(Boolean).sort().slice(-1)[0];
-      const failed=users.map(x=>x.last_failed_login).filter(Boolean).sort().slice(-1)[0];
+      const failed=failedLogs.map(x=>x.created_at).filter(Boolean).sort().slice(-1)[0];
       lastLogin.textContent=dt(last); lastFailed.textContent=dt(failed);
       ub.innerHTML=users.length?users.map(u=>`<tr><td><strong>${esc(u.display_name)}</strong><small>${esc(u.username)}</small></td><td>${esc(u.role)}</td><td>${u.active_sessions||0}</td><td>${dt(u.last_success_login)}</td><td>${dt(u.last_failed_login)}</td><td><button class="logout-all" data-user="${u.id}" ${u.active_sessions?``:`disabled`}>خروج من كل الأجهزة</button></td></tr>`).join(''):`<tr><td colspan="6">لا توجد بيانات</td></tr>`;
       sb.innerHTML=sessions.length?sessions.map(s=>`<tr><td>${esc(s.display_name)}<small>${esc(s.username)}</small></td><td>${dt(s.created_at)}</td><td>${dt(s.expires_at)}</td><td><button class="revoke-session" data-session="${s.id}">إنهاء الجلسة</button></td></tr>`).join(''):`<tr><td colspan="4">لا توجد جلسات نشطة</td></tr>`;
@@ -5570,6 +5689,90 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     },320);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+
+;
+
+/* ===== js/app-admin-whatsapp.js ===== */
+(function(){
+  if((location.pathname.replace(/\/+$/,'')||'/')!=='/admin') return;
+
+  const clean=v=>String(v||'').trim().replace(/[\s().-]/g,'');
+  function whatsappNumber(v){
+    let n=clean(v);
+    if(n.startsWith('00'))n=n.slice(2);
+    if(n.startsWith('+'))n=n.slice(1);
+    if(n.startsWith('0'))n=`970${n.slice(1)}`;
+    return /^\d{8,15}$/.test(n)?n:'';
+  }
+  function rowMobile(userId){
+    const row=document.querySelector(`#usersManageBody tr[data-user="${CSS.escape(String(userId||''))}"]`);
+    return clean(row?.querySelector('td:nth-child(3)')?.textContent||'');
+  }
+  function selectUser(userId){
+    const smsBtn=document.querySelector(`.sms-user-btn[data-user="${CSS.escape(String(userId||''))}"]`);
+    if(smsBtn&&!smsBtn.disabled)smsBtn.click();
+    const select=document.getElementById('smsRecipient');
+    if(select)select.value=String(userId||'');
+    document.querySelector('.sms-compose-card')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    const status=document.getElementById('smsComposeMsg');
+    if(status)status.textContent='تم اختيار المستخدم. اكتب الرسالة أو اختر نصًا جاهزًا ثم اضغط فتح واتساب.';
+  }
+  function openWhatsApp(){
+    const select=document.getElementById('smsRecipient');
+    const message=document.getElementById('smsMessage');
+    const status=document.getElementById('smsComposeMsg');
+    const id=select?.value||'';
+    const number=whatsappNumber(rowMobile(id));
+    const text=String(message?.value||'').trim();
+    if(!id){if(status)status.textContent='اختر مستخدمًا أولًا.';return;}
+    if(!number){if(status)status.textContent='رقم الجوال غير صالح لواتساب.';return;}
+    if(!text){if(status)status.textContent='اكتب نص الرسالة أولًا.';return;}
+    const url=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+    window.open(url,'_blank','noopener,noreferrer');
+    if(status)status.textContent='تم فتح واتساب بالرقم والنص. راجع الرسالة ثم اضغط إرسال من واتساب.';
+  }
+  function enhanceComposer(){
+    const card=document.querySelector('.sms-compose-card');
+    if(!card)return;
+    const head=card.querySelector('.sms-compose-head');
+    const tag=head?.querySelector('span');
+    const title=head?.querySelector('h3');
+    const desc=head?.querySelector('p');
+    if(tag)tag.textContent='SMS / WHATSAPP';
+    if(title)title.textContent='إرسال رسالة جوال أو واتساب';
+    if(desc)desc.textContent='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.';
+    const actions=card.querySelector('.sms-compose-actions');
+    const sms=document.getElementById('openSmsApp');
+    if(actions&&sms&&!document.getElementById('openWhatsAppApp')){
+      const btn=document.createElement('button');
+      btn.id='openWhatsAppApp';
+      btn.type='button';
+      btn.className='v3-primary';
+      btn.textContent='فتح واتساب';
+      btn.addEventListener('click',openWhatsApp);
+      actions.appendChild(btn);
+    }
+  }
+  function enhanceRows(){
+    document.querySelectorAll('#usersManageBody tr[data-user]').forEach(row=>{
+      if(row.querySelector('.whatsapp-user-btn'))return;
+      const sms=row.querySelector('.sms-user-btn');
+      if(!sms)return;
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='whatsapp-user-btn';
+      btn.dataset.user=sms.dataset.user||row.dataset.user||'';
+      btn.textContent='واتساب';
+      btn.disabled=sms.disabled;
+      btn.addEventListener('click',()=>selectUser(btn.dataset.user));
+      sms.insertAdjacentElement('afterend',btn);
+    });
+  }
+  function enhance(){enhanceComposer();enhanceRows();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhance,{once:true});else enhance();
+  const observer=new MutationObserver(enhance);
+  observer.observe(document.documentElement,{childList:true,subtree:true});
 })();
 
 ;
@@ -5939,6 +6142,91 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
 
 ;
 
+/* ===== js/app-returned-report-notice.js ===== */
+/* Returned report notice + editor home alerts. */
+(function(){
+  const pathName=location.pathname.replace(/\/+$/,'')||'/';
+
+  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+  const fmtDate=value=>{
+    if(!value) return '';
+    try{return new Date(value).toLocaleString('ar-EG',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch{return String(value);}
+  };
+  const reportId=()=>Number(new URLSearchParams(location.search).get('edit')||0);
+
+  async function waitForUser(){
+    for(let i=0;i<40&&!window.MINYA_USER;i+=1) await new Promise(resolve=>setTimeout(resolve,50));
+    return window.MINYA_USER||null;
+  }
+
+  async function api(url){
+    const response=await fetch(url);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.ok===false) throw new Error(data.message||'فشل تحميل البيانات');
+    return data;
+  }
+
+  function renderReportNotice(report){
+    document.getElementById('returnedReportNotice')?.remove();
+    if(!report||String(report.workflow_status||'draft')!=='draft'||!report.returned_at) return;
+    const role=window.MINYA_USER?.role||'viewer';
+    if(role!=='editor'&&role!=='admin') return;
+
+    const card=document.createElement('section');
+    card.id='returnedReportNotice';
+    card.className='no-print';
+    card.style.cssText='margin:12px 0;padding:14px 16px;border:1px solid #f0b44d;border-radius:10px;background:#fff8e8;color:#5b3a00;line-height:1.7;';
+    const reason=String(report.returned_reason||'').trim();
+    card.innerHTML=`<strong style="display:block;margin-bottom:4px;font-size:16px">أُعيد التقرير للتعديل</strong><div>${reason?`<b>السبب:</b> ${esc(reason)}`:'لم يتم تسجيل سبب محدد للإعادة.'}</div><small style="display:block;margin-top:4px">تاريخ الإعادة: ${esc(fmtDate(report.returned_at))}</small>`;
+    const workflow=document.getElementById('reportWorkflowPanel');
+    if(workflow) workflow.after(card); else document.querySelector('main.container')?.prepend(card);
+  }
+
+  async function loadReportNotice(){
+    const id=reportId(); if(!id) return;
+    try{const data=await api(`/api/reports/${id}`); renderReportNotice(data.report||data);}catch(error){console.error('Returned report notice failed',error);}
+  }
+
+  function renderHomeCard(reports){
+    document.getElementById('returnedReportsHomeCard')?.remove();
+    if(!reports.length) return;
+    const main=document.querySelector('main.container');
+    if(!main) return;
+
+    const card=document.createElement('section');
+    card.id='returnedReportsHomeCard';
+    card.className='no-print';
+    card.style.cssText='margin:16px 0;padding:16px;border:1px solid #f0b44d;border-radius:12px;background:#fff8e8;color:#5b3a00;';
+    const items=reports.slice(0,6).map(report=>{
+      const reason=String(report.returned_reason||'').trim();
+      return `<a href="/report?edit=${Number(report.id)}" style="display:block;margin-top:9px;padding:10px 12px;border:1px solid #efd49a;border-radius:8px;background:#fff;text-decoration:none;color:#5b3a00"><strong>${esc(report.report_no||report.report_date||'تقرير')}</strong><span style="display:block;margin-top:3px;font-size:13px">${esc(report.report_date||'')}${reason?` · ${esc(reason)}`:''}</span></a>`;
+    }).join('');
+    card.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><strong style="font-size:17px">تقارير أُعيدت للتعديل</strong><div style="margin-top:3px;font-size:14px">لديك ${reports.length} تقرير يحتاج مراجعتك.</div></div><span style="display:inline-flex;min-width:36px;height:36px;align-items:center;justify-content:center;border-radius:999px;background:#9a6700;color:#fff;font-weight:700">${reports.length}</span></div>${items}${reports.length>6?`<small style="display:block;margin-top:8px">يوجد ${reports.length-6} تقرير إضافي في الأرشيف.</small>`:''}`;
+
+    const firstPanel=main.querySelector('section.panel, .dashboard-grid, .home-dashboard-grid, [data-dashboard-grid]');
+    if(firstPanel) main.insertBefore(card,firstPanel); else main.prepend(card);
+  }
+
+  async function loadHomeReturnedReports(){
+    const user=await waitForUser();
+    if(pathName!=='/'||user?.role!=='editor') return;
+    try{
+      const data=await api('/api/reports');
+      const reports=Array.isArray(data.reports)?data.reports:[];
+      const mine=reports.filter(report=>String(report.workflow_status||'draft')==='draft'&&report.returned_at&&Number(report.returned_to||0)===Number(user.id||0)).sort((a,b)=>String(b.returned_at||'').localeCompare(String(a.returned_at||'')));
+      renderHomeCard(mine);
+    }catch(error){console.error('Returned reports home card failed',error);}
+  }
+
+  function init(){
+    if(pathName==='/report'){setTimeout(loadReportNotice,350);setTimeout(loadReportNotice,1000);}
+    if(pathName==='/'){setTimeout(loadHomeReturnedReports,500);setTimeout(loadHomeReturnedReports,1400);}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+
+;
+
 /* ===== js/app-reviews.js ===== */
 /* =========================================================
    صندوق مراجعة واعتماد التقارير
@@ -5947,6 +6235,15 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   const currentPath = location.pathname.replace(/\/+$/, "") || "/";
   const esc = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   const fmt = (value) => Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const cleanMobile = (value) => String(value || "").trim().replace(/[\s().+-]/g, "");
+
+  function whatsappNumber(value) {
+    let mobile = cleanMobile(value);
+    if (!mobile) return "";
+    if (mobile.startsWith("00970") || mobile.startsWith("00972")) mobile = mobile.slice(2);
+    if (mobile.startsWith("059") || mobile.startsWith("056")) mobile = `970${mobile.slice(1)}`;
+    return /^\d{8,15}$/.test(mobile) ? mobile : "";
+  }
 
   function dt(value) {
     if (!value) return "-";
@@ -5981,19 +6278,39 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     catch { return null; }
   }
 
+  function reviewAgeHours(report) {
+    const submitted = new Date(report?.submitted_at || 0).getTime();
+    if (!Number.isFinite(submitted) || submitted <= 0) return 0;
+    return Math.max(0, (Date.now() - submitted) / 3600000);
+  }
+
   async function addDashboardReviewCard() {
     if (currentPath !== "/" || window.MINYA_USER?.role !== "admin") return;
-    const count = await refreshGlobalReviewCount(); if (count === null) return;
+    let data;
+    try { data = await api("/api/reviews/pending"); }
+    catch { return; }
+    const reports = Array.isArray(data.reports) ? data.reports : [];
+    const count = reports.length;
+    addReviewNav(count);
+    const overdue = reports.filter((report) => reviewAgeHours(report) >= 24).sort((a, b) => reviewAgeHours(b) - reviewAgeHours(a));
     const grid = document.querySelector(".dashboard-grid, .home-dashboard-grid, [data-dashboard-grid]");
     if (!grid || document.getElementById("dashboardReviewCard")) return;
-    const card = document.createElement("a"); card.id = "dashboardReviewCard"; card.className = `dashboard-card review-dashboard-card${count ? " has-pending" : ""}`; card.href = "/reviews";
-    card.innerHTML = `<span class="dashboard-icon">✓</span><h3>مراجعة واعتماد التقارير</h3><p>${count ? `يوجد ${count} تقرير بانتظار المراجعة والاعتماد.` : "لا توجد تقارير بانتظار الاعتماد حاليًا."}</p><strong class="review-count">${count}</strong>`;
+    const card = document.createElement("div");
+    card.id = "dashboardReviewCard";
+    card.className = `dashboard-card review-dashboard-card${count ? " has-pending" : ""}${overdue.length ? " has-overdue" : ""}`;
+    card.style.position = "relative";
+    const overdueList = overdue.slice(0, 4).map((report) => {
+      const hours = Math.floor(reviewAgeHours(report));
+      const age = hours >= 48 ? `${Math.floor(hours / 24)} يوم` : `${hours} ساعة`;
+      return `<a href="/report?edit=${report.id}" style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;text-decoration:none"><span>${esc(report.report_no || report.report_date)}</span><small>${age}</small></a>`;
+    }).join("");
+    card.innerHTML = `<a href="/reviews" style="color:inherit;text-decoration:none;display:block"><span class="dashboard-icon">✓</span><h3>مراجعة واعتماد التقارير</h3><p>${count ? `يوجد ${count} تقرير بانتظار المراجعة والاعتماد.` : "لا توجد تقارير بانتظار الاعتماد حاليًا."}</p><strong class="review-count">${count}</strong></a>${overdue.length ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(160,90,0,.25)"><strong style="display:block;color:#9a5b00">متأخر أكثر من 24 ساعة: ${overdue.length}</strong>${overdueList}</div>` : ""}`;
     grid.appendChild(card);
   }
 
   function renderShell() {
     const main = document.querySelector("main.container"); if (!main) return null;
-    main.innerHTML = `<section class="reviews-page"><div class="reviews-hero"><div><span>REPORT APPROVAL</span><h2>مراجعة واعتماد التقارير</h2><p>التقارير التي أرسلها المحررون للمراجعة قبل اعتمادها النهائي.</p></div><div class="reviews-hero-count"><strong id="reviewsCount">0</strong><small>بانتظار الاعتماد</small></div></div><div class="reviews-toolbar"><label>من<input id="reviewsFrom" type="date"></label><label>إلى<input id="reviewsTo" type="date"></label><button id="reviewsRefresh" type="button">تحديث</button><button id="reviewsClear" type="button">مسح الفلاتر</button><span id="reviewsMsg"></span></div><div class="reviews-panel"><div class="reviews-table-wrap"><table class="reviews-table"><thead><tr><th>التقرير</th><th>التاريخ</th><th>أرسله</th><th>وقت الإرسال</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th><th>الإجراء</th></tr></thead><tbody id="reviewsBody"></tbody></table></div></div></section>`;
+    main.innerHTML = `<section class="reviews-page"><div class="reviews-hero"><div><span>REPORT APPROVAL</span><h2>مراجعة واعتماد التقارير</h2><p>التقارير التي أرسلها المحررون للمراجعة قبل اعتمادها النهائي.</p></div><div class="reviews-hero-count"><strong id="reviewsCount">0</strong><small>بانتظار الاعتماد</small></div></div><div class="reviews-toolbar"><label>من<input id="reviewsFrom" type="date"></label><label>إلى<input id="reviewsTo" type="date"></label><button id="reviewsRefresh" type="button">تحديث</button><button id="reviewsClear" type="button">مسح الفلاتر</button><span id="reviewsMsg"></span><span id="reviewWhatsappAction"></span></div><div class="reviews-panel"><div class="reviews-table-wrap"><table class="reviews-table"><thead><tr><th>التقرير</th><th>التاريخ</th><th>أرسله</th><th>وقت الإرسال</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th><th>الإجراء</th></tr></thead><tbody id="reviewsBody"></tbody></table></div></div></section>`;
     return main;
   }
 
@@ -6005,15 +6322,69 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const body = document.getElementById("reviewsBody"); const msg = document.getElementById("reviewsMsg");
     const fromInput = document.getElementById("reviewsFrom"); const toInput = document.getElementById("reviewsTo"); const countEl = document.getElementById("reviewsCount");
     const refreshBtn = document.getElementById("reviewsRefresh"); const clearBtn = document.getElementById("reviewsClear");
+    const whatsappAction = document.getElementById("reviewWhatsappAction");
+    let usersById = new Map();
+
+    async function loadUsers() {
+      try {
+        const data = await api("/api/security/sessions");
+        usersById = new Map((data.users || []).map((item) => [String(item.id), item]));
+      } catch { usersById = new Map(); }
+    }
+
+    function showWhatsapp(report, type, reason = "") {
+      if (!whatsappAction || !report) return;
+      whatsappAction.innerHTML = "";
+      const owner = usersById.get(String(report.submitted_by));
+      const mobile = whatsappNumber(owner?.mobile);
+      if (!mobile) {
+        const note = document.createElement("small");
+        note.textContent = "لا يوجد رقم جوال محفوظ لمحرر التقرير.";
+        whatsappAction.appendChild(note);
+        return;
+      }
+      const approved = type === "approved";
+      const text = approved
+        ? `تم اعتماد التقرير ${report.report_no} بتاريخ ${report.report_date}.`
+        : `تمت إعادة التقرير ${report.report_no} بتاريخ ${report.report_date} للتعديل.${reason ? ` السبب: ${reason}` : ""}`;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "v3-primary review-whatsapp-btn";
+      button.textContent = approved ? "واتساب: تم الاعتماد" : "واتساب: إعادة للتعديل";
+      button.onclick = () => window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+      whatsappAction.appendChild(button);
+    }
+
+    await loadUsers();
 
     async function load() {
       try {
-        refreshBtn.disabled = true; msg.textContent = "جاري التحديث...";
+        refreshBtn.disabled = true; msg.textContent = "جاري التحديث..."; if (whatsappAction) whatsappAction.innerHTML = "";
         const params = new URLSearchParams(); if (fromInput.value) params.set("from", fromInput.value); if (toInput.value) params.set("to", toInput.value);
         const data = await api(`/api/reviews/pending?${params}`); const reports = data.reports || []; countEl.textContent = reports.length; addReviewNav(reports.length);
-        body.innerHTML = reports.length ? reports.map((r) => `<tr><td><strong>${esc(r.report_no)}</strong><small>مرسل للمراجعة</small></td><td>${esc(r.report_date)}</td><td>${esc(r.submitted_by_name || "-")}</td><td>${dt(r.submitted_at)}</td><td>${fmt(r.total_waste_tons)} طن</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)} لتر</td><td class="review-row-actions"><a href="/report?edit=${r.id}">فتح ومراجعة</a><button class="review-approve" data-id="${r.id}" data-no="${esc(r.report_no)}">اعتماد</button><button class="review-return" data-id="${r.id}" data-no="${esc(r.report_no)}">إعادة كمسودة</button></td></tr>`).join("") : `<tr><td colspan="8" class="reviews-empty">لا توجد تقارير بانتظار الاعتماد.</td></tr>`;
-        body.querySelectorAll(".review-approve").forEach((button) => button.onclick = async () => { if (!confirm(`اعتماد التقرير ${button.dataset.no}؟`)) return; try { await api(`/api/reports/${button.dataset.id}/approve`, { method: "POST" }); msg.textContent = "تم اعتماد التقرير"; await load(); } catch (error) { msg.textContent = error.message; } });
-        body.querySelectorAll(".review-return").forEach((button) => button.onclick = async () => { const reason = prompt(`سبب إعادة التقرير ${button.dataset.no} كمسودة (اختياري):`, ""); if (reason === null || !confirm("إعادة التقرير كمسودة ليتم تعديله؟")) return; try { await api(`/api/reports/${button.dataset.id}/reopen`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }); msg.textContent = "تمت إعادة التقرير كمسودة"; await load(); } catch (error) { msg.textContent = error.message; } });
+        const reportsById = new Map(reports.map((report) => [String(report.id), report]));
+        body.innerHTML = reports.length ? reports.map((r) => `<tr><td><strong>${esc(r.report_no)}</strong><small>${reviewAgeHours(r) >= 24 ? `متأخر ${Math.floor(reviewAgeHours(r))} ساعة` : "مرسل للمراجعة"}</small></td><td>${esc(r.report_date)}</td><td>${esc(r.submitted_by_name || "-")}</td><td>${dt(r.submitted_at)}</td><td>${fmt(r.total_waste_tons)} طن</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)} لتر</td><td class="review-row-actions"><a href="/report?edit=${r.id}">فتح ومراجعة</a><button class="review-approve" data-id="${r.id}" data-no="${esc(r.report_no)}">اعتماد</button><button class="review-return" data-id="${r.id}" data-no="${esc(r.report_no)}">إعادة كمسودة</button></td></tr>`).join("") : `<tr><td colspan="8" class="reviews-empty">لا توجد تقارير بانتظار الاعتماد.</td></tr>`;
+        body.querySelectorAll(".review-approve").forEach((button) => button.onclick = async () => {
+          if (!confirm(`اعتماد التقرير ${button.dataset.no}؟`)) return;
+          const report = reportsById.get(String(button.dataset.id));
+          try {
+            await api(`/api/reports/${button.dataset.id}/approve`, { method: "POST" });
+            await load();
+            msg.textContent = "تم اعتماد التقرير";
+            showWhatsapp(report, "approved");
+          } catch (error) { msg.textContent = error.message; }
+        });
+        body.querySelectorAll(".review-return").forEach((button) => button.onclick = async () => {
+          const reason = prompt(`سبب إعادة التقرير ${button.dataset.no} كمسودة (اختياري):`, "");
+          if (reason === null || !confirm("إعادة التقرير كمسودة ليتم تعديله؟")) return;
+          const report = reportsById.get(String(button.dataset.id));
+          try {
+            await api(`/api/reports/${button.dataset.id}/reopen`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) });
+            await load();
+            msg.textContent = "تمت إعادة التقرير كمسودة";
+            showWhatsapp(report, "returned", reason);
+          } catch (error) { msg.textContent = error.message; }
+        });
         msg.textContent = `تم التحديث — ${reports.length} تقرير`;
       } catch (error) { body.innerHTML = `<tr><td colspan="8" class="reviews-empty">${esc(error.message)}</td></tr>`; msg.textContent = error.message; }
       finally { refreshBtn.disabled = false; }
@@ -6030,6 +6401,257 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+
+;
+
+/* ===== js/app-admin-workflow-summary.js ===== */
+/* Admin workflow summary strip for dashboard. */
+(function(){
+  const pathName=location.pathname.replace(/\/+$/,'')||'/';
+  if(pathName!=='/') return;
+
+  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+
+  async function waitForAdmin(){
+    for(let i=0;i<40&&!window.MINYA_USER;i+=1) await new Promise(resolve=>setTimeout(resolve,50));
+    return window.MINYA_USER?.role==='admin';
+  }
+
+  async function api(url){
+    const response=await fetch(url);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.ok===false) throw new Error(data.message||'فشل تحميل الملخص');
+    return data;
+  }
+
+  function ageHours(report){
+    const time=new Date(report?.submitted_at||0).getTime();
+    return Number.isFinite(time)&&time>0?Math.max(0,(Date.now()-time)/3600000):0;
+  }
+
+  function isToday(value){
+    if(!value) return false;
+    const date=new Date(value);
+    if(Number.isNaN(date.getTime())) return false;
+    const now=new Date();
+    return date.getFullYear()===now.getFullYear()&&date.getMonth()===now.getMonth()&&date.getDate()===now.getDate();
+  }
+
+  function metric(label,value,detail,href,tone){
+    return `<a href="${href}" style="display:block;text-decoration:none;color:inherit;padding:13px 14px;border:1px solid rgba(0,0,0,.1);border-radius:10px;background:${tone};min-width:0"><small style="display:block;margin-bottom:5px;opacity:.8">${esc(label)}</small><strong style="display:block;font-size:24px;line-height:1">${Number(value||0).toLocaleString('en-US')}</strong><span style="display:block;margin-top:6px;font-size:12px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(detail)}</span></a>`;
+  }
+
+  async function render(){
+    if(!(await waitForAdmin())) return;
+    let pendingData,reportsData;
+    try{
+      [pendingData,reportsData]=await Promise.all([api('/api/reviews/pending'),api('/api/reports')]);
+    }catch(error){console.error('Admin workflow summary failed',error);return;}
+
+    const pending=Array.isArray(pendingData.reports)?pendingData.reports:[];
+    const reports=Array.isArray(reportsData.reports)?reportsData.reports:[];
+    const overdue=pending.filter(report=>ageHours(report)>=24);
+    const returned=reports.filter(report=>String(report.workflow_status||'draft')==='draft'&&report.returned_at);
+    const approvedToday=reports.filter(report=>String(report.workflow_status||'')==='approved'&&isToday(report.approved_at));
+
+    document.getElementById('adminWorkflowSummary')?.remove();
+    const section=document.createElement('section');
+    section.id='adminWorkflowSummary';
+    section.className='no-print';
+    section.style.cssText='margin:14px 0 18px;padding:14px;border:1px solid rgba(0,0,0,.08);border-radius:12px;background:rgba(255,255,255,.75);';
+    section.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px"><div><strong style="font-size:16px">ملخص سير التقارير</strong><small style="display:block;margin-top:2px;opacity:.7">حالة العمل الحالية للمدير</small></div><a href="/reviews" style="text-decoration:none;font-size:13px">فتح المراجعة</a></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px">${metric('بانتظار المراجعة',pending.length,pending.length?'تقارير تحتاج قرارًا':'لا توجد تقارير معلقة','/reviews','#f4f8ff')}${metric('متأخر أكثر من 24 ساعة',overdue.length,overdue.length?'يحتاج متابعة عاجلة':'لا يوجد تأخير','/reviews','#fff5e8')}${metric('معاد للتعديل',returned.length,returned.length?'مسودات أعيدت للمحررين':'لا توجد تقارير معادة','/archive','#fff8e8')}${metric('معتمد اليوم',approvedToday.length,approvedToday.length?'تم إنجازها اليوم':'لا يوجد اعتماد اليوم','/archive','#eef9f1')}</div>`;
+
+    const grid=document.querySelector('.dashboard-grid, .home-dashboard-grid, [data-dashboard-grid]');
+    if(grid?.parentNode) grid.parentNode.insertBefore(section,grid); else document.querySelector('main.container')?.prepend(section);
+  }
+
+  function init(){setTimeout(render,500);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+
+;
+
+/* ===== js/app-admin-today-ops.js ===== */
+/* Admin daily operational KPIs on home dashboard. */
+(function(){
+  const pathName=location.pathname.replace(/\/+$/,'')||'/';
+  if(pathName!=='/') return;
+
+  const fmt=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
+  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+
+  function hebronDateFor(date){
+    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Hebron',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+    const map=Object.fromEntries(parts.filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+    return `${map.year}-${map.month}-${map.day}`;
+  }
+
+  function todayAndYesterday(){
+    const now=new Date();
+    return {today:hebronDateFor(now),yesterday:hebronDateFor(new Date(now.getTime()-86400000))};
+  }
+
+  async function api(url){
+    const response=await fetch(url);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.ok===false) throw new Error(data.message||'فشل تحميل البيانات');
+    return data;
+  }
+
+  async function waitForUser(){
+    for(let i=0;i<40&&!window.MINYA_USER;i+=1) await new Promise(resolve=>setTimeout(resolve,50));
+    return window.MINYA_USER||null;
+  }
+
+  function equipmentSummary(equipment){
+    const list=Array.isArray(equipment)?equipment:[];
+    if(!list.length) return {total:0,working:0,issues:0,text:'لا توجد بيانات معدات'};
+    const working=list.filter(item=>String(item.operating_status||'').trim()==='يعمل').length;
+    const issues=list.length-working;
+    return {total:list.length,working,issues,text:issues?`${working} يعمل / ${issues} يحتاج متابعة`:`${working} يعمل / لا توجد أعطال مسجلة`};
+  }
+
+  function compareText(current,previous){
+    const now=Number(current||0); const before=Number(previous||0);
+    if(!Number.isFinite(now)||!Number.isFinite(before)) return '';
+    const diff=now-before;
+    if(before===0){
+      if(now===0) return 'مثل أمس';
+      return '↑ جديد عن أمس';
+    }
+    const percent=Math.abs((diff/before)*100);
+    if(Math.abs(diff)<1e-9) return '→ مثل أمس';
+    return `${diff>0?'↑':'↓'} ${percent.toLocaleString('en-US',{maximumFractionDigits:1})}% عن أمس`;
+  }
+
+  function metricCard(label,value,unit,current,previous,hasYesterday){
+    return `<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.9)"><small>${esc(label)}</small><strong style="display:block;font-size:22px;margin-top:3px">${esc(value)}${unit?` ${esc(unit)}`:''}</strong><small style="display:block;margin-top:5px;opacity:.75">${hasYesterday?esc(compareText(current,previous)):'لا يوجد تقرير أمس للمقارنة'}</small></div>`;
+  }
+
+  function renderMissing(today){
+    if(document.getElementById('adminTodayOps')) return;
+    const main=document.querySelector('main.container'); if(!main) return;
+    const section=document.createElement('section');
+    section.id='adminTodayOps'; section.className='no-print';
+    section.style.cssText='margin:14px 0;padding:14px 16px;border:1px solid rgba(120,120,120,.22);border-radius:12px;background:rgba(255,255,255,.7);';
+    section.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><strong style="font-size:17px">مؤشرات تشغيل اليوم</strong><small style="display:block;margin-top:3px">${esc(today)}</small></div><a href="/report" style="text-decoration:none">إنشاء تقرير اليوم</a></div><p style="margin:10px 0 0">لم يتم تسجيل تقرير اليوم حتى الآن.</p>`;
+    const grid=document.querySelector('.dashboard-grid, .home-dashboard-grid, [data-dashboard-grid]');
+    if(grid&&grid.parentElement) grid.parentElement.insertBefore(section,grid); else main.prepend(section);
+  }
+
+  function renderReport(report,details,today,yesterdayReport,yesterdayDate){
+    if(document.getElementById('adminTodayOps')) return;
+    const main=document.querySelector('main.container'); if(!main) return;
+    const eq=equipmentSummary(details?.equipment);
+    const hasYesterday=Boolean(yesterdayReport);
+    const section=document.createElement('section');
+    section.id='adminTodayOps'; section.className='no-print';
+    section.style.cssText='margin:14px 0;padding:14px 16px;border:1px solid rgba(55,110,160,.22);border-radius:12px;background:rgba(248,252,255,.88);';
+    section.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><div><strong style="font-size:17px">مؤشرات تشغيل اليوم</strong><small style="display:block;margin-top:3px">${esc(today)} — ${esc(report.report_no||'')}</small>${hasYesterday?`<small style="display:block;margin-top:2px;opacity:.7">المقارنة مع ${esc(yesterdayDate)}</small>`:''}</div><a href="/report?edit=${Number(report.id)}" style="text-decoration:none">فتح تقرير اليوم</a></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px">${metricCard('النفايات',fmt(report.total_waste_tons),'طن',report.total_waste_tons,yesterdayReport?.total_waste_tons,hasYesterday)}${metricCard('الشاحنات',fmt(report.total_trucks),'',report.total_trucks,yesterdayReport?.total_trucks,hasYesterday)}${metricCard('السولار',fmt(report.total_diesel),'لتر',report.total_diesel,yesterdayReport?.total_diesel,hasYesterday)}<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.9)"><small>المعدات</small><strong style="display:block;font-size:16px;margin-top:5px">${esc(eq.text)}</strong><small style="display:block;margin-top:5px;opacity:.75">من تقرير اليوم</small></div></div>`;
+    const grid=document.querySelector('.dashboard-grid, .home-dashboard-grid, [data-dashboard-grid]');
+    if(grid&&grid.parentElement) grid.parentElement.insertBefore(section,grid); else main.prepend(section);
+  }
+
+  async function init(){
+    const user=await waitForUser();
+    if(user?.role!=='admin') return;
+    const dates=todayAndYesterday();
+    try{
+      const data=await api('/api/reports');
+      const reports=Array.isArray(data.reports)?data.reports:[];
+      const report=reports.find(item=>String(item.report_date||'')===dates.today);
+      if(!report){renderMissing(dates.today);return;}
+      const yesterdayReport=reports.find(item=>String(item.report_date||'')===dates.yesterday)||null;
+      let details=null;
+      try{const full=await api(`/api/reports/${report.id}`);details=full.report||full;}catch{}
+      renderReport(report,details,dates.today,yesterdayReport,dates.yesterday);
+    }catch(error){console.error('Admin today ops failed',error);}
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,500));else setTimeout(init,500);
+})();
+
+;
+
+/* ===== js/app-admin-system-health.js ===== */
+/* Admin system health snapshot for the home dashboard. */
+(function(){
+  const pathName=location.pathname.replace(/\/+$/,'')||'/';
+  if(pathName!=='/') return;
+
+  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+  const fmtBytes=value=>{
+    const bytes=Number(value||0);
+    if(!Number.isFinite(bytes)||bytes<=0) return '0 MB';
+    if(bytes>=1024*1024*1024) return `${(bytes/(1024*1024*1024)).toLocaleString('en-US',{maximumFractionDigits:2})} GB`;
+    return `${(bytes/(1024*1024)).toLocaleString('en-US',{maximumFractionDigits:1})} MB`;
+  };
+
+  async function waitForAdmin(){
+    for(let i=0;i<40&&!window.MINYA_USER;i+=1) await new Promise(resolve=>setTimeout(resolve,50));
+    return window.MINYA_USER?.role==='admin';
+  }
+
+  async function api(url){
+    const response=await fetch(url);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.ok===false) throw new Error(data.message||'فشل تحميل حالة النظام');
+    return data;
+  }
+
+  function statusLabel(integrity){
+    if(integrity?.level==='danger') return ['تحتاج تدخلًا','خطر'];
+    if(integrity?.level==='warning') return ['تحتاج متابعة','تنبيه'];
+    return ['سليمة','مستقرة'];
+  }
+
+  function metric(label,value,detail,tone){
+    return `<div style="padding:12px 13px;border:1px solid rgba(0,0,0,.08);border-radius:10px;background:${tone};min-width:0"><small style="display:block;margin-bottom:5px;opacity:.75">${esc(label)}</small><strong style="display:block;font-size:18px;line-height:1.2">${esc(value)}</strong><span style="display:block;margin-top:6px;font-size:12px;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(detail)}</span></div>`;
+  }
+
+  async function render(){
+    if(!(await waitForAdmin())) return;
+    let integrity,storage,backups;
+    try{
+      [integrity,storage,backups]=await Promise.all([
+        api('/api/system/integrity'),
+        api('/api/system/storage'),
+        api('/api/backups')
+      ]);
+    }catch(error){
+      console.error('Admin system health failed',error);
+      return;
+    }
+
+    const issues=Array.isArray(integrity.issues)?integrity.issues:[];
+    const [healthText,healthDetail]=statusLabel(integrity);
+    const latest=Array.isArray(backups.backups)?backups.backups[0]:null;
+    const backupAge=integrity.latest_backup_age_hours;
+    const backupText=latest?'موجودة':'غير موجودة';
+    const backupDetail=latest?(backupAge==null?'آخر نسخة محفوظة':`منذ ${Number(backupAge).toLocaleString('en-US',{maximumFractionDigits:1})} ساعة`):'أنشئ نسخة احتياطية';
+    const storagePercent=Number(storage.percent||0);
+    const storageDetail=`${fmtBytes(storage.total_bytes)} مستخدم`;
+    const attachmentProblems=(integrity.missing_attachments?.length||0)+(integrity.invalid_attachment_paths?.length||0)+(integrity.orphan_files?.length||0);
+    const reportsWithoutOperations=Array.isArray(integrity.reports_without_operations)?integrity.reports_without_operations.length:0;
+    const reportsWithoutEquipment=Array.isArray(integrity.reports_without_equipment)?integrity.reports_without_equipment.length:0;
+
+    document.getElementById('adminSystemHealth')?.remove();
+    const section=document.createElement('section');
+    section.id='adminSystemHealth';
+    section.className='no-print';
+    section.style.cssText='margin:14px 0 18px;padding:14px;border:1px solid rgba(0,0,0,.08);border-radius:12px;background:rgba(255,255,255,.78);';
+    section.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap"><div><strong style="font-size:16px">صحة النظام</strong><small style="display:block;margin-top:2px;opacity:.7">فحص قاعدة البيانات والنسخ الاحتياطية والتخزين وجودة التقارير</small></div><a href="/system.html" style="text-decoration:none;font-size:13px">فتح إدارة النظام</a></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px">${metric('سلامة النظام',healthText,healthDetail,integrity.level==='danger'?'#fff0f0':integrity.level==='warning'?'#fff8e8':'#eef9f1')}${metric('الملاحظات',issues.length,String(issues[0]?.message||'لا توجد ملاحظات حرجة'),issues.length?'#fff8e8':'#f4f8ff')}${metric('آخر نسخة احتياطية',backupText,backupDetail,latest?'#eef9f1':'#fff0f0')}${metric('التخزين',`${storagePercent.toLocaleString('en-US',{maximumFractionDigits:1})}%`,storageDetail,storage.level==='danger'?'#fff0f0':storage.level==='warning'?'#fff8e8':'#f4f8ff')}${metric('مشاكل المرفقات',attachmentProblems,attachmentProblems?'ملفات مفقودة أو يتيمة أو مسارات غير صالحة':'لا توجد مشاكل مرفقات',attachmentProblems?'#fff8e8':'#f4f8ff')}${metric('تقارير بدون عمليات',reportsWithoutOperations,reportsWithoutOperations?'تحتاج استكمال بيانات العمليات':'جميع التقارير تحتوي عمليات',reportsWithoutOperations?'#fff8e8':'#eef9f1')}${metric('تقارير بدون معدات',reportsWithoutEquipment,reportsWithoutEquipment?'تحتاج استكمال بيانات المعدات':'جميع التقارير تحتوي معدات',reportsWithoutEquipment?'#fff8e8':'#eef9f1')}</div>`;
+
+    const workflow=document.getElementById('adminWorkflowSummary');
+    const todayOps=document.getElementById('adminTodayOps');
+    if(todayOps?.parentNode) todayOps.parentNode.insertBefore(section,todayOps.nextSibling);
+    else if(workflow?.parentNode) workflow.parentNode.insertBefore(section,workflow.nextSibling);
+    else document.querySelector('main.container')?.prepend(section);
+  }
+
+  function init(){setTimeout(render,650);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 
 ;
