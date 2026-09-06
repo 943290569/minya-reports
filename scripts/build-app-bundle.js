@@ -26,7 +26,7 @@ const versionMatch = loader.match(/const\s+MINYA_ASSET_VERSION\s*=\s*["']([^"']+
 if (!versionMatch) {
   throw new Error("MINYA_ASSET_VERSION is missing from public/app.js");
 }
-const assetVersion = `${versionMatch[1]}-wa2`;
+const assetVersion = `${versionMatch[1]}-wa3`;
 
 const loaderBlock = loader.slice(start, end + endMarker.length);
 const styleBlock = loader.slice(styleStart, styleEnd + styleEndMarker.length);
