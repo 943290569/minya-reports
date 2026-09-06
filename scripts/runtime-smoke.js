@@ -87,6 +87,8 @@ async function login(username,password){
     expectStatus(x,400,'invalid Base64 attachment was not rejected');
     x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'bad.txt',mime_type:'bad mime',data_base64:Buffer.from('ok').toString('base64')}));
     expectStatus(x,400,'invalid MIME attachment was not rejected');
+    x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'folder/bad.txt',mime_type:'text/plain',data_base64:Buffer.from('ok').toString('base64')}));
+    expectStatus(x,400,'unsafe attachment file name was not rejected');
     x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'ok.txt',mime_type:'text/plain',data_base64:Buffer.from('ok').toString('base64')}));
     expectStatus(x,200,'valid attachment was rejected');
 
