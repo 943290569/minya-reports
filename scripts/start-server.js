@@ -27,6 +27,18 @@ const replacements = [
     "const reason=String(req.body?.reason||\"\").trim().slice(0,500);const returnedAt=new Date().toISOString();const returnedTo=report.submitted_by||null;db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason=?,returned_at=?,returned_by=?,returned_to=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(reason,returnedAt,req.user.id,returnedTo,id);"
   ],
   [
+    'app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{\n  try {',
+    'app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{\n  const restoreCreatedFiles=[];\n  try {'
+  ],
+  [
+    'fs.writeFileSync(path.join(uploadsDir,stored),buffer);db.prepare(`INSERT INTO attachments',
+    'fs.writeFileSync(path.join(uploadsDir,stored),buffer);restoreCreatedFiles.push(stored);db.prepare(`INSERT INTO attachments'
+  ],
+  [
+    '} catch(error){res.status(500).json({ok:false,message:"فشل استعادة النسخة",error:error.message});}\n});',
+    '} catch(error){for(const stored of restoreCreatedFiles)safeUnlinkUpload(stored);res.status(500).json({ok:false,message:"فشل استعادة النسخة",error:error.message});}\n});'
+  ],
+  [
     'return { system: "Minya Landfill System", version: "3.2.0", exported_at:',
     `return { system: "Minya Landfill System", version: "${version}", exported_at:`
   ],
