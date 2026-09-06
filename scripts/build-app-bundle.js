@@ -12,6 +12,9 @@ const driveScriptOutputPath = path.join(root, "public", "drive-import-bundle.js"
 const driveStyleOutputPath = path.join(root, "public", "drive-import-bundle.css");
 const driversIndexPath = path.join(root, "public", "drivers-licenses.html");
 const driversScriptOutputPath = path.join(root, "public", "drivers-licenses-bundle.js");
+const systemIndexPath = path.join(root, "public", "system.html");
+const systemScriptOutputPath = path.join(root, "public", "system-bundle.js");
+const systemStyleOutputPath = path.join(root, "public", "system-bundle.css");
 const loader = fs.readFileSync(loaderPath, "utf8");
 
 const startMarker = "/* MINYA_MODULES_START */";
@@ -34,6 +37,7 @@ if (!versionMatch) {
 const assetVersion = `${versionMatch[1]}-wa7`;
 const driveAssetVersion = `${assetVersion}-drive1`;
 const driversAssetVersion = `${assetVersion}-drivers1`;
+const systemAssetVersion = `${assetVersion}-system1`;
 
 const driveScriptPaths = [
   "js/app-auth.js",
@@ -72,6 +76,18 @@ const driversScriptPaths = [
   "js/app-driver-license-status-red.js",
   "js/app-driver-license-multi-image-import.js",
   "js/app-driver-license-print-v2.js"
+];
+const systemScriptPaths = [
+  "js/app-auth.js",
+  "js/app-system.js",
+  "js/app-system-integrity.js"
+];
+const systemStylePaths = [
+  "style.css",
+  "multipage.css",
+  "system.css",
+  "system-integrity.css",
+  "v3.css"
 ];
 
 const loaderBlock = loader.slice(start, end + endMarker.length);
@@ -143,6 +159,15 @@ const driversScripts = driversScriptPaths.map((relativePath) => {
   return `\n/* ===== ${relativePath} ===== */\n${source}\n;`;
 }).join("\n");
 new vm.Script(driversScripts, { filename: "public/drivers-licenses-bundle.js" });
+const systemScripts = systemScriptPaths.map((relativePath) => {
+  const source = fs.readFileSync(path.join(root, "public", relativePath), "utf8");
+  return `\n/* ===== ${relativePath} ===== */\n${source}\n;`;
+}).join("\n");
+const systemStyles = systemStylePaths.map((relativePath) => {
+  const source = fs.readFileSync(path.join(root, "public", relativePath), "utf8");
+  return `\n/* ===== ${relativePath} ===== */\n${source}\n`;
+}).join("\n");
+new vm.Script(systemScripts, { filename: "public/system-bundle.js" });
 
 const bundleWithModules = `${loader.slice(0, start)}${modules}\n${loader.slice(end + endMarker.length)}`;
 const bundle = bundleWithModules.replace(styleBlock, "");
@@ -164,6 +189,10 @@ const driversIndexSource = fs.readFileSync(driversIndexPath, "utf8");
 const syncedDriversIndexSource = driversIndexSource
   .replace(/app-bundle\.css\?v=[^"']+/g, `app-bundle.css?v=${driversAssetVersion}`)
   .replace(/drivers-licenses-bundle\.js\?v=[^"']+/g, `drivers-licenses-bundle.js?v=${driversAssetVersion}`);
+const systemIndexSource = fs.readFileSync(systemIndexPath, "utf8");
+const syncedSystemIndexSource = systemIndexSource
+  .replace(/system-bundle\.css\?v=[^"']+/g, `system-bundle.css?v=${systemAssetVersion}`)
+  .replace(/system-bundle\.js\?v=[^"']+/g, `system-bundle.js?v=${systemAssetVersion}`);
 
 if (process.argv.includes("--check")) {
   const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : "";
@@ -171,16 +200,20 @@ if (process.argv.includes("--check")) {
   const currentDriveScripts = fs.existsSync(driveScriptOutputPath) ? fs.readFileSync(driveScriptOutputPath, "utf8") : "";
   const currentDriveStyles = fs.existsSync(driveStyleOutputPath) ? fs.readFileSync(driveStyleOutputPath, "utf8") : "";
   const currentDriversScripts = fs.existsSync(driversScriptOutputPath) ? fs.readFileSync(driversScriptOutputPath, "utf8") : "";
-  const bundleOutdated = current !== bundle || currentStyles !== styles || currentDriveScripts !== driveScripts || currentDriveStyles !== driveStyles || currentDriversScripts !== driversScripts;
+  const currentSystemScripts = fs.existsSync(systemScriptOutputPath) ? fs.readFileSync(systemScriptOutputPath, "utf8") : "";
+  const currentSystemStyles = fs.existsSync(systemStyleOutputPath) ? fs.readFileSync(systemStyleOutputPath, "utf8") : "";
+  const bundleOutdated = current !== bundle || currentStyles !== styles || currentDriveScripts !== driveScripts || currentDriveStyles !== driveStyles || currentDriversScripts !== driversScripts || currentSystemScripts !== systemScripts || currentSystemStyles !== systemStyles;
   const indexOutdated = indexSource !== syncedIndexSource;
   const driveIndexOutdated = driveIndexSource !== syncedDriveIndexSource;
   const driversIndexOutdated = driversIndexSource !== syncedDriversIndexSource;
+  const systemIndexOutdated = systemIndexSource !== syncedSystemIndexSource;
 
-  if (bundleOutdated || indexOutdated || driveIndexOutdated || driversIndexOutdated) {
+  if (bundleOutdated || indexOutdated || driveIndexOutdated || driversIndexOutdated || systemIndexOutdated) {
     if (bundleOutdated) console.error("Frontend bundles are outdated. Run: npm run build:app");
     if (indexOutdated) console.error(`public/index.html does not reference asset version ${assetVersion}. Run: npm run build:app`);
     if (driveIndexOutdated) console.error(`public/drive-import.html does not reference asset version ${driveAssetVersion}. Run: npm run build:app`);
     if (driversIndexOutdated) console.error(`public/drivers-licenses.html does not reference asset version ${driversAssetVersion}. Run: npm run build:app`);
+    if (systemIndexOutdated) console.error(`public/system.html does not reference asset version ${systemAssetVersion}. Run: npm run build:app`);
     process.exit(1);
   }
   console.log(`Frontend bundles are current (${modulePaths.length} modules, ${stylePaths.length} styles, version ${assetVersion}).`);
@@ -190,8 +223,11 @@ if (process.argv.includes("--check")) {
   fs.writeFileSync(driveScriptOutputPath, driveScripts);
   fs.writeFileSync(driveStyleOutputPath, driveStyles);
   fs.writeFileSync(driversScriptOutputPath, driversScripts);
+  fs.writeFileSync(systemScriptOutputPath, systemScripts);
+  fs.writeFileSync(systemStyleOutputPath, systemStyles);
   if (indexSource !== syncedIndexSource) fs.writeFileSync(indexPath, syncedIndexSource, "utf8");
   if (driveIndexSource !== syncedDriveIndexSource) fs.writeFileSync(driveIndexPath, syncedDriveIndexSource, "utf8");
   if (driversIndexSource !== syncedDriversIndexSource) fs.writeFileSync(driversIndexPath, syncedDriversIndexSource, "utf8");
+  if (systemIndexSource !== syncedSystemIndexSource) fs.writeFileSync(systemIndexPath, syncedSystemIndexSource, "utf8");
   console.log(`Built frontend bundles from ${modulePaths.length} modules and ${stylePaths.length} styles (version ${assetVersion}).`);
 }
