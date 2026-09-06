@@ -3073,6 +3073,38 @@ function isArchivePage() {
   return (location.pathname.replace(/\/+$/, "") || "/") === "/archive";
 }
 
+function installArchiveSelectionEvents() {
+  if (window.__MINYA_ARCHIVE_SELECTION_EVENTS__) return;
+  window.__MINYA_ARCHIVE_SELECTION_EVENTS__ = true;
+
+  document.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target?.matches?.(".archive-select-report")) {
+      updateArchiveSelectionUI();
+      return;
+    }
+    if (target?.id === "archiveSelectAll") {
+      archiveToggleSelectAll(target.checked);
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const button = event.target?.closest?.("button");
+    if (!button) return;
+
+    if (button.id === "archiveSelectAllButton") {
+      event.preventDefault();
+      archiveSelectAllReports();
+    } else if (button.id === "archiveClearSelection") {
+      event.preventDefault();
+      archiveClearSelection();
+    } else if (button.id === "archiveBulkDelete") {
+      event.preventDefault();
+      archiveBulkDelete();
+    }
+  });
+}
+
 async function archiveDeleteReport(id) {
   if (!confirm("هل تريد حذف هذا التقرير نهائيًا؟")) return;
   try {
@@ -3111,7 +3143,7 @@ function setupArchivePagination() {
   if (headerRow && !headerRow.querySelector(".archive-select-column")) {
     const header = document.createElement("th");
     header.className = "archive-select-column";
-    header.innerHTML = '<input id="archiveSelectAll" type="checkbox" aria-label="تحديد كل التقارير الظاهرة" onchange="archiveToggleSelectAll(this.checked)">';
+    header.innerHTML = '<input id="archiveSelectAll" type="checkbox" aria-label="تحديد كل التقارير الظاهرة">';
     headerRow.insertBefore(header, headerRow.firstChild);
   }
 
@@ -3119,10 +3151,10 @@ function setupArchivePagination() {
   toolbar.id = "archiveBulkActions";
   toolbar.style.cssText = "display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;";
   toolbar.innerHTML = `
-    <button type="button" id="archiveSelectAllButton" onclick="archiveSelectAllReports()">تحديد الكل</button>
-    <button type="button" id="archiveClearSelection" onclick="archiveClearSelection()">إلغاء التحديد</button>
+    <button type="button" id="archiveSelectAllButton">تحديد الكل</button>
+    <button type="button" id="archiveClearSelection">إلغاء التحديد</button>
     <strong id="archiveSelectedCount">0 محدد</strong>
-    <button type="button" id="archiveBulkDelete" class="role-admin-action" style="background:#b91c1c" onclick="archiveBulkDelete()" disabled>حذف المحدد</button>
+    <button type="button" id="archiveBulkDelete" class="role-admin-action" style="background:#b91c1c" disabled>حذف المحدد</button>
   `;
   table.insertAdjacentElement("beforebegin", toolbar);
 
@@ -3203,7 +3235,7 @@ async function loadArchivePage(page = 1) {
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
         <tr>
-          <td class="archive-select-column"><input class="archive-select-report" type="checkbox" value="${report.id}" aria-label="تحديد التقرير ${escapeHtml(report.report_no)}" onchange="updateArchiveSelectionUI()"></td>
+          <td class="archive-select-column"><input class="archive-select-report" type="checkbox" value="${report.id}" aria-label="تحديد التقرير ${escapeHtml(report.report_no)}"></td>
           <td>${escapeHtml(report.report_no)}</td>
           <td>${formatDate(report.report_date)}</td>
           <td>${formatNumber(report.total_waste_tons)}</td>
@@ -3253,6 +3285,7 @@ async function loadArchivePage(page = 1) {
 })();
 
 if (isArchivePage()) {
+  installArchiveSelectionEvents();
   setupArchivePagination();
   setTimeout(() => loadArchivePage(1), 0);
 
