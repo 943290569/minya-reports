@@ -1771,7 +1771,14 @@ document.getElementById("clearArchiveFiltersBtn")?.addEventListener("click", () 
 });
 
 document.getElementById("saveBtn").addEventListener("click", saveReport);
-document.getElementById("archiveBtn").addEventListener("click", () => loadArchive(true));
+document.getElementById("archiveBtn").addEventListener("click", () => {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/archive" && typeof window.loadArchivePage === "function") {
+    window.loadArchivePage(1);
+    return;
+  }
+  loadArchive(true);
+});
 document.getElementById("newReportBtn").addEventListener("click", resetNewReport);
 document.getElementById("printMonthlyReportBtn")?.addEventListener("click", printMonthlyReport);
 
@@ -3384,6 +3391,8 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
       setTimeout(() => window.loadAnnualArchiveData(), 50);
     } else if (page === "monthly" && typeof window.loadMonthlyArchiveData === "function") {
       setTimeout(() => window.loadMonthlyArchiveData(false), 50);
+    } else if (page === "archive" && typeof window.loadArchivePage === "function") {
+      setTimeout(() => window.loadArchivePage(1), 50);
     } else if (typeof loadArchive === "function") {
       setTimeout(() => loadArchive(false), 50);
     }
