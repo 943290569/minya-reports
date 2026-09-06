@@ -7,6 +7,9 @@ const loaderPath = path.join(root, "public", "app.js");
 const outputPath = path.join(root, "public", "app-bundle.js");
 const styleOutputPath = path.join(root, "public", "app-bundle.css");
 const indexPath = path.join(root, "public", "index.html");
+const driveIndexPath = path.join(root, "public", "drive-import.html");
+const driveScriptOutputPath = path.join(root, "public", "drive-import-bundle.js");
+const driveStyleOutputPath = path.join(root, "public", "drive-import-bundle.css");
 const loader = fs.readFileSync(loaderPath, "utf8");
 
 const startMarker = "/* MINYA_MODULES_START */";
@@ -27,6 +30,38 @@ if (!versionMatch) {
   throw new Error("MINYA_ASSET_VERSION is missing from public/app.js");
 }
 const assetVersion = `${versionMatch[1]}-wa7`;
+const driveAssetVersion = `${assetVersion}-drive1`;
+
+const driveScriptPaths = [
+  "js/app-auth.js",
+  "js/app-drive-admin-guard.js",
+  "js/app-logout-header.js",
+  "js/app-header-menu.js",
+  "js/app-source-files-import.js",
+  "js/app-source-import-guard-v6.js",
+  "js/app-source-stable-v16.js",
+  "js/app-source-pivot-raw-v30.js",
+  "js/app-source-stations-wide-v9.js",
+  "js/app-source-usage-note-v22.js",
+  "js/app-drive-import.js",
+  "js/app-drive-quality.js",
+  "js/app-drive-quality-details.js",
+  "js/app-drive-folder-nav.js",
+  "js/app-english-digits.js"
+];
+const driveStylePaths = [
+  "style.css",
+  "v3.css",
+  "header-tone.css",
+  "account-position.css",
+  "header-compact.css",
+  "desktop-nav-hero.css",
+  "final-ui-stabilize.css",
+  "mobile-vertical-menu.css",
+  "drive-import.css",
+  "drive-folder-nav.css",
+  "source-files-import.css"
+];
 
 const loaderBlock = loader.slice(start, end + endMarker.length);
 const styleBlock = loader.slice(styleStart, styleEnd + styleEndMarker.length);
@@ -83,6 +118,16 @@ const styles = stylePaths.map((relativePath) => {
   return `\n/* ===== ${relativePath} ===== */\n${source}\n`;
 }).join("\n");
 
+const driveScripts = driveScriptPaths.map((relativePath) => {
+  const source = fs.readFileSync(path.join(root, "public", relativePath), "utf8");
+  return `\n/* ===== ${relativePath} ===== */\n${source}\n;`;
+}).join("\n");
+const driveStyles = driveStylePaths.map((relativePath) => {
+  const source = fs.readFileSync(path.join(root, "public", relativePath), "utf8");
+  return `\n/* ===== ${relativePath} ===== */\n${source}\n`;
+}).join("\n");
+new vm.Script(driveScripts, { filename: "public/drive-import-bundle.js" });
+
 const bundleWithModules = `${loader.slice(0, start)}${modules}\n${loader.slice(end + endMarker.length)}`;
 const bundle = bundleWithModules.replace(styleBlock, "");
 new vm.Script(bundle, { filename: "public/app-bundle.js" });
@@ -95,22 +140,33 @@ function syncIndexAssetVersion(source) {
 
 const indexSource = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : "";
 const syncedIndexSource = syncIndexAssetVersion(indexSource);
+const driveIndexSource = fs.readFileSync(driveIndexPath, "utf8");
+const syncedDriveIndexSource = driveIndexSource
+  .replace(/drive-import-bundle\.css\?v=[^"']+/g, `drive-import-bundle.css?v=${driveAssetVersion}`)
+  .replace(/drive-import-bundle\.js\?v=[^"']+/g, `drive-import-bundle.js?v=${driveAssetVersion}`);
 
 if (process.argv.includes("--check")) {
   const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : "";
   const currentStyles = fs.existsSync(styleOutputPath) ? fs.readFileSync(styleOutputPath, "utf8") : "";
-  const bundleOutdated = current !== bundle || currentStyles !== styles;
+  const currentDriveScripts = fs.existsSync(driveScriptOutputPath) ? fs.readFileSync(driveScriptOutputPath, "utf8") : "";
+  const currentDriveStyles = fs.existsSync(driveStyleOutputPath) ? fs.readFileSync(driveStyleOutputPath, "utf8") : "";
+  const bundleOutdated = current !== bundle || currentStyles !== styles || currentDriveScripts !== driveScripts || currentDriveStyles !== driveStyles;
   const indexOutdated = indexSource !== syncedIndexSource;
+  const driveIndexOutdated = driveIndexSource !== syncedDriveIndexSource;
 
-  if (bundleOutdated || indexOutdated) {
+  if (bundleOutdated || indexOutdated || driveIndexOutdated) {
     if (bundleOutdated) console.error("Frontend bundles are outdated. Run: npm run build:app");
     if (indexOutdated) console.error(`public/index.html does not reference asset version ${assetVersion}. Run: npm run build:app`);
+    if (driveIndexOutdated) console.error(`public/drive-import.html does not reference asset version ${driveAssetVersion}. Run: npm run build:app`);
     process.exit(1);
   }
   console.log(`Frontend bundles are current (${modulePaths.length} modules, ${stylePaths.length} styles, version ${assetVersion}).`);
 } else {
   fs.writeFileSync(outputPath, bundle);
   fs.writeFileSync(styleOutputPath, styles);
+  fs.writeFileSync(driveScriptOutputPath, driveScripts);
+  fs.writeFileSync(driveStyleOutputPath, driveStyles);
   if (indexSource !== syncedIndexSource) fs.writeFileSync(indexPath, syncedIndexSource, "utf8");
+  if (driveIndexSource !== syncedDriveIndexSource) fs.writeFileSync(driveIndexPath, syncedDriveIndexSource, "utf8");
   console.log(`Built frontend bundles from ${modulePaths.length} modules and ${stylePaths.length} styles (version ${assetVersion}).`);
 }

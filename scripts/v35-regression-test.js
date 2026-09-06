@@ -8,6 +8,7 @@ const build=read('scripts/build-app-bundle.js');
 const bundle=read('public/app-bundle.js');
 const startServer=read('scripts/start-server.js');
 const driveImport=read('public/drive-import.html');
+const driveBundle=read('public/drive-import-bundle.js');
 
 assert(health.includes("window.MINYA_USER?.role==='admin'"),'system health dashboard is not restricted to admins');
 assert(health.includes("api('/api/system/integrity')"),'system health dashboard does not read integrity status');
@@ -43,10 +44,11 @@ assert(startServer.includes('approved_by_name,returned_reason,returned_at,return
 assert(startServer.includes('r.returned_reason||"",r.returned_at||null,r.returned_by||null,r.returned_to||null'), 'restore does not write returned-report metadata values');
 
 assert(driveImport.includes('معاينة مستقرة V33'),'Drive import stable badge is not V33');
-assert(driveImport.includes('app-source-stable-v16.js?v=3.4.0-source-stable-v33'),'canonical stable source parser is not pinned to V33');
-assert(driveImport.includes('app-source-pivot-raw-v30.js?v=3.4.0-pivot-compat-v33'),'pivot compatibility parser is not pinned to V33');
-assert(driveImport.includes('app-source-stations-wide-v9.js?v=3.4.0-stations-pivot-v33'),'station parser is not pinned to V33');
+assert(driveImport.includes('drive-import-bundle.js?v='),'Drive JavaScript bundle is missing');
+assert(driveBundle.includes('js/app-source-stable-v16.js'),'canonical stable source parser is missing');
+assert(driveBundle.includes('js/app-source-pivot-raw-v30.js'),'pivot compatibility parser is missing');
+assert(driveBundle.includes('js/app-source-stations-wide-v9.js'),'station parser is missing');
 const forbiddenDriveScripts=['app-source-pivot-raw-v29.js','app-source-landfill-flat-v31.js','app-source-stable-disabled-v31.js','app-source-summary-final-v12.js','app-source-summary-final-v13.js','app-source-approve-v1.js','app-source-approve-v2.js','app-source-landfill-dedupe-v61.js'];
-for(const legacy of forbiddenDriveScripts)assert(!driveImport.includes(legacy),`legacy Drive parser is active again: ${legacy}`);
+for(const legacy of forbiddenDriveScripts)assert(!driveBundle.includes(legacy),`legacy Drive parser is active again: ${legacy}`);
 
 console.log('V3.5 regression checks passed: admin health + report quality + strict attachments + safe backup/restore + Drive V33 parser isolation.');

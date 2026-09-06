@@ -16,6 +16,7 @@ function atLeast(version, major, minor) {
 const pkg = require('../package.json');
 const loader = read('public/app.js');
 const drivePage = read('public/drive-import.html');
+const driveBundle = read('public/drive-import-bundle.js');
 const startServer = read('scripts/start-server.js');
 const returnedNotice = read('public/js/app-returned-report-notice.js');
 const workflowSummary = read('public/js/app-admin-workflow-summary.js');
@@ -59,10 +60,12 @@ assert(reviews.includes('واتساب: إعادة للتعديل'), 'review retu
 assert(adminWhatsApp.includes('https://wa.me/'), 'administrator WhatsApp compose link is missing');
 
 assert(drivePage.includes('معاينة مستقرة V33'), 'Drive import page does not advertise the canonical V33 reader');
-assert(drivePage.includes('source-stable-v33'), 'Drive stable-reader cache key is stale');
-assert(drivePage.includes('pivot-compat-v33'), 'Drive Pivot compatibility cache key is stale');
-assert(drivePage.includes('stations-pivot-v33'), 'Drive canonical Pivot adapter cache key is stale');
-assert(drivePage.includes('usage-note-v24'), 'Drive usage-note cache key is stale');
+assert(drivePage.includes('drive-import-bundle.js?v='), 'Drive JavaScript bundle is missing');
+assert(drivePage.includes('drive-import-bundle.css?v='), 'Drive stylesheet bundle is missing');
+assert(driveBundle.includes('js/app-source-stable-v16.js'), 'Drive stable reader is missing from the bundle');
+assert(driveBundle.includes('js/app-source-pivot-raw-v30.js'), 'Drive Pivot compatibility layer is missing from the bundle');
+assert(driveBundle.includes('js/app-source-stations-wide-v9.js'), 'Drive canonical Pivot adapter is missing from the bundle');
+assert(driveBundle.includes('js/app-source-usage-note-v22.js'), 'Drive usage note is missing from the bundle');
 assert(stableShim.includes('معاينة مستقرة V33'), 'stable reader shim still exposes an old version label');
 assert(pivotShim.includes('V33 adapter'), 'legacy Pivot shim still points to an old adapter version');
 assert(pivotAdapter.includes('/* V33 Pivot adapter:'), 'canonical Pivot adapter is not V33');
