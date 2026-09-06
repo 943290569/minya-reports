@@ -68,12 +68,31 @@ const replacements = [
   ]
 ];
 
-for (const [before, after] of replacements) {
-  if (!source.includes(before)) {
-    throw new Error(`Runtime server sync failed: expected source fragment not found: ${before.slice(0, 80)}`);
+function countOccurrences(haystack, needle) {
+  if (!needle) return 0;
+  let count = 0;
+  let offset = 0;
+  while (true) {
+    const index = haystack.indexOf(needle, offset);
+    if (index < 0) return count;
+    count += 1;
+    offset = index + needle.length;
+  }
+}
+
+replacements.forEach(([before, after], index) => {
+  const matches = countOccurrences(source, before);
+  if (matches !== 1) {
+    throw new Error(`Runtime server sync failed at patch ${index + 1}: expected exactly 1 source match, found ${matches}. Fragment: ${before.slice(0, 80)}`);
   }
   source = source.replace(before, after);
-}
+  if (source.includes(before)) {
+    throw new Error(`Runtime server sync failed at patch ${index + 1}: legacy fragment still present after replacement.`);
+  }
+  if (!source.includes(after)) {
+    throw new Error(`Runtime server sync failed at patch ${index + 1}: replacement fragment missing after patch.`);
+  }
+});
 
 const runtimeModule = new Module(serverPath, module);
 runtimeModule.filename = serverPath;
