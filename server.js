@@ -744,6 +744,33 @@ app.put("/api/reports/:id", requireRole("admin","editor"), (req,res)=>{
     res.json({ok:true,message:adminApproved?"تم تحديث التقرير واعتماده تلقائيًا":"تم تعديل التقرير كمسودة",report:{id,report_no:reportNo,workflow_status:adminApproved?"approved":"draft",approved_at:approvedAt,approved_by_name:approvedName}});
   } catch(error){res.status(500).json({ok:false,message:"فشل تعديل التقرير",error:error.message});}
 });
+app.post("/api/reports/bulk-delete", requireRole("admin"), (req,res)=>{
+  try {
+    const ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(Number).filter(id=>Number.isInteger(id)&&id>0))];
+    if(!ids.length)return res.status(400).json({ok:false,message:"حدد تقريرًا واحدًا على الأقل"});
+    if(ids.length>500)return res.status(400).json({ok:false,message:"الحد الأقصى للحذف الجماعي 500 تقرير"});
+    const placeholders=ids.map(()=>"?").join(",");
+    const reports=db.prepare(`SELECT * FROM daily_reports WHERE id IN (${placeholders})`).all(...ids);
+    if(!reports.length)return res.status(404).json({ok:false,message:"لم يتم العثور على التقارير المحددة"});
+    const foundIds=reports.map(report=>report.id);
+    const foundPlaceholders=foundIds.map(()=>"?").join(",");
+    const files=db.prepare(`SELECT stored_name FROM attachments WHERE report_id IN (${foundPlaceholders})`).all(...foundIds).map(item=>item.stored_name);
+    writeAutomaticBackup("pre-bulk-delete",true);
+    const tx=db.transaction(()=>{
+      const remove=db.prepare(`DELETE FROM daily_reports WHERE id=?`);
+      for(const report of reports){
+        remove.run(report.id);
+        audit(req.user,"DELETE_REPORT","report",report.id,`${report.report_no} | حذف جماعي`);
+      }
+    });
+    tx();
+    for(const stored of files)safeUnlinkUpload(stored);
+    res.json({ok:true,message:`تم حذف ${reports.length} تقرير`,deleted_count:reports.length,missing_count:ids.length-reports.length});
+  } catch(error){
+    res.status(500).json({ok:false,message:"فشل الحذف الجماعي",error:error.message});
+  }
+});
+
 app.delete("/api/reports/:id", requireRole("admin"), (req,res)=>{
   try { const id=Number(req.params.id);const report=db.prepare(`SELECT * FROM daily_reports WHERE id=?`).get(id);if(!report)return res.status(404).json({ok:false,message:"التقرير غير موجود"});const files=db.prepare(`SELECT stored_name FROM attachments WHERE report_id=?`).all(id).map(x=>x.stored_name);writeAutomaticBackup("pre-delete",true);db.prepare(`DELETE FROM daily_reports WHERE id=?`).run(id);for(const stored of files){safeUnlinkUpload(stored);}audit(req.user,"DELETE_REPORT","report",id,report.report_no);res.json({ok:true,message:"تم حذف التقرير بنجاح"}); } catch(error){res.status(500).json({ok:false,message:"فشل حذف التقرير",error:error.message});}
 });
