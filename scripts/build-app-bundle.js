@@ -31,6 +31,11 @@ const assetVersion = versionMatch[1];
 const loaderBlock = loader.slice(start, end + endMarker.length);
 const styleBlock = loader.slice(styleStart, styleEnd + styleEndMarker.length);
 const modulePaths = [...loaderBlock.matchAll(/"(js\/[^"]+\.js)"/g)].map((match) => match[1]);
+const compatibilityModule = "js/app-monthly-operation-aliases.js";
+if (!modulePaths.includes(compatibilityModule)) {
+  const monthlyIndex = modulePaths.indexOf("js/app-monthly.js");
+  modulePaths.splice(monthlyIndex >= 0 ? monthlyIndex + 1 : modulePaths.length, 0, compatibilityModule);
+}
 const stylePaths = [...styleBlock.matchAll(/"([^"]+\.css)"/g)].map((match) => match[1]);
 
 if (!modulePaths.length || !stylePaths.length) {
