@@ -15,7 +15,7 @@ async function json(url,options={}){const response=await fetch(base+url,options)
 function auth(cookie,body){return{method:'POST',headers:{cookie,'content-type':'application/json'},body:JSON.stringify(body)};}
 function expectStatus(result,status,label){if(result.response.status!==status)throw new Error(`${label}: expected ${status}, got ${result.response.status} ${result.data?.message||''}`);}
 function backup(report){return{system:'Minya Landfill System',version:'test',exported_at:new Date().toISOString(),reports:[{report,crews:[],operations:[],stations:[],equipment:[],attachments:[]}],maintenance:[]};}
-function validReport(overrides={}){return{report_date:'2099-01-31',report_no:'MINYA-2099-01-31',temperature:20,total_trucks:2,total_waste_tons:3,total_diesel:4,...overrides};}
+function validReport(overrides={}){return{report_date:'2099-01-31',report_no:'MINYA-2099-01-31',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',total_trucks:2,total_waste_tons:3,total_diesel:4,notes:'backup smoke',workflow_status:'draft',...overrides};}
 
 (async()=>{
   const child=spawn(process.execPath,['scripts/start-server.js'],{cwd:path.resolve(__dirname,'..'),env:{...process.env,PORT:String(port),RAILWAY_ENVIRONMENT:'',MINYA_DATA_DIR:tmp},stdio:['ignore','pipe','pipe']});
@@ -45,6 +45,28 @@ function validReport(overrides={}){return{report_date:'2099-01-31',report_no:'MI
     x=await json('/api/backup/validate',auth(cookie,backup(validReport({total_diesel:-1}))));
     expectStatus(x,400,'negative diesel total accepted');
 
-    console.log('Backup validation smoke passed: valid backup accepted; invalid dates and totals rejected.');
+    const returnedReason='اختبار حفظ سبب الإعادة بعد الاستعادة';
+    const returnedAt='2099-01-30T10:11:12.000Z';
+    const restoreBackup=backup(validReport({
+      workflow_status:'draft',
+      returned_reason:returnedReason,
+      returned_at:returnedAt,
+      returned_by:41,
+      returned_to:42
+    }));
+    x=await json('/api/backup/restore',auth(cookie,restoreBackup));
+    expectStatus(x,200,'backup restore failed');
+
+    x=await json('/api/reports',{headers:{cookie}});
+    expectStatus(x,200,'reports read after restore failed');
+    const reports=Array.isArray(x.data?.reports)?x.data.reports:Array.isArray(x.data)?x.data:[];
+    const restored=reports.find(r=>r.report_date==='2099-01-31');
+    if(!restored)throw new Error('restored report was not found');
+    if(restored.returned_reason!==returnedReason)throw new Error('returned_reason was lost during restore');
+    if(restored.returned_at!==returnedAt)throw new Error('returned_at was lost during restore');
+    if(Number(restored.returned_by)!==41)throw new Error('returned_by was lost during restore');
+    if(Number(restored.returned_to)!==42)throw new Error('returned_to was lost during restore');
+
+    console.log('Backup smoke passed: validation rules enforced and returned-report metadata preserved by restore.');
   }catch(error){console.error(output);throw error;}finally{child.kill('SIGTERM');fs.rmSync(tmp,{recursive:true,force:true});}
 })().catch(error=>{console.error(error.stack||error.message||error);process.exit(1);});
