@@ -74,6 +74,19 @@ async function login(username,password){
     if(!editorId) throw new Error('runtime editor id missing');
     const editorCookie=await login('runtimeeditor',testPassword);
 
+    x=await json('/api/users',auth(adminCookie,'POST',{username:'runtimeviewer',display_name:'Runtime Viewer',password:testPassword,role:'viewer'}));
+    expectStatus(x,200,'runtime viewer creation failed');
+    const viewerCookie=await login('runtimeviewer',testPassword);
+
+    x=await json('/api/reports',auth(viewerCookie));
+    expectStatus(x,200,'viewer could not read reports');
+    x=await json('/api/reports',auth(viewerCookie,'POST',{
+      report_date:'2099-12-29',weather:'صحو',temperature:18,start_time:'04:00',end_time:'19:00',
+      total_trucks:1,total_waste_tons:1,total_diesel:1,notes:'viewer must not create',
+      crews:[],operations:[],stations:[],equipment:[]
+    }));
+    expectStatus(x,403,'viewer was allowed to create a report');
+
     x=await json('/api/reports',auth(adminCookie,'POST',{
       report_date:'2099-12-31',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
       total_trucks:1,total_waste_tons:1,total_diesel:1,notes:'runtime attachment smoke',
@@ -138,7 +151,13 @@ async function login(username,password){
     const resubmitted=x.data?.report||{};
     if(resubmitted.returned_reason||resubmitted.returned_at||resubmitted.returned_by||resubmitted.returned_to) throw new Error('old returned-report metadata was not cleared on resubmission');
 
-    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + safe attachments + returned-report workflow ok.`);
+    x=await json(`/api/reports/${returnedReportId}/approve`,auth(editorCookie,'POST',{}));
+    expectStatus(x,403,'editor was allowed to approve a report');
+    x=await json(`/api/reports/${returnedReportId}/approve`,auth(adminCookie,'POST',{}));
+    expectStatus(x,200,'admin could not approve a pending report');
+    if(x.data?.workflow_status!=='approved') throw new Error('admin approval did not set approved status');
+
+    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + role permissions + safe attachments + returned-report workflow ok.`);
   } catch (error) {
     console.error(output);
     throw error;
