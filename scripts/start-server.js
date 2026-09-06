@@ -98,7 +98,7 @@ replacements.forEach(([before, after], index) => {
     throw new Error(`Runtime server sync failed at patch ${index + 1}: expected exactly 1 source match, found ${matches}. Fragment: ${before.slice(0, 80)}`);
   }
   source = source.replace(before, after);
-  if (source.includes(before)) {
+  if (!after.includes(before) && source.includes(before)) {
     throw new Error(`Runtime server sync failed at patch ${index + 1}: legacy fragment still present after replacement.`);
   }
   if (!source.includes(after)) {
