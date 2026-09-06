@@ -34,4 +34,9 @@ assert(startServer.includes('new Set(["application/pdf","image/jpeg","image/png"
 assert(startServer.includes('safeInline?requestedMime:"application/octet-stream"'), 'unsafe attachment MIME types are not forced to binary download');
 assert(startServer.includes('safeInline?"inline":"attachment"'), 'unsafe attachment MIME types are not forced to attachment disposition');
 
-console.log('V3.5 regression checks passed: admin health + report quality + strict production attachments.');
+assert(startServer.includes('const reportDate=String(r.report_date||"").trim()'), 'backup validation does not normalize report dates');
+assert(startServer.includes('parsedDate.toISOString().slice(0,10)!==reportDate'), 'backup validation does not reject impossible calendar dates');
+assert(startServer.includes('const numericChecks=[["temperature",false],["total_trucks",true],["total_waste_tons",true],["total_diesel",true]]'), 'backup validation numeric field checks are missing');
+assert(startServer.includes('field==="total_trucks"&&!Number.isInteger(n)'), 'backup validation does not require integer truck totals');
+
+console.log('V3.5 regression checks passed: admin health + report quality + strict attachments + safe backup validation.');
