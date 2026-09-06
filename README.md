@@ -1,10 +1,10 @@
-# Minya Landfill System V3.3 Stable
+# Minya Landfill System V3.4 Stable
 
 Operational and management reporting system for Al-Minya Landfill.
 
 ## Version
 
-Current stable version: **3.3.0**
+Current stable version: **3.4.0**
 
 ## Main features
 
@@ -17,11 +17,18 @@ Current stable version: **3.3.0**
 - Weekly and managerial reports.
 - Advanced report search and CSV export.
 - Report workflow: draft → pending review → approved.
+- Returned-report workflow with saved return reason, return date and assigned editor.
+- Admin review dashboard with pending, overdue, returned and approved-today indicators.
+- Daily operational KPI dashboard with waste, trucks, diesel and equipment status.
+- Today-versus-yesterday operational comparison.
+- Manual SMS and WhatsApp message preparation for users and review actions.
 - User roles: viewer, editor and admin.
 - Admin user management, sessions, audit log and security controls.
+- Google Drive / Excel source import with canonical V33 Pivot normalization and cache-safe reader versions.
 - Full JSON backups including attachment content.
 - Automatic backup throttling to avoid redundant rapid backup files.
 - Backup validation and safe restore with pre/post restore backups.
+- Failed-restore cleanup for attachment files created before a rolled-back database transaction.
 - SQLite integrity, storage, missing attachment and orphan-file diagnostics.
 - Security response headers and secure session-cookie support in production.
 
@@ -42,15 +49,16 @@ Open `http://localhost:5001`.
 npm test
 ```
 
-The automated smoke test runs the server with an isolated temporary data directory and verifies roles, report workflow, attachments, maintenance, backups, restore, sessions, audit and integrity checks without touching production data.
+The automated tests build and validate the frontend, scan JavaScript syntax, run UI regression checks, run an isolated server smoke test, and launch the same production runtime path used by Railway to verify the package version and SQLite integrity without touching production data.
 
 ## Project structure
 
 - `server.js` — Express server, API routes, authentication and SQLite initialization.
-- `scripts/start-server.js` — runtime launcher that synchronizes the package version with health/backup metadata and applies the backup JSON request limit.
+- `scripts/start-server.js` — production runtime launcher that synchronizes package version, workflow compatibility fields, backup limits and restore safety patches.
 - `public/index.html` — main multipage application shell.
-- `public/app.js` — application loader.
+- `public/app.js` — application loader and frontend asset version.
 - `public/js/` — application modules.
+- `public/drive-import.html` — administrator Drive / Excel import page.
 - `public/system.html` — system management and diagnostics.
 - `public/assets/header.png` — official print header.
 - `public/assets/footer.png` — official print footer.
