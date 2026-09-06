@@ -5,7 +5,7 @@ const Module = require("module");
 const root = path.resolve(__dirname, "..");
 const serverPath = path.join(root, "server.js");
 const pkg = require(path.join(root, "package.json"));
-const version = String(pkg.version || "3.4.0");
+const version = String(pkg.version || "3.5.0");
 
 let source = fs.readFileSync(serverPath, "utf8");
 
@@ -25,6 +25,10 @@ const replacements = [
   [
     "const reason=String(req.body?.reason||\"\").trim().slice(0,500);db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(id);",
     "const reason=String(req.body?.reason||\"\").trim().slice(0,500);const returnedAt=new Date().toISOString();const returnedTo=report.submitted_by||null;db.prepare(`UPDATE daily_reports SET workflow_status='draft',submitted_at=NULL,submitted_by=NULL,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason=?,returned_at=?,returned_by=?,returned_to=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(reason,returnedAt,req.user.id,returnedTo,id);"
+  ],
+  [
+    'const {name,mime_type,data_base64}=req.body;if(!name||!data_base64)return res.status(400).json({ok:false,message:"الملف مطلوب"});const buffer=Buffer.from(String(data_base64).replace(/^data:[^;]+;base64,/,""),"base64");if(buffer.length>8*1024*1024)return res.status(413).json({ok:false,message:"الحد الأقصى للملف 8MB"});',
+    'const {name,mime_type,data_base64}=req.body;const cleanName=String(name||"").trim();const cleanMime=String(mime_type||"application/octet-stream").trim();if(!cleanName||!data_base64)return res.status(400).json({ok:false,message:"الملف مطلوب"});if(cleanName.length>255)return res.status(400).json({ok:false,message:"اسم الملف طويل جدًا"});if(!validateMimeType(cleanMime))return res.status(400).json({ok:false,message:"نوع الملف غير صالح"});const rawBase64=String(data_base64).replace(/^data:[^;]+;base64,/,"");const buffer=decodeStrictBase64(rawBase64);if(!buffer)return res.status(400).json({ok:false,message:"بيانات الملف غير صالحة"});if(buffer.length>MAX_ATTACHMENT_BYTES)return res.status(413).json({ok:false,message:"الحد الأقصى للملف 8MB"});'
   ],
   [
     'app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{\n  try {',
