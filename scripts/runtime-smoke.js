@@ -92,6 +92,18 @@ async function login(username,password){
     x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'ok.txt',mime_type:'text/plain',data_base64:Buffer.from('ok').toString('base64')}));
     expectStatus(x,200,'valid attachment was rejected');
 
+    const htmlPayload=Buffer.from('<script>document.body.textContent="unsafe"</script>').toString('base64');
+    x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'page.html',mime_type:'text/html',data_base64:htmlPayload}));
+    expectStatus(x,200,'HTML attachment upload should be stored for download');
+    const htmlAttachmentId=Number(x.data?.id||0);
+    if(!htmlAttachmentId) throw new Error('HTML attachment id missing');
+    const htmlDownload=await fetch(`${base}/api/attachments/${htmlAttachmentId}/download`,{headers:{cookie:adminCookie}});
+    if(htmlDownload.status!==200) throw new Error(`HTML attachment download failed: ${htmlDownload.status}`);
+    const contentType=String(htmlDownload.headers.get('content-type')||'').toLowerCase();
+    const disposition=String(htmlDownload.headers.get('content-disposition')||'').toLowerCase();
+    if(!contentType.startsWith('application/octet-stream')) throw new Error(`active attachment was not forced to binary MIME: ${contentType}`);
+    if(!disposition.startsWith('attachment;')) throw new Error(`active attachment was not forced to download: ${disposition}`);
+
     x=await json('/api/reports',auth(editorCookie,'POST',{
       report_date:'2099-12-30',weather:'صحو',temperature:19,start_time:'04:00',end_time:'19:00',
       total_trucks:2,total_waste_tons:2,total_diesel:2,notes:'runtime return smoke',
@@ -126,7 +138,7 @@ async function login(username,password){
     const resubmitted=x.data?.report||{};
     if(resubmitted.returned_reason||resubmitted.returned_at||resubmitted.returned_by||resubmitted.returned_to) throw new Error('old returned-report metadata was not cleared on resubmission');
 
-    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + strict attachments + returned-report workflow ok.`);
+    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + safe attachments + returned-report workflow ok.`);
   } catch (error) {
     console.error(output);
     throw error;
