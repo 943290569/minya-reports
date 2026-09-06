@@ -23,6 +23,18 @@ const replacements = [
     '["approved_by_name", "TEXT DEFAULT \'\'"],\n  ["returned_reason", "TEXT DEFAULT \'\'"],\n  ["returned_at", "TEXT"],\n  ["returned_by", "INTEGER"],\n  ["returned_to", "INTEGER"]\n].forEach(([name, definition]) => {'
   ],
   [
+    'function generateReportNo(reportDate) { return `MINYA-${reportDate}`; }',
+    'function generateReportNo(reportDate) { return `MINYA-${reportDate}`; }\nfunction validateReportPayload(body = {}) {\n  const reportDate=String(body.report_date||"").trim();\n  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(reportDate)) return "تاريخ التقرير غير صالح";\n  const parsedDate=new Date(`${reportDate}T00:00:00Z`);\n  if(Number.isNaN(parsedDate.getTime())||parsedDate.toISOString().slice(0,10)!==reportDate) return "تاريخ التقرير غير موجود في التقويم";\n  const numericChecks=[["temperature",false,false],["total_trucks",true,true],["total_waste_tons",true,false],["total_diesel",true,false]];\n  for(const [field,nonNegative,integerOnly] of numericChecks){\n    const value=body[field];\n    if(value===undefined||value===null||value==="") continue;\n    const n=Number(value);\n    if(!Number.isFinite(n)) return `قيمة ${field} غير رقمية`;\n    if(nonNegative&&n<0) return `قيمة ${field} لا يمكن أن تكون سالبة`;\n    if(integerOnly&&!Number.isInteger(n)) return `قيمة ${field} يجب أن تكون عددًا صحيحًا`;\n  }\n  return "";\n}'
+  ],
+  [
+    '    if(!report_date)return res.status(400).json({ok:false,message:"تاريخ التقرير مطلوب"});\n    if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=?`).get(report_date))return res.status(409).json({ok:false,message:"يوجد تقرير محفوظ مسبقًا بنفس التاريخ"});',
+    '    const validationError=validateReportPayload(req.body);if(validationError)return res.status(400).json({ok:false,message:validationError});\n    if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=?`).get(report_date))return res.status(409).json({ok:false,message:"يوجد تقرير محفوظ مسبقًا بنفس التاريخ"});'
+  ],
+  [
+    '    if(!report_date)return res.status(400).json({ok:false,message:"تاريخ التقرير مطلوب"});\n    if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=? AND id<>?`).get(report_date,id))return res.status(409).json({ok:false,message:"يوجد تقرير آخر محفوظ بنفس التاريخ"});',
+    '    const validationError=validateReportPayload(req.body);if(validationError)return res.status(400).json({ok:false,message:validationError});\n    if(db.prepare(`SELECT id FROM daily_reports WHERE report_date=? AND id<>?`).get(report_date,id))return res.status(409).json({ok:false,message:"يوجد تقرير آخر محفوظ بنفس التاريخ"});'
+  ],
+  [
     "db.prepare(`UPDATE daily_reports SET workflow_status='pending',submitted_at=?,submitted_by=?,approved_at=NULL,approved_by=NULL,approved_by_name='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,id);",
     "db.prepare(`UPDATE daily_reports SET workflow_status='pending',submitted_at=?,submitted_by=?,approved_at=NULL,approved_by=NULL,approved_by_name='',returned_reason='',returned_at=NULL,returned_by=NULL,returned_to=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(now,req.user.id,id);"
   ],
