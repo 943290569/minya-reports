@@ -25,6 +25,8 @@ assert(build.includes('modulePaths.splice(todayOpsIndex >= 0 ? todayOpsIndex + 1
 assert(bundle.includes('/* ===== js/app-admin-system-health.js ===== */'),'system health module is missing from generated bundle');
 
 assert(startServer.includes('if(cleanName.length>255)'), 'production attachment upload does not validate file-name length');
+assert(startServer.includes('if(/[\\\\/\\u0000-\\u001F\\u007F]/.test(cleanName))'), 'production attachment upload does not reject unsafe file-name characters');
+assert(startServer.includes('try{encodeURIComponent(cleanName);}catch'), 'production attachment upload does not reject unencodable file names');
 assert(startServer.includes('if(!validateMimeType(cleanMime))'), 'production attachment upload does not validate MIME type');
 assert(startServer.includes('const buffer=decodeStrictBase64(rawBase64)'), 'production attachment upload does not strictly validate Base64');
 assert(startServer.includes('if(buffer.length>MAX_ATTACHMENT_BYTES)'), 'production attachment upload does not use the shared attachment size limit');
