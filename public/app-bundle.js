@@ -3244,6 +3244,7 @@ async function loadArchivePage(page = 1) {
 
 if (isArchivePage()) {
   setupArchivePagination();
+  setTimeout(() => loadArchivePage(1), 0);
 
   document.getElementById("archiveBtn")?.addEventListener("click", () => {
     setTimeout(() => loadArchivePage(1), 300);
