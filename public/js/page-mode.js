@@ -71,6 +71,8 @@
       setTimeout(() => window.loadAnnualArchiveData(), 50);
     } else if (page === "monthly" && typeof window.loadMonthlyArchiveData === "function") {
       setTimeout(() => window.loadMonthlyArchiveData(false), 50);
+    } else if (page === "archive" && typeof window.loadArchivePage === "function") {
+      setTimeout(() => window.loadArchivePage(1), 50);
     } else if (typeof loadArchive === "function") {
       setTimeout(() => loadArchive(false), 50);
     }
