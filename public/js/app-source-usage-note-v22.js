@@ -1,4 +1,4 @@
-/* V23: clarify Pivot quantity + vehicle-count fields in selective-reading note. Approval/conflict helpers only; landfill corrections are handled by the canonical V33 Pivot adapter. */
+/* V24: clarify Pivot quantity + vehicle-count fields in selective-reading note. Approval/conflict helpers only; landfill corrections are handled by the canonical V33 Pivot adapter. */
 (function(){
   const $=id=>document.getElementById(id);
   function apply(){
@@ -10,6 +10,7 @@
   function schedule(){[150,400,900,1800,3500,6000,9500,12500].forEach(ms=>setTimeout(apply,ms));}
   function loadScript(src,key){if(document.querySelector(`script[data-${key}]`))return;const s=document.createElement('script');s.src=src;s.dataset[key.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]='1';document.body.appendChild(s);}
   function loadApproval(){
+    loadScript('js/app-source-operation-normalize.js?v=3.3.0-source-operation-normalize-v1','source-operation-normalize');
     loadScript('js/app-source-approve-v4.js?v=3.3.0-source-approve-v4','source-approve-v4');
     loadScript('js/app-source-conflict-bulk-v5.js?v=3.3.0-source-conflict-bulk-v5','source-conflict-bulk-v5');
   }
