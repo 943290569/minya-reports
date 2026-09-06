@@ -64,7 +64,14 @@ document.getElementById("clearArchiveFiltersBtn")?.addEventListener("click", () 
 });
 
 document.getElementById("saveBtn").addEventListener("click", saveReport);
-document.getElementById("archiveBtn").addEventListener("click", () => loadArchive(true));
+document.getElementById("archiveBtn").addEventListener("click", () => {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/archive" && typeof window.loadArchivePage === "function") {
+    window.loadArchivePage(1);
+    return;
+  }
+  loadArchive(true);
+});
 document.getElementById("newReportBtn").addEventListener("click", resetNewReport);
 document.getElementById("printMonthlyReportBtn")?.addEventListener("click", printMonthlyReport);
 
