@@ -46,6 +46,7 @@ const driveScriptPaths = [
   "js/app-drive-import.js",
   "js/app-drive-quality.js",
   "js/app-drive-quality-details.js",
+  "js/app-drive-preimport-consistency.js",
   "js/app-drive-folder-nav.js",
   "js/app-english-digits.js"
 ];
