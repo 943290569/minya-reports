@@ -178,3 +178,108 @@
     margin-top:12px !important;
   }
 }
+
+
+/* Readable Arabic typography and contrast */
+body[data-page="system"],
+body[data-page="system"] button,
+body[data-page="system"] input,
+body[data-page="system"] select,
+body[data-page="system"] textarea {
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif !important;
+}
+
+body[data-page="system"] .system-page {
+  color:#1f2f28 !important;
+  font-size:14px !important;
+}
+
+body[data-page="system"] .system-hero h2 {
+  color:#fff !important;
+  font-weight:800 !important;
+  letter-spacing:0 !important;
+}
+
+body[data-page="system"] .system-hero p {
+  color:rgba(255,255,255,.9) !important;
+  font-size:14px !important;
+  font-weight:500 !important;
+}
+
+body[data-page="system"] .system-kicker {
+  color:rgba(255,255,255,.78) !important;
+  font-size:11px !important;
+}
+
+body[data-page="system"] .system-panel-head h3 {
+  color:#172a21 !important;
+  font-size:19px !important;
+  font-weight:800 !important;
+  line-height:1.4 !important;
+}
+
+body[data-page="system"] .system-panel-head span,
+body[data-page="system"] .system-metric span {
+  color:#596b62 !important;
+  font-size:11px !important;
+  font-weight:700 !important;
+}
+
+body[data-page="system"] .system-panel > p,
+body[data-page="system"] .restore-file-name,
+body[data-page="system"] .restore-confirm-row label {
+  color:#465950 !important;
+  font-size:13px !important;
+  font-weight:500 !important;
+}
+
+body[data-page="system"] .system-metric strong,
+body[data-page="system"] .storage-breakdown strong,
+body[data-page="system"] .integrity-grid strong {
+  color:#172a21 !important;
+  font-weight:800 !important;
+}
+
+body[data-page="system"] .system-metric small,
+body[data-page="system"] .storage-breakdown span,
+body[data-page="system"] .storage-breakdown small,
+body[data-page="system"] .integrity-grid span {
+  color:#63746b !important;
+  font-size:11px !important;
+}
+
+body[data-page="system"] .restore-confirm-row input {
+  color:#1f2937 !important;
+  background:#fff !important;
+  border-color:#c8d4ce !important;
+  font-size:14px !important;
+}
+
+body[data-page="system"] .restore-confirm-row input::placeholder {
+  color:#6b776f !important;
+  opacity:1 !important;
+}
+
+body[data-page="system"] .restore-file-label,
+body[data-page="system"] .system-primary-btn,
+body[data-page="system"] .backup-download-link,
+body[data-page="system"] .integrity-refresh {
+  color:#fff !important;
+}
+
+body[data-page="system"] .restore-warning {
+  color:#9a3f00 !important;
+  font-size:13px !important;
+  font-weight:700 !important;
+}
+
+body[data-page="system"] .restore-state {
+  color:#43546c !important;
+  font-size:12px !important;
+}
+
+@media (max-width:520px) {
+  body[data-page="system"] .system-page { font-size:13px !important; }
+  body[data-page="system"] .system-panel-head h3 { font-size:17px !important; }
+  body[data-page="system"] .system-panel > p { font-size:12.5px !important; }
+}
