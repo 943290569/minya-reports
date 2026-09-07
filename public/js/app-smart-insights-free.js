@@ -12,7 +12,7 @@
 
   function monthReports(){const m=thisMonth();return state.reports.filter(r=>String(r.report_date||'').startsWith(m));}
 
-  function detectAnomalies(){
+  function detectReviewItems(){
     const items=monthReports();
     const out=[];
     [['total_waste_tons','النفايات','طن'],['total_diesel','السولار','لتر'],['total_trucks','الشاحنات','شاحنة']].forEach(([key,label,unit])=>{
@@ -26,17 +26,17 @@
 
   function insightSummary(){
     const items=monthReports();
-    if(!items.length)return ['لا توجد تقارير محفوظة للشهر الحالي بعد.'];
+    if(!items.length)return ['لا توجد بيانات كافية لهذا الشهر حتى الآن.'];
     const waste=items.map(r=>Number(r.total_waste_tons||0));
     const trucks=items.map(r=>Number(r.total_trucks||0));
     const diesel=items.map(r=>Number(r.total_diesel||0));
     const top=items.slice().sort((a,b)=>Number(b.total_waste_tons||0)-Number(a.total_waste_tons||0))[0];
     const soon=state.licenses.filter(x=>{const d=Number(x.days_remaining);return Number.isFinite(d)&&d>=0&&d<=30;}).length;
     return [
-      `متوسط النفايات هذا الشهر ${fmt(avg(waste))} طن يوميًا عبر ${items.length} يوم مسجل.`,
-      `أعلى يوم نفايات هو ${top?.report_date||'-'} بكمية ${fmt(top?.total_waste_tons)} طن.`,
-      `متوسط الشاحنات ${fmt(avg(trucks))} شاحنة يوميًا، ومتوسط السولار ${fmt(avg(diesel))} لتر يوميًا.`,
-      soon?`${soon} رخصة تنتهي خلال 30 يومًا وتحتاج متابعة.`:'لا توجد رخص تنتهي خلال 30 يومًا.'
+      `متوسط النفايات ${fmt(avg(waste))} طن يوميًا خلال ${items.length} يوم مسجل.`,
+      `أعلى كمية مسجلة كانت في ${top?.report_date||'-'} وبلغت ${fmt(top?.total_waste_tons)} طن.`,
+      `متوسط الشاحنات ${fmt(avg(trucks))} يوميًا، ومتوسط السولار ${fmt(avg(diesel))} لتر يوميًا.`,
+      soon?`${soon} رخصة تحتاج متابعة خلال 30 يومًا.`:'لا توجد رخص تحتاج متابعة خلال 30 يومًا.'
     ];
   }
 
@@ -47,7 +47,7 @@
     if(/رخص|انتهاء/.test(query)){
       const exp=state.licenses.filter(x=>x.status==='منتهية');
       const soon=state.licenses.filter(x=>{const d=Number(x.days_remaining);return Number.isFinite(d)&&d>=0&&d<=30;});
-      return `الرخص: ${exp.length} منتهية، و${soon.length} تنتهي خلال 30 يومًا.`;
+      return `الرخص: ${exp.length} منتهية، و${soon.length} تحتاج متابعة خلال 30 يومًا.`;
     }
     if(/أعلى|اعلى|اكبر|أكبر/.test(query)&&/نفايات|طن/.test(query)){
       const rows=items.slice().sort((a,b)=>Number(b.total_waste_tons||0)-Number(a.total_waste_tons||0)).slice(0,5);
@@ -57,8 +57,8 @@
     if(/شاحن/.test(query))return `إجمالي الشاحنات للشهر الحالي ${fmt(items.reduce((s,r)=>s+Number(r.total_trucks||0),0))}، والمتوسط اليومي ${fmt(avg(items.map(r=>r.total_trucks)))}.`;
     if(/سولار|ديزل/.test(query))return `إجمالي السولار للشهر الحالي ${fmt(items.reduce((s,r)=>s+Number(r.total_diesel||0),0))} لتر، والمتوسط اليومي ${fmt(avg(items.map(r=>r.total_diesel)))} لتر.`;
     if(/اليوم|تقرير اليوم/.test(query)){const r=state.reports.find(x=>x.report_date===today());return r?`تقرير اليوم موجود: ${fmt(r.total_waste_tons)} طن، ${fmt(r.total_trucks)} شاحنة، ${fmt(r.total_diesel)} لتر سولار.`:'لا يوجد تقرير محفوظ لليوم حتى الآن.';}
-    if(/غير طبيعي|شاذ|مشكلة|تنبيه/.test(query)){const a=detectAnomalies();return a.length?a.map(x=>`${x.date}: ${x.label} ${fmt(x.value)} ${x.unit} مقابل متوسط ${fmt(x.avg)}`).join(' — '):'لم أجد انحرافات كبيرة في بيانات الشهر الحالي.';}
-    return 'يمكنني حاليًا الإجابة مجانًا عن: متوسط وأعلى النفايات، الشاحنات، السولار، تقرير اليوم، الرخص، والقيم غير الطبيعية.';
+    if(/مراجعة|غير طبيعي|مختلف|تنبيه|مشكلة/.test(query)){const a=detectReviewItems();return a.length?a.map(x=>`${x.date}: ${x.label} ${fmt(x.value)} ${x.unit} مقارنة بمتوسط ${fmt(x.avg)}`).join(' — '):'لا توجد فروقات كبيرة تحتاج مراجعة في بيانات الشهر الحالي.';}
+    return 'يمكنني الإجابة عن: متوسط وأعلى النفايات، الشاحنات، السولار، تقرير اليوم، الرخص، والقراءات التي تحتاج مراجعة.';
   }
 
   function mount(){
@@ -66,7 +66,7 @@
     if(!dashboard||document.getElementById('freeSmartInsights'))return;
     const section=document.createElement('section');
     section.id='freeSmartInsights';section.className='free-smart-insights';
-    section.innerHTML=`<div class="fsi-head"><div><span>SMART — FREE</span><h3>التحليل الذكي المجاني</h3><p>تحليل محلي لبيانات النظام بدون أي API أو تكلفة.</p></div><strong>مجاني 100%</strong></div><div id="fsiSummary" class="fsi-summary"><div>جاري تحليل البيانات...</div></div><div class="fsi-anomaly"><h4>قراءات تحتاج مراجعة</h4><div id="fsiAnomalies">جاري الفحص...</div></div><div class="fsi-ask"><h4>اسأل النظام</h4><div class="fsi-ask-row"><input id="fsiQuestion" placeholder="مثال: ما متوسط النفايات هذا الشهر؟"><button id="fsiAskBtn" type="button">تحليل</button></div><div class="fsi-chips"><button data-q="ما متوسط النفايات هذا الشهر؟">متوسط النفايات</button><button data-q="ما أعلى أيام النفايات؟">أعلى الأيام</button><button data-q="هل يوجد شيء غير طبيعي؟">كشف الشذوذ</button><button data-q="ما وضع الرخص؟">الرخص</button></div><div id="fsiAnswer" class="fsi-answer">التحليل يتم داخل الموقع ولا يرسل البيانات لأي خدمة خارجية.</div></div>`;
+    section.innerHTML=`<div class="fsi-head"><div><span>تحليل ذكي</span><h3>ملخص وتشغيل</h3></div><strong>بدون تكلفة</strong></div><div id="fsiSummary" class="fsi-summary"><div>جاري تحليل البيانات...</div></div><div class="fsi-anomaly"><h4>ملاحظات مهمة</h4><div id="fsiAnomalies">جاري الفحص...</div></div><div class="fsi-ask"><h4>اسأل عن البيانات</h4><div class="fsi-ask-row"><input id="fsiQuestion" placeholder="مثال: ما متوسط النفايات هذا الشهر؟"><button id="fsiAskBtn" type="button">عرض النتيجة</button></div><div class="fsi-chips"><button data-q="ما متوسط النفايات هذا الشهر؟">متوسط النفايات</button><button data-q="ما أعلى أيام النفايات؟">أعلى الأيام</button><button data-q="ما القراءات التي تحتاج مراجعة؟">مراجعة البيانات</button><button data-q="ما وضع الرخص؟">الرخص</button></div><div id="fsiAnswer" class="fsi-answer">يمكنك اختيار أحد الأزرار أو كتابة سؤال مباشر عن بيانات الموقع.</div></div>`;
     const exec=document.getElementById('executiveDashboardSection');
     if(exec)exec.insertAdjacentElement('beforebegin',section);else dashboard.appendChild(section);
     const ask=()=>document.getElementById('fsiAnswer').textContent=answer(document.getElementById('fsiQuestion').value);
@@ -79,8 +79,8 @@
       const [r,l]=await Promise.all([getJson('/api/reports'),getJson('/api/driver-licenses').catch(()=>({rows:[]}))]);
       state.reports=Array.isArray(r.reports)?r.reports:[];state.licenses=Array.isArray(l.rows)?l.rows:[];
       const s=document.getElementById('fsiSummary');if(s)s.innerHTML=insightSummary().map(x=>`<div>${esc(x)}</div>`).join('');
-      const a=detectAnomalies(),box=document.getElementById('fsiAnomalies');if(box)box.innerHTML=a.length?a.map(x=>`<div><strong>${esc(x.date)}</strong><span>${esc(x.label)}: ${fmt(x.value)} ${esc(x.unit)} — المتوسط ${fmt(x.avg)}</span></div>`).join(''):'<div class="fsi-ok">لا توجد انحرافات كبيرة في الشهر الحالي.</div>';
-    }catch(e){const s=document.getElementById('fsiSummary');if(s)s.textContent='تعذر تحميل التحليل الآن.';}
+      const a=detectReviewItems(),box=document.getElementById('fsiAnomalies');if(box)box.innerHTML=a.length?a.map(x=>`<div><strong>${esc(x.date)}</strong><span>${esc(x.label)}: ${fmt(x.value)} ${esc(x.unit)} — المتوسط ${fmt(x.avg)}</span></div>`).join(''):'<div class="fsi-ok">لا توجد فروقات كبيرة تحتاج مراجعة حاليًا.</div>';
+    }catch(e){const s=document.getElementById('fsiSummary');if(s)s.textContent='تعذر تحميل الملخص الآن.';}
   }
 
   function init(){mount();load();}
