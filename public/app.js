@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260906-stable3";
+const MINYA_ASSET_VERSION = "3.5.0-20260907-stable4";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -284,11 +284,12 @@ function revealMinyaApp(){
   }, delay);
 }
 
-if (document.readyState === "complete") {
-  revealMinyaApp();
-} else {
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", revealMinyaApp, { once: true });
   window.addEventListener("load", revealMinyaApp, { once: true });
+} else {
+  revealMinyaApp();
 }
 
 // Safety fallback only if a resource fails to finish loading.
-setTimeout(revealMinyaApp, 30000);
+setTimeout(revealMinyaApp, 8000);
