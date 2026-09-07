@@ -2,7 +2,7 @@
 (function () {
   if (window.__MINYA_NOTIFICATION_CENTER__) return;
   window.__MINYA_NOTIFICATION_CENTER__ = true;
-  const state = { items: [], open: false };
+  const state = { items: [], open: false, refreshPromise: null };
 
   function esc(value) {
     return String(value ?? "")
@@ -66,7 +66,10 @@
 
   function addItem(item) {
     if (!item || !item.text) return;
-    state.items.push({ tone: "info", href: "/", ...item });
+    const normalized = { tone: "info", href: "/", ...item };
+    const key = `${normalized.title || ""}|${normalized.text}|${normalized.href}`;
+    const exists = state.items.some((x) => `${x.title || ""}|${x.text}|${x.href}` === key);
+    if (!exists) state.items.push(normalized);
   }
 
   async function collectLicenseAlerts() {
@@ -127,13 +130,21 @@
       </a>`).join("");
   }
 
-  async function refresh() {
+  async function doRefresh() {
     state.items = [];
     await Promise.all([collectLicenseAlerts(), collectReportAlerts()]);
     state.items.sort((a, b) => ({ danger: 0, warning: 1, info: 2 }[a.tone] ?? 3) - ({ danger: 0, warning: 1, info: 2 }[b.tone] ?? 3));
     render();
     window.MINYA_NOTIFICATIONS = state.items.slice();
     window.dispatchEvent(new CustomEvent("minya-notifications-updated", { detail: { items: state.items.slice() } }));
+  }
+
+  function refresh() {
+    if (state.refreshPromise) return state.refreshPromise;
+    state.refreshPromise = doRefresh().finally(() => {
+      state.refreshPromise = null;
+    });
+    return state.refreshPromise;
   }
 
   function init() {
