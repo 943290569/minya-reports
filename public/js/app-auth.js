@@ -68,7 +68,7 @@
 
     loadStyleOnce('/pwa.css?v=stable10-pwa3','data-minya-pwa-style');
     loadScriptOnce('/js/app-pwa.js?v=stable10-pwa3','data-minya-pwa');
-    loadStyleOnce('/local-notifications.css?v=stable10-push2','data-minya-local-notifications-style');
+    loadStyleOnce('/local-notifications.css?v=stable10-push3','data-minya-local-notifications-style');
     loadScriptOnce('/js/app-local-notifications.js?v=stable10-push2','data-minya-local-notifications');
 
     const path=location.pathname.replace(/\/+$/,'')||'/';
