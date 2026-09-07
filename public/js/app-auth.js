@@ -51,16 +51,26 @@
     document.head.appendChild(script);
   }
 
+  function loadStyleOnce(href,marker){
+    if(document.querySelector(`link[${marker}]`)) return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=href;
+    link.setAttribute(marker,'1');
+    document.head.appendChild(link);
+  }
+
   function loadSharedEnhancements(){
     if(publicPages.includes(location.pathname)) return;
-    if(!document.querySelector('link[href^="/notification-center.css"],link[href^="notification-center.css"]')){
-      const link=document.createElement('link');
-      link.rel='stylesheet';
-      link.href='/notification-center.css?v=stable9-update1';
-      document.head.appendChild(link);
-    }
+    loadStyleOnce('/notification-center.css?v=stable9-update1','data-minya-notification-style');
     if(!window.__MINYA_NOTIFICATION_CENTER__) loadScriptOnce('/js/app-notification-center.js?v=stable9-update1','data-minya-notifications');
     if(location.pathname==='/drivers-licenses.html'&&!window.__MINYA_LICENSE_FILTERS__) loadScriptOnce('/js/app-driver-license-filters.js?v=stable9-update1','data-minya-license-filters');
+
+    const path=location.pathname.replace(/\/+$/,'')||'/';
+    if(path==='/'){
+      loadStyleOnce('/smart-insights-free.css?v=stable10-free1','data-minya-smart-free-style');
+      loadScriptOnce('/js/app-smart-insights-free.js?v=stable10-free1','data-minya-smart-free');
+    }
   }
 
   mountStandaloneRemembrance();
