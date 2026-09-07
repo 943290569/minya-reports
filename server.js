@@ -329,9 +329,21 @@ function requireRole(...roles) {
     next();
   };
 }
+const AUDIT_LOG_RETENTION_COUNT = 5;
+
+function pruneAuditLogs() {
+  db.prepare(`DELETE FROM audit_logs
+    WHERE id NOT IN (
+      SELECT id FROM audit_logs ORDER BY id DESC LIMIT ?
+    )`).run(AUDIT_LOG_RETENTION_COUNT);
+}
+
 function audit(user, action, entityType = "", entityId = "", details = "") {
   db.prepare(`INSERT INTO audit_logs (user_id,username,action,entity_type,entity_id,details) VALUES (?,?,?,?,?,?)`).run(user?.id || null, user?.username || "system", action, entityType, String(entityId || ""), String(details || ""));
+  pruneAuditLogs();
 }
+
+pruneAuditLogs();
 const APPEARANCE_DEFAULTS = {
   loadingSeconds: 3,
   remembranceFontSize: 72,
@@ -804,7 +816,7 @@ app.get("/api/weekly", requireAuth, (req,res)=>{ const start=req.query.start;if(
 app.get("/api/reviews/pending", requireRole("admin"), (req,res)=>{ const from=String(req.query.from||""),to=String(req.query.to||"");let sql=`SELECT r.*,COALESCE(u.display_name,u.username,'-') AS submitted_by_name FROM daily_reports r LEFT JOIN users u ON u.id=r.submitted_by WHERE r.workflow_status='pending'`;const params=[];if(from){sql+=` AND r.report_date>=?`;params.push(from);}if(to){sql+=` AND r.report_date<=?`;params.push(to);}sql+=` ORDER BY COALESCE(r.submitted_at,r.updated_at) ASC,r.report_date ASC`;const reports=db.prepare(sql).all(...params);res.json({ok:true,count:reports.length,reports}); });
 
 app.get("/api/export/managerial.csv", requireAuth, (req,res)=>{ const from=req.query.from||"0000-01-01",to=req.query.to||"9999-12-31";const rows=db.prepare(`SELECT report_date,report_no,total_waste_tons,total_trucks,total_diesel,notes FROM daily_reports WHERE report_date BETWEEN ? AND ? ORDER BY report_date`).all(from,to);const escCsv=v=>`"${String(v??"").replaceAll('"','""')}"`;const csv=['التاريخ,رقم التقرير,النفايات طن,الشاحنات,السولار لتر,الملاحظات',...rows.map(r=>[r.report_date,r.report_no,r.total_waste_tons,r.total_trucks,r.total_diesel,r.notes].map(escCsv).join(','))].join('\n');res.setHeader('Content-Type','text/csv; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename=minya-managerial.csv');res.send('\ufeff'+csv); });
-app.get("/api/audit", requireRole("admin"), (req,res)=>{ const limit=Math.min(Number(req.query.limit||200),1000);res.json({ok:true,logs:db.prepare(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?`).all(limit)}); });
+app.get("/api/audit", requireRole("admin"), (req,res)=>{ const limit=Math.min(Math.max(Number(req.query.limit||AUDIT_LOG_RETENTION_COUNT),1),AUDIT_LOG_RETENTION_COUNT);res.json({ok:true,logs:db.prepare(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?`).all(limit)}); });
 app.get("/api/backup/download", requireRole("admin"), (req,res)=>{ const payload=buildBackupObject();audit(req.user,"DOWNLOAD_BACKUP","system","full");res.setHeader("Content-Disposition",`attachment; filename=minya-backup-${localDateString()}.json`);res.json(payload); });
 
 function directorySize(dir) { try { return fs.readdirSync(dir,{withFileTypes:true}).reduce((sum,entry)=>{if(!entry.isFile())return sum;try{return sum+fs.statSync(path.join(dir,entry.name)).size;}catch{return sum;}},0); } catch{return 0;} }
