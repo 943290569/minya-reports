@@ -212,8 +212,10 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
 
   x=await json('/api/audit?limit=500',auth(admin));
   assert(x.r.status===200,'audit endpoint failed');
-  const actions=new Set((x.data.logs||[]).map(r=>r.action));
-  ['UPDATE_APPEARANCE_SETTINGS','CREATE_REPORT','CREATE_APPROVED_REPORT','UPDATE_APPROVED_REPORT','ADD_ATTACHMENT','CREATE_MAINTENANCE','DELETE_MAINTENANCE','SUBMIT_REPORT','APPROVE_REPORT','REOPEN_REPORT','RESTORE_BACKUP'].forEach(a=>assert(actions.has(a),`audit missing ${a}`));
+  const auditLogs=x.data.logs||[];
+  const actions=new Set(auditLogs.map(r=>r.action));
+  assert(auditLogs.length>0&&auditLogs.length<=5,'audit retention did not keep the latest 5 records');
+  assert(actions.has('SECURITY_CLEANUP'),'audit missing latest SECURITY_CLEANUP action');
 
   x=await json('/api/system/storage',auth(admin));
   assert(x.r.status===200&&x.data.attachment_count===1,'storage endpoint incorrect');
