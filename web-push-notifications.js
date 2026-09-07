@@ -77,10 +77,10 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
   function wasSent(key){return Boolean(db.prepare(`SELECT alert_key FROM push_dispatch_log WHERE alert_key=?`).get(key));}
   function markSent(key,count){db.prepare(`INSERT OR REPLACE INTO push_dispatch_log(alert_key,sent_at,sent_count) VALUES(?,CURRENT_TIMESTAMP,?)`).run(key,count);}
 
-  function localParts(){
-    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Hebron',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  function localParts(dateValue=new Date()){
+    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(dateValue);
     const x=Object.fromEntries(parts.map(p=>[p.type,p.value]));
-    return {date:`${x.year}-${x.month}-${x.day}`,hour:Number(x.hour||0)};
+    return {date:`${x.year}-${x.month}-${x.day}`,hour:Number(x.hour||0),minute:Number(x.minute||0)};
   }
   function daysUntil(isoDate,today){
     if(!isoDate) return null;
@@ -91,15 +91,13 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
   async function dispatchOperationalAlerts(){
     const subs=db.prepare(`SELECT COUNT(*) AS c FROM push_subscriptions`).get().c;
     if(!subs) return;
-    const {date,hour}=localParts();
+    const {date}=localParts();
 
-    if(hour>=20){
-      const hasToday=Boolean(db.prepare(`SELECT id FROM daily_reports WHERE report_date=? LIMIT 1`).get(date));
-      const key=`report-missing:${date}`;
-      if(!hasToday && !wasSent(key)){
-        const count=await sendToAll({title:'تقرير اليوم',body:'لا يوجد تقرير محفوظ بتاريخ اليوم حتى الآن.',href:'/report',tag:key});
-        if(count) markSent(key,count);
-      }
+    const hasToday=Boolean(db.prepare(`SELECT id FROM daily_reports WHERE report_date=? LIMIT 1`).get(date));
+    const reportKey=`report-missing:${date}`;
+    if(!hasToday && !wasSent(reportKey)){
+      const count=await sendToAll({title:'تقرير اليوم',body:'لا يوجد تقرير محفوظ بتاريخ اليوم حتى الآن.',href:'/report',tag:reportKey});
+      if(count) markSent(reportKey,count);
     }
 
     const licenses=db.prepare(`SELECT name_ar,expiry_date FROM driver_licenses WHERE trim(expiry_date)<>'' ORDER BY expiry_date`).all();
@@ -136,7 +134,7 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
   app.get('/api/push/public-key',requireAuth,(req,res)=>res.json({ok:true,publicKey:vapid.publicKey}));
   app.get('/api/push/status',requireAuth,(req,res)=>{
     const count=db.prepare(`SELECT COUNT(*) AS c FROM push_subscriptions WHERE user_id=?`).get(req.user.id).c;
-    res.json({ok:true,subscribed:count>0,devices:count});
+    res.json({ok:true,subscribed:count>0,devices:count,schedule:'08:00',timeZone:'Asia/Jerusalem'});
   });
   app.post('/api/push/subscribe',requireAuth,(req,res)=>{
     const sub=safeSubscription(req.body);
@@ -160,14 +158,27 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
   });
 
   let running=false;
-  async function scheduledCheck(){
+  async function scheduledRun(){
     if(running) return;
     running=true;
-    try{await dispatchOperationalAlerts();}catch(error){console.error('Push alert check failed',error);}finally{running=false;}
+    try{await dispatchOperationalAlerts();}catch(error){console.error('Push alert check failed',error);}finally{running=false;scheduleNext();}
   }
-  setTimeout(scheduledCheck,15000);
-  const timer=setInterval(scheduledCheck,30*60*1000);
-  timer.unref?.();
+  function millisecondsUntilNextEight(){
+    const now=Date.now();
+    for(let minutes=1;minutes<=26*60;minutes++){
+      const candidate=new Date(now+minutes*60*1000);
+      const p=localParts(candidate);
+      if(p.hour===8 && p.minute===0) return Math.max(1000,candidate.getTime()-now);
+    }
+    return 24*60*60*1000;
+  }
+  let scheduleTimer=null;
+  function scheduleNext(){
+    if(scheduleTimer) clearTimeout(scheduleTimer);
+    scheduleTimer=setTimeout(scheduledRun,millisecondsUntilNextEight());
+    scheduleTimer.unref?.();
+  }
+  scheduleNext();
 
   return {dispatchOperationalAlerts};
 };
