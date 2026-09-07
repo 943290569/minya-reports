@@ -32,6 +32,8 @@ const workflow = read("public/js/app-report-workflow.js");
 const dateDisplay = read("public/js/app-date-display.js");
 const linkedSummary = read("public/js/app-period-linked-summary.js");
 const linkedSummaryStyles = read("public/period-linked-summary.css");
+const mobileMenu = read("public/js/app-header-menu.js");
+const mobileMenuStyles = read("public/mobile-vertical-menu.css");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -122,6 +124,16 @@ assert(linkedSummary.includes("إجمالي الوارد لمكب المنيا")
 assert(linkedSummary.includes("نفايات مكب المنيا + نفايات جميع محطات الترحيل"), "incoming waste formula is not explained");
 assert(linkedSummary.includes("تنبيه اختلاف:"), "linked Summary does not flag mismatched stored totals");
 assert(linkedSummaryStyles.includes("linked-summary-grand"), "incoming waste grand total has no distinct visual style");
+assert(loader.includes('"js/app-header-menu.js"'), "mobile navigation logic is missing from the frontend bundle");
+assert(loader.includes('"mobile-vertical-menu.css"'), "mobile navigation styles are missing from the style bundle");
+assert(loader.indexOf('"mobile-vertical-menu.css"') > loader.indexOf('"final-ui-stabilize.css"'), "mobile navigation must load after the general mobile hiding rules");
+assert(loader.indexOf('"mobile-vertical-menu.css"') > loader.indexOf('"desktop-nav-hero.css"'), "mobile navigation must load after the desktop navigation layer");
+assert(mobileMenu.includes('{label:"رخص السائقين"'), "drivers licenses is missing from the mobile menu");
+assert(mobileMenu.includes('{label:"إدارة النظام"'), "system management is missing from the mobile menu");
+assert(mobileMenu.includes('{label:"المراجعة والاعتماد"'), "reviews is missing from the mobile menu");
+assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
+assert(mobileMenuStyles.includes('overflow-y: auto !important'), "mobile menu cannot scroll to its final items");
+assert(mobileMenuStyles.includes('#minyaHeaderMenu[hidden]'), "closed mobile menu is not reliably hidden");
 assert(server.includes('ALTER TABLE users ADD COLUMN mobile'), "existing users do not receive the mobile field migration");
 assert(server.includes('function validMobile(value)'), "mobile numbers are not validated on the server");
 assert(server.includes('u.mobile,u.role'), "administrator user data does not include mobile numbers");
@@ -129,4 +141,4 @@ assert(read("public/js/app-admin-users.js").includes('id="smsRecipient"'), "admi
 assert(read("public/js/app-admin-users.js").includes('location.href=`sms:${mobile}?body='), "SMS action does not open the phone messaging application");
 assert(read("public/js/app-admin-users.js").includes('data-user="${u.id}" ${u.mobile?\'\':\'disabled\'}>SMS'), "SMS action is not disabled when a user has no mobile number");
 
-console.log("UI regression checks passed: page isolation + linked Summary + administrator SMS compose + consolidated assets.");
+console.log("UI regression checks passed: page isolation + linked Summary + complete scrollable mobile navigation + administrator SMS compose + consolidated assets.");
