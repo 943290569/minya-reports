@@ -68,12 +68,14 @@
 
     const path=location.pathname.replace(/\/+$/,'')||'/';
     if(path==='/'){
-      loadStyleOnce('/smart-insights-free.css?v=stable10-free3','data-minya-smart-free-style');
-      loadScriptOnce('/js/app-smart-insights-free.js?v=stable10-free3','data-minya-smart-free');
-      loadStyleOnce('/smart-search-free.css?v=stable10-free3','data-minya-smart-search-style');
-      loadScriptOnce('/js/app-smart-search-free.js?v=stable10-free3','data-minya-smart-search');
-      loadStyleOnce('/smart-monthly-compare.css?v=stable10-free3','data-minya-smart-compare-style');
-      loadScriptOnce('/js/app-smart-monthly-compare.js?v=stable10-free3','data-minya-smart-compare');
+      loadStyleOnce('/smart-insights-free.css?v=stable10-free4','data-minya-smart-free-style');
+      loadScriptOnce('/js/app-smart-insights-free.js?v=stable10-free4','data-minya-smart-free');
+      loadStyleOnce('/smart-search-free.css?v=stable10-free4','data-minya-smart-search-style');
+      loadScriptOnce('/js/app-smart-search-free.js?v=stable10-free4','data-minya-smart-search');
+      loadStyleOnce('/smart-monthly-compare.css?v=stable10-free4','data-minya-smart-compare-style');
+      loadScriptOnce('/js/app-smart-monthly-compare.js?v=stable10-free4','data-minya-smart-compare');
+      loadStyleOnce('/smart-operations-free.css?v=stable10-free4','data-minya-smart-ops-style');
+      loadScriptOnce('/js/app-smart-operations-free.js?v=stable10-free4','data-minya-smart-ops');
     }
   }
 
