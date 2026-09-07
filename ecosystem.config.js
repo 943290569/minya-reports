@@ -3,9 +3,8 @@ module.exports = {
     {
       name: 'minya-landfill',
       cwd: __dirname,
-      script: 'npm',
-      args: 'start',
-      interpreter: 'none',
+      script: 'scripts/start-server.js',
+      interpreter: 'node',
       autorestart: true,
       watch: false,
       max_restarts: 10,
