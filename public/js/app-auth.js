@@ -66,6 +66,9 @@
     if(!window.__MINYA_NOTIFICATION_CENTER__) loadScriptOnce('/js/app-notification-center.js?v=stable9-update1','data-minya-notifications');
     if(location.pathname==='/drivers-licenses.html'&&!window.__MINYA_LICENSE_FILTERS__) loadScriptOnce('/js/app-driver-license-filters.js?v=stable9-update1','data-minya-license-filters');
 
+    loadStyleOnce('/pwa.css?v=stable10-pwa1','data-minya-pwa-style');
+    loadScriptOnce('/js/app-pwa.js?v=stable10-pwa1','data-minya-pwa');
+
     const path=location.pathname.replace(/\/+$/,'')||'/';
     if(path==='/'){
       loadStyleOnce('/smart-insights-free.css?v=stable10-free4','data-minya-smart-free-style');
