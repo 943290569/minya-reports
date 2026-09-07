@@ -1,5 +1,7 @@
 /* Unified notification center */
 (function () {
+  if (window.__MINYA_NOTIFICATION_CENTER__) return;
+  window.__MINYA_NOTIFICATION_CENTER__ = true;
   const state = { items: [], open: false };
 
   function esc(value) {
