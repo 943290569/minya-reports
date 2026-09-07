@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260907-stable4";
+const MINYA_ASSET_VERSION = "3.5.0-20260907-stable8";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -67,6 +67,8 @@ document.documentElement.style.setProperty(
 );
 
 (function mountMinyaLoadingScreen(){
+  // Disabled: the startup overlay must never block access to the application.
+  return;
   const messages = [
     "لا تنسَ ذكر الله",
     "صلِّ على النبي ﷺ",
@@ -5266,7 +5268,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   }
 
   async function fetchLogs() {
-    const response = await fetch("/api/audit?limit=200");
+    const response = await fetch("/api/audit?limit=5");
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل سجل النشاط");
     return Array.isArray(data.logs) ? data.logs : [];
@@ -5299,7 +5301,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
         <button id="auditRefreshBtn" type="button">تحديث السجل</button>
         <button id="auditClearBtn" type="button" class="secondary">مسح الفلاتر</button>
       </div>
-      <div id="auditFilterStatus" class="audit-filter-status">جاري تحميل آخر 200 عملية...</div>
+      <div id="auditFilterStatus" class="audit-filter-status">جاري تحميل آخر 5 عملية...</div>
     `;
     tableWrap.before(tools);
 
@@ -5353,7 +5355,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
       usersCountEl.textContent = usersCount;
       reportsCount.textContent = reportActions;
       sensitiveCount.textContent = sensitiveActions;
-      filterStatus.textContent = `عرض ${filtered.length} من أصل ${logs.length} عملية محفوظة ضمن آخر 200 سجل.`;
+      filterStatus.textContent = `عرض ${filtered.length} من أصل ${logs.length} عملية محفوظة ضمن آخر 5 سجل.`;
 
       body.innerHTML = filtered.length ? filtered.map((x) => `
         <tr class="audit-row ${isSensitive(x.action) ? "sensitive" : ""}">
@@ -5739,9 +5741,9 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const tag=head?.querySelector('span');
     const title=head?.querySelector('h3');
     const desc=head?.querySelector('p');
-    if(tag)tag.textContent='SMS / WHATSAPP';
-    if(title)title.textContent='إرسال رسالة جوال أو واتساب';
-    if(desc)desc.textContent='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.';
+    if(tag&&tag.textContent!=='SMS / WHATSAPP')tag.textContent='SMS / WHATSAPP';
+    if(title&&title.textContent!=='إرسال رسالة جوال أو واتساب')title.textContent='إرسال رسالة جوال أو واتساب';
+    if(desc&&desc.textContent!=='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.')desc.textContent='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.';
     const actions=card.querySelector('.sms-compose-actions');
     const sms=document.getElementById('openSmsApp');
     if(actions&&sms&&!document.getElementById('openWhatsAppApp')){
@@ -7922,7 +7924,9 @@ ${payload.sections.join("\n")}
 
     if(path==='/admin'){
       document.querySelectorAll('.v3-panel h3').forEach(h=>{
-        if(h.textContent.trim()==='سجل التعديلات Audit Log') h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';
+        if(h.textContent.trim()==='سجل التعديلات Audit Log' && !h.querySelector('small')) {
+          h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';
+        }
       });
     }
   }
