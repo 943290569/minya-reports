@@ -1,4 +1,4 @@
-const CACHE_NAME='minya-pwa-v4';
+const CACHE_NAME='minya-pwa-v5';
 const STATIC_ASSETS=['/','/style.css','/manifest.webmanifest','/assets/app-icon.svg','/assets/app-icon-maskable.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(STATIC_ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -19,6 +19,22 @@ self.addEventListener('fetch',event=>{
     return;
   }
   if(req.mode==='navigate') event.respondWith(fetch(req).catch(()=>caches.match('/')));
+});
+self.addEventListener('push',event=>{
+  let data={};
+  try{data=event.data?event.data.json():{};}catch{try{data={body:event.data?.text()||''};}catch{data={};}}
+  const title=data.title||'تنبيه من مكب المنيا';
+  const options={
+    body:data.body||'',
+    icon:'/assets/app-icon.svg',
+    badge:'/assets/app-icon.svg',
+    tag:data.tag||`minya-push-${Date.now()}`,
+    renotify:false,
+    data:{href:data.href||'/'},
+    dir:'rtl',
+    lang:'ar'
+  };
+  event.waitUntil(self.registration.showNotification(title,options));
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
