@@ -42,6 +42,23 @@
     },loadingSeconds*1000);
   }
 
+  function loadSharedNotifications(){
+    if(publicPages.includes(location.pathname)) return;
+    if(!document.querySelector('link[href^="notification-center.css"]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='/notification-center.css?v=stable9-update1';
+      document.head.appendChild(link);
+    }
+    if(window.__MINYA_NOTIFICATION_CENTER__) return;
+    if(document.querySelector('script[data-minya-notifications]')) return;
+    const script=document.createElement('script');
+    script.src='/js/app-notification-center.js?v=stable9-update1';
+    script.defer=true;
+    script.dataset.minyaNotifications='1';
+    document.head.appendChild(script);
+  }
+
   mountStandaloneRemembrance();
 
   function applyRoleNavigation(user){
@@ -62,6 +79,7 @@
 
     applyRoleNavigation(user);
     removeUserBox();
+    loadSharedNotifications();
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
