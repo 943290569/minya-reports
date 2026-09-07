@@ -87,17 +87,41 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
     const a=Date.parse(`${isoDate}T00:00:00Z`), b=Date.parse(`${today}T00:00:00Z`);
     return Number.isFinite(a)&&Number.isFinite(b)?Math.round((a-b)/86400000):null;
   }
+  function dateMinus(dateString,days){
+    const d=new Date(`${dateString}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate()-days);
+    return d.toISOString().slice(0,10);
+  }
+  function fmt(value){return Number(value||0).toLocaleString('en-US',{maximumFractionDigits:1});}
+
+  function buildMorningSummary(date){
+    const latest=db.prepare(`SELECT id,report_date,total_waste_tons,total_trucks,total_diesel FROM daily_reports WHERE report_date<? ORDER BY report_date DESC,id DESC LIMIT 1`).get(date)
+      || db.prepare(`SELECT id,report_date,total_waste_tons,total_trucks,total_diesel FROM daily_reports ORDER BY report_date DESC,id DESC LIMIT 1`).get();
+    if(!latest) return {body:'لا توجد تقارير تشغيلية محفوظة حتى الآن.',href:'/'};
+    const from=dateMinus(date,7);
+    const week=db.prepare(`SELECT COALESCE(SUM(total_waste_tons),0) waste,COUNT(*) days FROM daily_reports WHERE report_date>=? AND report_date<?`).get(from,date);
+    const month=date.slice(0,7);
+    const monthly=db.prepare(`SELECT COALESCE(SUM(total_waste_tons),0) waste,COUNT(*) days FROM daily_reports WHERE substr(report_date,1,7)=?`).get(month);
+    const stopped=db.prepare(`SELECT COUNT(*) AS c FROM equipment WHERE report_id=? AND trim(operating_status)<>'' AND operating_status NOT IN ('يعمل','شغال','متاح','جيد','فعال')`).get(latest.id).c;
+    const parts=[
+      `آخر تقرير ${latest.report_date}: ${fmt(latest.total_waste_tons)} طن، ${fmt(latest.total_trucks)} شاحنة`,
+      `آخر 7 أيام: ${fmt(week.waste)} طن`,
+      `الشهر: ${fmt(monthly.waste)} طن`
+    ];
+    if(stopped) parts.push(`معدات تحتاج متابعة: ${stopped}`);
+    return {body:parts.join(' | '),href:'/'};
+  }
 
   async function dispatchOperationalAlerts(){
     const subs=db.prepare(`SELECT COUNT(*) AS c FROM push_subscriptions`).get().c;
     if(!subs) return;
     const {date}=localParts();
 
-    const hasToday=Boolean(db.prepare(`SELECT id FROM daily_reports WHERE report_date=? LIMIT 1`).get(date));
-    const reportKey=`report-missing:${date}`;
-    if(!hasToday && !wasSent(reportKey)){
-      const count=await sendToAll({title:'تقرير اليوم',body:'لا يوجد تقرير محفوظ بتاريخ اليوم حتى الآن.',href:'/report',tag:reportKey});
-      if(count) markSent(reportKey,count);
+    const summaryKey=`morning-summary:${date}`;
+    if(!wasSent(summaryKey)){
+      const summary=buildMorningSummary(date);
+      const count=await sendToAll({title:'الملخص التشغيلي الصباحي',body:summary.body,href:summary.href,tag:summaryKey});
+      if(count) markSent(summaryKey,count);
     }
 
     const licenses=db.prepare(`SELECT name_ar,expiry_date FROM driver_licenses WHERE trim(expiry_date)<>'' ORDER BY expiry_date`).all();
@@ -114,16 +138,6 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
       const key=`licenses-soon:${date}`;
       if(!wasSent(key)){
         const count=await sendToAll({title:'رخص قريبة الانتهاء',body:`${soon.length} رخصة تنتهي خلال 30 يومًا.`,href:'/drivers-licenses.html',tag:key});
-        if(count) markSent(key,count);
-      }
-    }
-
-    const latest=db.prepare(`SELECT id,report_date FROM daily_reports ORDER BY report_date DESC,id DESC LIMIT 1`).get();
-    if(latest){
-      const stopped=db.prepare(`SELECT equipment_name,operating_status FROM equipment WHERE report_id=? AND trim(operating_status)<>'' AND operating_status NOT IN ('يعمل','شغال','متاح')`).all(latest.id);
-      const key=`equipment:${latest.id}`;
-      if(stopped.length && !wasSent(key)){
-        const count=await sendToAll({title:'معدات تحتاج متابعة',body:`${stopped.length} معدة في آخر تقرير تحتاج مراجعة حالتها.`,href:'/equipment',tag:key});
         if(count) markSent(key,count);
       }
     }
