@@ -73,8 +73,13 @@
     const dash=document.querySelector('.dashboard-home');if(!dash||document.getElementById('operationalSummaries'))return;
     const s=document.createElement('section');s.id='operationalSummaries';s.className='ops-summaries';
     s.innerHTML=`<div class="ops-summary-head"><div><span>ملخصات التشغيل</span><h3>قراءة يومية وأسبوعية وشهرية</h3></div><div class="ops-summary-tabs" role="tablist"><button type="button" data-mode="daily" class="active">اليوم</button><button type="button" data-mode="weekly">الأسبوع</button><button type="button" data-mode="monthly">الشهر</button></div></div><div id="opsSummaryBody" class="ops-summary-body">جاري تحميل الملخص...</div>`;
-    const health=document.getElementById('adminSystemHealth');
-    if(health?.parentNode)health.insertAdjacentElement('afterend',s);else dash.prepend(s);
+    const smartOps=document.getElementById('smartOperationsFree');
+    const executive=document.getElementById('executiveDashboardSection');
+    const compare=document.getElementById('smartMonthlyCompare');
+    if(smartOps?.parentNode) smartOps.insertAdjacentElement('afterend',s);
+    else if(compare?.parentNode) compare.insertAdjacentElement('afterend',s);
+    else if(executive?.parentNode) executive.parentNode.insertBefore(s,executive);
+    else dash.appendChild(s);
     s.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;s.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));render();});
   }
 
