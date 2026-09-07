@@ -8,3 +8,4 @@ database.db-wal
 database.db-shm
 server.js.before-*
 backups/
+uploads/
