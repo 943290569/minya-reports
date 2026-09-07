@@ -34,6 +34,10 @@ const linkedSummary = read("public/js/app-period-linked-summary.js");
 const linkedSummaryStyles = read("public/period-linked-summary.css");
 const mobileMenu = read("public/js/app-header-menu.js");
 const mobileMenuStyles = read("public/mobile-vertical-menu.css");
+const publicHtml = fs.readdirSync("public")
+  .filter((name) => name.endsWith(".html"))
+  .map((name) => read(`public/${name}`))
+  .join("\n");
 
 assert(index.includes('class="archive-date-control"'), "archive date control is not addressable by page styles");
 assert(index.includes('id="periodPageTitle"'), "period page heading is missing");
@@ -134,6 +138,9 @@ assert(mobileMenu.includes('{label:"المراجعة والاعتماد"'), "rev
 assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
 assert(mobileMenuStyles.includes('overflow-y: auto !important'), "mobile menu cannot scroll to its final items");
 assert(mobileMenuStyles.includes('#minyaHeaderMenu[hidden]'), "closed mobile menu is not reliably hidden");
+assert(!/stable[0-8]/.test(publicHtml), "an HTML page still references a frontend release older than stable9");
+assert(read("public/system.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa7'), "system page is not using stable9 styles");
+assert(read("public/drivers-licenses.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa7'), "drivers licenses page is not using stable9 styles");
 assert(server.includes('ALTER TABLE users ADD COLUMN mobile'), "existing users do not receive the mobile field migration");
 assert(server.includes('function validMobile(value)'), "mobile numbers are not validated on the server");
 assert(server.includes('u.mobile,u.role'), "administrator user data does not include mobile numbers");
