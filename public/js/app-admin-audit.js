@@ -64,7 +64,7 @@
   }
 
   async function fetchLogs() {
-    const response = await fetch("/api/audit?limit=200");
+    const response = await fetch("/api/audit?limit=5");
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل سجل النشاط");
     return Array.isArray(data.logs) ? data.logs : [];
@@ -97,7 +97,7 @@
         <button id="auditRefreshBtn" type="button">تحديث السجل</button>
         <button id="auditClearBtn" type="button" class="secondary">مسح الفلاتر</button>
       </div>
-      <div id="auditFilterStatus" class="audit-filter-status">جاري تحميل آخر 200 عملية...</div>
+      <div id="auditFilterStatus" class="audit-filter-status">جاري تحميل آخر 5 عملية...</div>
     `;
     tableWrap.before(tools);
 
@@ -151,7 +151,7 @@
       usersCountEl.textContent = usersCount;
       reportsCount.textContent = reportActions;
       sensitiveCount.textContent = sensitiveActions;
-      filterStatus.textContent = `عرض ${filtered.length} من أصل ${logs.length} عملية محفوظة ضمن آخر 200 سجل.`;
+      filterStatus.textContent = `عرض ${filtered.length} من أصل ${logs.length} عملية محفوظة ضمن آخر 5 سجل.`;
 
       body.innerHTML = filtered.length ? filtered.map((x) => `
         <tr class="audit-row ${isSensitive(x.action) ? "sensitive" : ""}">
