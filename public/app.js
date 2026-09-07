@@ -241,6 +241,7 @@ document.documentElement.style.setProperty(
   "hero-clarity.css",
   "desktop-nav-hero.css",
   "final-ui-stabilize.css",
+  "report-mobile-scroll.css",
   "mobile-vertical-menu.css",
   "ui-polish-v2.css",
   "ui-polish-v3.css",

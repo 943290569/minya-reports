@@ -34,6 +34,7 @@ const linkedSummary = read("public/js/app-period-linked-summary.js");
 const linkedSummaryStyles = read("public/period-linked-summary.css");
 const mobileMenu = read("public/js/app-header-menu.js");
 const mobileMenuStyles = read("public/mobile-vertical-menu.css");
+const reportMobileScroll = read("public/report-mobile-scroll.css");
 const publicHtml = fs.readdirSync("public")
   .filter((name) => name.endsWith(".html"))
   .map((name) => read(`public/${name}`))
@@ -138,9 +139,15 @@ assert(mobileMenu.includes('{label:"المراجعة والاعتماد"'), "rev
 assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
 assert(mobileMenuStyles.includes('overflow-y: auto !important'), "mobile menu cannot scroll to its final items");
 assert(mobileMenuStyles.includes('#minyaHeaderMenu[hidden]'), "closed mobile menu is not reliably hidden");
+assert((index.match(/class="report-table-scroll"/g) || []).length === 4, "daily report tables are not all wrapped for mobile scrolling");
+assert(loader.includes('"report-mobile-scroll.css"'), "daily report mobile scrolling styles are missing from the bundle");
+assert(loader.indexOf('"report-mobile-scroll.css"') > loader.indexOf('"final-ui-stabilize.css"'), "daily report scrolling must override the general overflow rules");
+assert(reportMobileScroll.includes('overflow-x: auto'), "daily report table containers cannot scroll horizontally");
+assert(reportMobileScroll.includes('touch-action: pan-x pan-y'), "daily report table touch scrolling is not enabled");
+assert(reportMobileScroll.includes('@media print'), "daily report mobile scrolling is not neutralized for printing");
 assert(!/stable[0-8]/.test(publicHtml), "an HTML page still references a frontend release older than stable9");
-assert(read("public/system.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa7'), "system page is not using stable9 styles");
-assert(read("public/drivers-licenses.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa7'), "drivers licenses page is not using stable9 styles");
+assert(read("public/system.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa8'), "system page is not using the current stable9 styles");
+assert(read("public/drivers-licenses.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa8'), "drivers licenses page is not using the current stable9 styles");
 assert(server.includes('ALTER TABLE users ADD COLUMN mobile'), "existing users do not receive the mobile field migration");
 assert(server.includes('function validMobile(value)'), "mobile numbers are not validated on the server");
 assert(server.includes('u.mobile,u.role'), "administrator user data does not include mobile numbers");

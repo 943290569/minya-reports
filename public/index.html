@@ -282,7 +282,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نظام إدارة مكب المنيا</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="app-bundle.css?v=3.5.0-20260907-stable9-wa7">
+  <link rel="stylesheet" href="app-bundle.css?v=3.5.0-20260907-stable9-wa8">
 </head>
 
 <body>
@@ -312,10 +312,10 @@
       </div>
     </section>
 
-    <section class="panel"><h2>شؤون الموظفين</h2><table id="crewsTable"><thead><tr><th>طواقم العمل</th><th>العدد</th><th>الملاحظات</th></tr></thead><tbody></tbody></table></section>
-    <section class="panel"><h2>العمليات</h2><table id="operationsTable"><thead><tr><th>العملية</th><th>عدد المركبات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></section>
-    <section class="panel"><h2>محطات الترحيل</h2><table id="stationsTable"><thead><tr><th>المحطة</th><th>عدد الشاحنات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></section>
-    <section class="panel"><h2>تقرير الصيانة اليومي</h2><table id="equipmentTable"><thead><tr><th>اسم الآلية</th><th>حالة الآلية</th><th>وصف الحالة</th><th>ساعات العمل</th><th>كمية السولار</th></tr></thead><tbody></tbody></table></section>
+    <section class="panel"><h2>شؤون الموظفين</h2><div class="report-table-scroll"><table id="crewsTable"><thead><tr><th>طواقم العمل</th><th>العدد</th><th>الملاحظات</th></tr></thead><tbody></tbody></table></div></section>
+    <section class="panel"><h2>العمليات</h2><div class="report-table-scroll"><table id="operationsTable"><thead><tr><th>العملية</th><th>عدد المركبات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></div></section>
+    <section class="panel"><h2>محطات الترحيل</h2><div class="report-table-scroll"><table id="stationsTable"><thead><tr><th>المحطة</th><th>عدد الشاحنات</th><th>الكمية</th><th>الوحدة</th></tr></thead><tbody></tbody></table></div></section>
+    <section class="panel"><h2>تقرير الصيانة اليومي</h2><div class="report-table-scroll"><table id="equipmentTable"><thead><tr><th>اسم الآلية</th><th>حالة الآلية</th><th>وصف الحالة</th><th>ساعات العمل</th><th>كمية السولار</th></tr></thead><tbody></tbody></table></div></section>
     <section class="panel"><h2>الملاحظات</h2><textarea id="notes" rows="5" placeholder="اكتب الملاحظات اليومية هنا..."></textarea></section>
 
     <section class="panel">
@@ -388,7 +388,7 @@
     </section>
   </main>
 
-  <script src="app-bundle.js?v=3.5.0-20260907-stable9-wa7"></script>
+  <script src="app-bundle.js?v=3.5.0-20260907-stable9-wa8"></script>
   <script>
   (function () {
     function renderMonthlyWasteChart() {

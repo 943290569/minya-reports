@@ -29,7 +29,7 @@ const versionMatch = loader.match(/const\s+MINYA_ASSET_VERSION\s*=\s*["']([^"']+
 if (!versionMatch) {
   throw new Error("MINYA_ASSET_VERSION is missing from public/app.js");
 }
-const assetVersion = `${versionMatch[1]}-wa7`;
+const assetVersion = `${versionMatch[1]}-wa8`;
 const driveAssetVersion = `${assetVersion}-drive1`;
 
 const driveScriptPaths = [
