@@ -83,6 +83,7 @@
       loadScriptOnce('/js/app-smart-operations-free.js?v=stable10-free4','data-minya-smart-ops');
       loadStyleOnce('/operational-summaries.css?v=stable10-summary2','data-minya-operational-summary-style');
       loadScriptOnce('/js/app-operational-summaries.js?v=stable10-summary2','data-minya-operational-summary');
+      loadScriptOnce('/js/app-home-layout-stable10.js?v=stable10-home1','data-minya-home-layout');
     }
   }
 
