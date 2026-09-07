@@ -43,9 +43,9 @@
     const tag=head?.querySelector('span');
     const title=head?.querySelector('h3');
     const desc=head?.querySelector('p');
-    if(tag)tag.textContent='SMS / WHATSAPP';
-    if(title)title.textContent='إرسال رسالة جوال أو واتساب';
-    if(desc)desc.textContent='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.';
+    if(tag&&tag.textContent!=='SMS / WHATSAPP')tag.textContent='SMS / WHATSAPP';
+    if(title&&title.textContent!=='إرسال رسالة جوال أو واتساب')title.textContent='إرسال رسالة جوال أو واتساب';
+    if(desc&&desc.textContent!=='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.')desc.textContent='استخدم نفس المستلم والنص الجاهز، ثم افتح تطبيق الرسائل أو واتساب من هاتفك.';
     const actions=card.querySelector('.sms-compose-actions');
     const sms=document.getElementById('openSmsApp');
     if(actions&&sms&&!document.getElementById('openWhatsAppApp')){
