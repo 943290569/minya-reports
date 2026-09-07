@@ -3,6 +3,7 @@
   const ENABLED_KEY='minya_local_notifications_enabled_v1';
   const SENT_KEY='minya_local_notifications_sent_v1';
   let enabled=localStorage.getItem(ENABLED_KEY)==='1';
+  let observer=null;
 
   function isStandalone(){return window.matchMedia?.('(display-mode: standalone)')?.matches||window.navigator.standalone===true;}
   function readSent(){try{return JSON.parse(localStorage.getItem(SENT_KEY)||'{}')||{};}catch{return {};}}
@@ -41,21 +42,65 @@
   function disable(){enabled=false;localStorage.setItem(ENABLED_KEY,'0');renderState();}
 
   function renderState(){
-    const b=document.getElementById('minyaEnableNotificationsBtn');if(!b)return;
-    const granted='Notification' in window&&Notification.permission==='granted';
-    if(enabled&&granted){b.textContent='التنبيهات مفعّلة';b.dataset.active='true';b.title='اضغط لإيقاف تنبيهات هذا الجهاز';b.onclick=disable;}
+    const b=document.getElementById('minyaEnableNotificationsBtn');
+    const status=document.getElementById('minyaNotificationsSettingStatus');
+    const supported='Notification' in window;
+    const granted=supported&&Notification.permission==='granted';
+    if(status){
+      if(!supported) status.textContent='الإشعارات غير مدعومة على هذا المتصفح.';
+      else if(enabled&&granted) status.textContent='مفعّلة على هذا الجهاز.';
+      else if(Notification.permission==='denied') status.textContent='الإذن مرفوض من إعدادات المتصفح.';
+      else status.textContent='غير مفعّلة على هذا الجهاز.';
+    }
+    if(!b)return;
+    if(enabled&&granted){b.textContent='إيقاف تنبيهات الجوال';b.dataset.active='true';b.title='إيقاف تنبيهات هذا الجهاز';b.onclick=disable;}
     else{b.textContent='تفعيل تنبيهات الجوال';b.dataset.active='false';b.title='السماح للتطبيق بعرض التنبيهات المهمة';b.onclick=requestEnable;}
   }
 
-  function mount(){
-    if(document.getElementById('minyaEnableNotificationsBtn'))return;
-    const header=document.querySelector('.top-header');if(!header)return;
-    const b=document.createElement('button');b.id='minyaEnableNotificationsBtn';b.type='button';b.className='minya-enable-notifications';header.appendChild(b);renderState();
-    document.documentElement.dataset.pwaInstalled=isStandalone()?'true':'false';
+  function removeHeaderButton(){
+    const old=document.querySelector('.top-header #minyaEnableNotificationsBtn');
+    if(old)old.remove();
+  }
+
+  function mountInSettings(){
+    removeHeaderButton();
+    if(document.getElementById('minyaNotificationsSettingsSection')){renderState();return true;}
+    const panel=document.getElementById('minyaAppearancePanel');
+    if(!panel)return false;
+    const actions=panel.querySelector('.appearance-actions');
+    if(!actions)return false;
+
+    const section=document.createElement('section');
+    section.id='minyaNotificationsSettingsSection';
+    section.className='minya-notifications-settings';
+    section.innerHTML=`
+      <div class="minya-notifications-settings-copy">
+        <strong>تنبيهات الجوال</strong>
+        <span id="minyaNotificationsSettingStatus">جاري التحقق...</span>
+      </div>
+      <button id="minyaEnableNotificationsBtn" type="button" class="minya-enable-notifications"></button>
+    `;
+    actions.insertAdjacentElement('beforebegin',section);
+    renderState();
+    return true;
+  }
+
+  function watchForSettings(){
+    if(mountInSettings())return;
+    if(observer)return;
+    observer=new MutationObserver(()=>{
+      if(mountInSettings()){
+        observer.disconnect();
+        observer=null;
+      }
+    });
+    observer.observe(document.body,{childList:true,subtree:true});
   }
 
   function init(){
-    mount();
+    document.documentElement.dataset.pwaInstalled=isStandalone()?'true':'false';
+    removeHeaderButton();
+    watchForSettings();
     window.addEventListener('minya-notifications-updated',e=>notifyItems(e.detail?.items||[]));
     if(Array.isArray(window.MINYA_NOTIFICATIONS))notifyItems(window.MINYA_NOTIFICATIONS);
   }
