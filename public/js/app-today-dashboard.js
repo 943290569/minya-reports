@@ -2,7 +2,7 @@
 (function(){
   function isHome(){const p=location.pathname.replace(/\/+$/,"")||"/";return p==="/";}
   function fmt(v){return Number(v||0).toLocaleString("en-US",{maximumFractionDigits:1});}
-  function todayIso(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+  function todayIso(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
   function ensure(){
     const home=document.querySelector('.dashboard-home');
     if(!home||document.getElementById('todayOperationsSection'))return null;
