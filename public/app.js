@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260907-stable9-adhkar1";
+const MINYA_ASSET_VERSION = "3.5.0-20260907-stable9-update1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -182,8 +182,10 @@ document.documentElement.style.setProperty(
   "js/app-archive-pagination.js",
   "js/page-mode.js",
   "js/app-smart-status.js",
+  "js/app-notification-center.js",
   "js/app-modern-charts.js",
   "js/app-monthly-table.js",
+  "js/app-today-dashboard.js",
   "js/app-executive-dashboard.js",
   "js/app-system-link.js",
   "js/app-credit.js",
@@ -217,7 +219,9 @@ document.documentElement.style.setProperty(
   "multipage.css",
   "smart-status.css",
   "appearance-settings.css",
+  "notification-center.css",
   "modern-charts.css",
+  "today-dashboard.css",
   "executive-dashboard.css",
   "v3.css",
   "report-attachments.css",
