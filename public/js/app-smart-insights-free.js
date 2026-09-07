@@ -4,7 +4,7 @@
   const fmt=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:1});
   const avg=a=>a.length?a.reduce((s,v)=>s+Number(v||0),0)/a.length:0;
   const std=a=>{if(a.length<2)return 0;const m=avg(a);return Math.sqrt(avg(a.map(v=>(Number(v||0)-m)**2)));};
-  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+  const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const thisMonth=()=>today().slice(0,7);
   const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 
