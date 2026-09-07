@@ -81,3 +81,100 @@
   .backup-table td:first-child{max-width:260px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
   .backup-download-link{min-width:86px;padding:8px 12px;}
 }
+
+
+/* Compact system workspace */
+@media (min-width:901px) {
+  body[data-page="system"] .system-page {
+    width:min(1440px,calc(100% - 40px)) !important;
+    max-width:1440px !important;
+    margin:18px auto 0 !important;
+    padding-bottom:32px !important;
+  }
+
+  body[data-page="system"] .system-hero {
+    min-height:0 !important;
+    padding:18px 22px !important;
+    margin-bottom:12px !important;
+    border-radius:15px !important;
+    box-shadow:0 6px 18px rgba(16,81,60,.10) !important;
+  }
+
+  body[data-page="system"] .system-hero h2 {
+    font-size:27px !important;
+  }
+
+  body[data-page="system"] .system-metrics {
+    gap:10px !important;
+    margin-bottom:12px !important;
+  }
+
+  body[data-page="system"] .system-metric {
+    min-height:82px !important;
+    padding:12px 14px !important;
+    border-radius:13px !important;
+  }
+
+  body[data-page="system"] .system-metric strong {
+    margin:4px 0 2px !important;
+    font-size:21px !important;
+  }
+
+  body[data-page="system"] .system-panel {
+    padding:16px 18px !important;
+    border-radius:14px !important;
+    box-shadow:0 3px 12px rgba(16,24,40,.04) !important;
+  }
+
+  body[data-page="system"] .system-panel-head {
+    margin-bottom:8px !important;
+  }
+
+  body[data-page="system"] .system-panel-head h3 {
+    font-size:17px !important;
+  }
+
+  body[data-page="system"] .system-panel > p {
+    margin-bottom:10px !important;
+    line-height:1.65 !important;
+  }
+
+  body[data-page="system"] .restore-panel .restore-file-row {
+    margin:10px 0 !important;
+  }
+
+  body[data-page="system"] .restore-panel .restore-file-label {
+    min-height:38px !important;
+    padding:7px 14px !important;
+  }
+
+  body[data-page="system"] .restore-panel .restore-confirm-row {
+    margin-top:9px !important;
+    gap:5px !important;
+  }
+
+  body[data-page="system"] .restore-panel .restore-confirm-row input {
+    min-height:40px !important;
+    padding:8px 11px !important;
+  }
+
+  body[data-page="system"] .restore-panel .restore-action-btn {
+    width:auto !important;
+    min-width:280px !important;
+    min-height:40px !important;
+    margin-top:10px !important;
+    padding:8px 22px !important;
+  }
+
+  body[data-page="system"] .restore-panel .restore-warning {
+    margin-top:8px !important;
+    font-size:12px !important;
+  }
+
+  body[data-page="system"] .storage-panel,
+  body[data-page="system"] .integrity-panel,
+  body[data-page="system"] .backups-panel,
+  body[data-page="system"] .system-note-panel {
+    margin-top:12px !important;
+  }
+}
