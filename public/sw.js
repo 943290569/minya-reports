@@ -1,0 +1,19 @@
+const CACHE_NAME='minya-pwa-v1';
+const STATIC_ASSETS=['/','/style.css','/manifest.webmanifest','/assets/app-icon.svg','/assets/app-icon-maskable.svg'];
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(STATIC_ASSETS)).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',event=>{
+  const req=event.request;
+  if(req.method!=='GET') return;
+  const url=new URL(req.url);
+  if(url.origin!==location.origin) return;
+  if(url.pathname.startsWith('/api/')) return;
+  const isStatic=/\.(?:css|js|svg|png|jpg|jpeg|webp|woff2?)$/i.test(url.pathname)||url.pathname==='/manifest.webmanifest';
+  if(isStatic){
+    event.respondWith(caches.match(req).then(cached=>cached||fetch(req).then(res=>{const clone=res.clone();caches.open(CACHE_NAME).then(c=>c.put(req,clone));return res;}).catch(()=>caches.match('/'))));
+    return;
+  }
+  if(req.mode==='navigate'){
+    event.respondWith(fetch(req).catch(()=>caches.match('/')));
+  }
+});
