@@ -7,7 +7,7 @@
     if(!document.querySelector('link[rel="manifest"]')){
       const l=document.createElement('link');
       l.rel='manifest';
-      l.href='/manifest.webmanifest?v=stable10-pwa2';
+      l.href='/manifest.webmanifest?v=stable10-pwa5';
       document.head.appendChild(l);
     }
     let meta=document.querySelector('meta[name="theme-color"]');
@@ -67,7 +67,7 @@
     ensureManifest();
     installButton();
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js?v=stable10-pwa2',{scope:'/'}).catch(()=>{});
+      navigator.serviceWorker.register('/sw.js?v=stable10-pwa5',{scope:'/'}).catch(()=>{});
     }
     window.addEventListener('beforeinstallprompt',e=>{
       e.preventDefault();
