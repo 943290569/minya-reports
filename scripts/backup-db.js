@@ -24,7 +24,7 @@ db.backup(backupPath)
       }))
       .sort((a, b) => b.time - a.time);
 
-    for (const file of files.slice(14)) {
+    for (const file of files.slice(5)) {
       fs.unlinkSync(path.join(backupDir, file.name));
     }
 
