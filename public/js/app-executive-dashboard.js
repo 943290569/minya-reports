@@ -12,6 +12,17 @@
     return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 1 });
   }
 
+  function jerusalemParts() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return { year: values.year, month: `${values.year}-${values.month}` };
+  }
+
   function monthLabel(monthValue) {
     if (!monthValue) return "-";
     const [year, month] = monthValue.split("-");
@@ -22,8 +33,8 @@
   function previousMonth(monthValue) {
     const [year, month] = String(monthValue || "").split("-").map(Number);
     if (!year || !month) return "";
-    const d = new Date(year, month - 2, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const d = new Date(Date.UTC(year, month - 2, 1));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
   }
 
   function changeText(current, previous) {
@@ -105,14 +116,14 @@
     if (!shell) return;
 
     try {
-      const response = await fetch("/api/reports");
+      const response = await fetch("/api/reports", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل البيانات");
 
       const reports = Array.isArray(data.reports) ? data.reports : [];
-      const now = new Date();
-      const year = String(now.getFullYear());
-      const month = `${year}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const currentPeriod = jerusalemParts();
+      const year = String(currentPeriod.year);
+      const month = currentPeriod.month;
       const prevMonth = previousMonth(month);
 
       const byMonth = (value) => reports.filter((r) => String(r.report_date || "").startsWith(value));
