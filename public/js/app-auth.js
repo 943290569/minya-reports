@@ -68,8 +68,10 @@
 
     const path=location.pathname.replace(/\/+$/,'')||'/';
     if(path==='/'){
-      loadStyleOnce('/smart-insights-free.css?v=stable10-free1','data-minya-smart-free-style');
-      loadScriptOnce('/js/app-smart-insights-free.js?v=stable10-free1','data-minya-smart-free');
+      loadStyleOnce('/smart-insights-free.css?v=stable10-free2','data-minya-smart-free-style');
+      loadScriptOnce('/js/app-smart-insights-free.js?v=stable10-free2','data-minya-smart-free');
+      loadStyleOnce('/smart-search-free.css?v=stable10-free2','data-minya-smart-search-style');
+      loadScriptOnce('/js/app-smart-search-free.js?v=stable10-free2','data-minya-smart-search');
     }
   }
 
