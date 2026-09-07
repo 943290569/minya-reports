@@ -42,21 +42,25 @@
     },loadingSeconds*1000);
   }
 
-  function loadSharedNotifications(){
+  function loadScriptOnce(src,attribute){
+    if(document.querySelector(`script[${attribute}]`)) return;
+    const script=document.createElement('script');
+    script.src=src;
+    script.defer=true;
+    script.setAttribute(attribute,'1');
+    document.head.appendChild(script);
+  }
+
+  function loadSharedEnhancements(){
     if(publicPages.includes(location.pathname)) return;
-    if(!document.querySelector('link[href^="notification-center.css"]')){
+    if(!document.querySelector('link[href^="/notification-center.css"],link[href^="notification-center.css"]')){
       const link=document.createElement('link');
       link.rel='stylesheet';
       link.href='/notification-center.css?v=stable9-update1';
       document.head.appendChild(link);
     }
-    if(window.__MINYA_NOTIFICATION_CENTER__) return;
-    if(document.querySelector('script[data-minya-notifications]')) return;
-    const script=document.createElement('script');
-    script.src='/js/app-notification-center.js?v=stable9-update1';
-    script.defer=true;
-    script.dataset.minyaNotifications='1';
-    document.head.appendChild(script);
+    if(!window.__MINYA_NOTIFICATION_CENTER__) loadScriptOnce('/js/app-notification-center.js?v=stable9-update1','data-minya-notifications');
+    if(location.pathname==='/drivers-licenses.html'&&!window.__MINYA_LICENSE_FILTERS__) loadScriptOnce('/js/app-driver-license-filters.js?v=stable9-update1','data-minya-license-filters');
   }
 
   mountStandaloneRemembrance();
@@ -79,7 +83,7 @@
 
     applyRoleNavigation(user);
     removeUserBox();
-    loadSharedNotifications();
+    loadSharedEnhancements();
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
