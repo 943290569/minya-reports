@@ -37,7 +37,9 @@
 
     if(path==='/admin'){
       document.querySelectorAll('.v3-panel h3').forEach(h=>{
-        if(h.textContent.trim()==='سجل التعديلات Audit Log') h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';
+        if(h.textContent.trim()==='سجل التعديلات Audit Log' && !h.querySelector('small')) {
+          h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';
+        }
       });
     }
   }
