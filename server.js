@@ -419,6 +419,18 @@ function buildBackupObject() {
 }
 let lastAutomaticBackupAt = 0;
 const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;
+const AUTO_BACKUP_RETENTION_COUNT = 5;
+
+function pruneAutomaticBackups() {
+  const files = fs.readdirSync(backupsDir)
+    .filter(f => f.endsWith(".json"))
+    .map(name => ({ name, time: fs.statSync(path.join(backupsDir, name)).mtimeMs }))
+    .sort((a,b)=>b.time-a.time);
+
+  files.slice(AUTO_BACKUP_RETENTION_COUNT).forEach(f => {
+    try { fs.unlinkSync(path.join(backupsDir, f.name)); } catch {}
+  });
+}
 
 function writeAutomaticBackup(reason = "auto", force = false) {
   try {
@@ -431,14 +443,7 @@ function writeAutomaticBackup(reason = "auto", force = false) {
 
     lastAutomaticBackupAt = now;
 
-    const files = fs.readdirSync(backupsDir)
-      .filter(f => f.endsWith(".json"))
-      .map(name => ({ name, time: fs.statSync(path.join(backupsDir, name)).mtimeMs }))
-      .sort((a,b)=>b.time-a.time);
-
-    files.slice(20).forEach(f => {
-      try { fs.unlinkSync(path.join(backupsDir, f.name)); } catch {}
-    });
+    pruneAutomaticBackups();
 
     return true;
   } catch (error) {
@@ -446,6 +451,8 @@ function writeAutomaticBackup(reason = "auto", force = false) {
     return false;
   }
 }
+
+pruneAutomaticBackups();
 
 app.get("/api/health", (req, res) => {
   const integrity = db.pragma("integrity_check", { simple: true });
@@ -802,7 +809,7 @@ app.get("/api/backup/download", requireRole("admin"), (req,res)=>{ const payload
 
 function directorySize(dir) { try { return fs.readdirSync(dir,{withFileTypes:true}).reduce((sum,entry)=>{if(!entry.isFile())return sum;try{return sum+fs.statSync(path.join(dir,entry.name)).size;}catch{return sum;}},0); } catch{return 0;} }
 app.get("/api/system/storage", requireRole("admin"), (req,res)=>{ const dbBytes=fs.existsSync(dbPath)?fs.statSync(dbPath).size:0;const uploadsBytes=directorySize(uploadsDir);const backupsBytes=directorySize(backupsDir);const totalBytes=dbBytes+uploadsBytes+backupsBytes;const referenceLimitBytes=512*1024*1024;const percent=referenceLimitBytes?Number(((totalBytes/referenceLimitBytes)*100).toFixed(2)):0;const level=percent>=85?"danger":percent>=70?"warning":"ok";const attachmentCount=db.prepare(`SELECT COUNT(*) AS count FROM attachments`).get().count;const backupCount=fs.readdirSync(backupsDir).filter(name=>name.endsWith(".json")).length;res.json({ok:true,db_bytes:dbBytes,uploads_bytes:uploadsBytes,backups_bytes:backupsBytes,total_bytes:totalBytes,reference_limit_bytes:referenceLimitBytes,percent,level,attachment_count:attachmentCount,backup_count:backupCount}); });
-app.get("/api/backups", requireRole("admin"), (req,res)=>{ const backups=fs.readdirSync(backupsDir).filter(name=>/^minya-.*\.json$/.test(name)).map(name=>{const stat=fs.statSync(path.join(backupsDir,name));return{name,size_bytes:stat.size,created_at:stat.mtime.toISOString()};}).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,20);res.json({ok:true,backups}); });
+app.get("/api/backups", requireRole("admin"), (req,res)=>{ const backups=fs.readdirSync(backupsDir).filter(name=>/^minya-.*\.json$/.test(name)).map(name=>{const stat=fs.statSync(path.join(backupsDir,name));return{name,size_bytes:stat.size,created_at:stat.mtime.toISOString()};}).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,AUTO_BACKUP_RETENTION_COUNT);res.json({ok:true,backups}); });
 app.get("/api/backups/:name/download", requireRole("admin"), (req,res)=>{ const name=path.basename(String(req.params.name||""));if(!/^minya-.*\.json$/.test(name))return res.status(400).json({ok:false,message:"اسم النسخة غير صالح"});const file=path.join(backupsDir,name);if(!fs.existsSync(file))return res.status(404).json({ok:false,message:"النسخة غير موجودة"});audit(req.user,"DOWNLOAD_SAVED_BACKUP","system",name);res.download(file,name); });
 
 app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
