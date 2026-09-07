@@ -1,0 +1,16 @@
+{
+  "name": "نظام إدارة مكب المنيا",
+  "short_name": "مكب المنيا",
+  "description": "نظام التقارير التشغيلية والبيئية اليومية لمكب المنيا",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#176b4f",
+  "icons": [
+    {"src":"/assets/app-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"},
+    {"src":"/assets/app-icon-maskable.svg","sizes":"any","type":"image/svg+xml","purpose":"maskable"}
+  ]
+}
