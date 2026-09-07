@@ -1,4 +1,4 @@
-/* V33 Pivot adapter: single source of truth for landfill/stations/Aziz. Supports flat landfill pivots (date row carries quantity/count) and grouped pivots without double counting date totals. */
+/* V34 Pivot adapter: single source of truth for landfill/stations/Aziz. Supports flat/grouped Pivot safely and refuses ambiguous station totals instead of guessing. */
 (function(){
   const $=id=>document.getElementById(id);
   const clean=v=>String(v??'').replace(/\s+/g,' ').trim();
@@ -15,6 +15,7 @@
   }
   function bucket(label){const n=norm(label);if(n.includes('عصاره'))return'leachate';if(n.includes('مواد لتغطيه المكب'))return'cover';if(n.includes('طمم'))return'tamm';if(n.includes('هيئات محليه'))return'local';if(n.includes('اسرائيلي')||n.includes('مستوطن'))return'settlements';if(n.includes('افراد')||n.includes('نقديه'))return'individuals';if(n.includes('شركات')||n.includes('مصانع'))return'companies';return'other';}
   function stationKey(label){const n=norm(label);if(n.includes('يطا'))return'yata';if(n.includes('ترقوميا'))return'tarqumia';if(n.includes('الخليل'))return'hebron';return'';}
+  function isTotalLabel(label){const n=norm(label);return n.includes('الاجمالي')||n.includes('المجموع الكلي')||n.includes('grand total');}
   function emptyLand(){return{local:{tons:0,trucks:0},settlements:{tons:0,trucks:0},individuals:{tons:0,trucks:0},companies:{tons:0,trucks:0},other:{tons:0,trucks:0},leachate:{tons:0,trucks:0},tamm:{tons:0,trucks:0},cover:{tons:0,trucks:0}};}
   function emptyStations(){return{yata:{tons:0,trucks:0},tarqumia:{tons:0,trucks:0},hebron:{tons:0,trucks:0}};}
 
@@ -55,8 +56,67 @@
     finish();
     state.landfill=map;assign(input,makeFile(out,'مكب-pivot-normalized.xlsx'));return true;
   }
-  async function normalizeStations(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','المحطة','الكمية']],map=new Map();let d='';for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(date){d=date;if(!map.has(d))map.set(d,emptyStations());continue;}if(!d||norm(row[0]).includes('الاجمالي الكلي'))continue;const k=stationKey(row[0]);if(!k)continue;const x=map.get(d)[k];x.tons+=num(row[1]);x.trucks+=num(row[2]);expand(out,d,clean(row[0]),row[1],row[2]);}state.stations=map;assign(input,makeFile(out,'محطات-pivot-normalized.xlsx'));return true;}
-  async function normalizeAziz(input){const p=await pivot(input.files?.[0]);if(!p)return false;const out=[['التاريخ','الكمية']],map=new Map();for(let r=p.h+1;r<p.rows.length;r++){const row=p.rows[r]||[],date=iso(row[0]);if(!date)continue;const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));map.set(date,{tons,trucks});if(trucks){const each=tons/trucks;for(let i=0;i<trucks;i++)out.push([date,each]);}}state.aziz=map;assign(input,makeFile(out,'عبد العزيز-pivot-normalized.xlsx'));return true;}
+
+  async function normalizeStations(input){
+    const p=await pivot(input.files?.[0]);if(!p)return false;
+    const out=[['التاريخ','المحطة','الكمية']],map=new Map();
+    let section=null;
+    const finish=()=>{
+      if(!section)return;
+      const {date,dateTons,dateTrucks,children}=section,x=emptyStations();
+      let recognized=0;
+      for(const row of children){
+        const label=clean(row[0]);
+        if(!label||isTotalLabel(label))continue;
+        const k=stationKey(label);if(!k)continue;
+        const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));
+        if(tons===0&&trucks===0)continue;
+        x[k].tons+=tons;x[k].trucks+=trucks;expand(out,date,label,tons,trucks);recognized++;
+      }
+      if(recognized===0&&(dateTons!==0||dateTrucks!==0)){
+        throw new Error(`ملف المحطات: توجد إجماليات بتاريخ ${date} بدون اسم محطة واضح. تم إيقاف القراءة بدل توزيعها بشكل تخميني.`);
+      }
+      map.set(date,x);section=null;
+    };
+    for(let r=p.h+1;r<p.rows.length;r++){
+      const row=p.rows[r]||[],date=iso(row[0]);
+      if(date){finish();section={date,dateTons:num(row[1]),dateTrucks:Math.max(0,Math.round(num(row[2]))),children:[]};continue;}
+      if(section)section.children.push(row);
+    }
+    finish();
+    state.stations=map;assign(input,makeFile(out,'محطات-pivot-normalized.xlsx'));return true;
+  }
+
+  async function normalizeAziz(input){
+    const p=await pivot(input.files?.[0]);if(!p)return false;
+    const out=[['التاريخ','الكمية']],map=new Map();
+    let section=null;
+    const finish=()=>{
+      if(!section)return;
+      const {date,dateTons,dateTrucks,children}=section;
+      let childTons=0,childTrucks=0,childRows=0;
+      for(const row of children){
+        const label=clean(row[0]);
+        if(isTotalLabel(label))continue;
+        const tons=num(row[1]),trucks=Math.max(0,Math.round(num(row[2])));
+        if(tons===0&&trucks===0)continue;
+        childTons+=tons;childTrucks+=trucks;childRows++;
+      }
+      const tons=childRows?childTons:dateTons;
+      const trucks=childRows?childTrucks:dateTrucks;
+      map.set(date,{tons,trucks});
+      if(trucks){const each=tons/trucks;for(let i=0;i<trucks;i++)out.push([date,each]);}
+      section=null;
+    };
+    for(let r=p.h+1;r<p.rows.length;r++){
+      const row=p.rows[r]||[],date=iso(row[0]);
+      if(date){finish();section={date,dateTons:num(row[1]),dateTrucks:Math.max(0,Math.round(num(row[2]))),children:[]};continue;}
+      if(section)section.children.push(row);
+    }
+    finish();
+    state.aziz=map;assign(input,makeFile(out,'عبد العزيز-pivot-normalized.xlsx'));return true;
+  }
+
   function text(x){return `${fmt(x.tons)} طن · ${fmt(x.trucks)} شاحنة`;}
   function totalLand(x){const ks=['local','settlements','individuals','companies','other'];return ks.reduce((a,k)=>({tons:a.tons+x[k].tons,trucks:a.trucks+x[k].trucks}),{tons:0,trucks:0});}
   function leachateTotal(){let t={tons:0,trucks:0};for(const x of state.landfill.values()){t.tons+=x.leachate.tons;t.trucks+=x.leachate.trucks;}return t;}
