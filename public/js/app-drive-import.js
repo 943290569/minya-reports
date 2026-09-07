@@ -23,11 +23,21 @@
     el.className=`drive-state${type?` ${type}`:''}`; el.textContent=message;
   }
   function dateIso(value){
+    const valid=(year,month,day)=>{
+      const y=Number(year),m=Number(month),d=Number(day);
+      const date=new Date(Date.UTC(y,m-1,d));
+      return y>=2000&&y<=2100&&date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d
+        ?`${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`:'';
+    };
+    if(value instanceof Date&&!Number.isNaN(value.getTime()))return valid(value.getFullYear(),value.getMonth()+1,value.getDate());
+    if(typeof value==='number'&&window.XLSX?.SSF){const d=window.XLSX.SSF.parse_date_code(value);if(d)return valid(d.y,d.m,d.d);}
     const s=text(value);
-    let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
-    if(m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
-    m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+    let m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})(?:\D.*)?$/);
+    if(m)return valid(m[1],m[2],m[3]);
+    m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})(?:\D.*)?$/);
+    if(m)return valid(m[3].length===2?2000+Number(m[3]):m[3],m[2],m[1]);
+    m=s.match(/^(\d{2})(\d{2})(\d{4})$/);
+    if(m)return valid(m[3],m[2],m[1]);
     return '';
   }
   function dateDisplay(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:iso||'-';}
