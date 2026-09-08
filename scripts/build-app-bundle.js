@@ -30,7 +30,7 @@ if (!versionMatch) {
   throw new Error("MINYA_ASSET_VERSION is missing from public/app.js");
 }
 const assetVersion = `${versionMatch[1]}-wa8`;
-const driveAssetVersion = `${assetVersion}-drive1`;
+const driveAssetVersion = `${assetVersion}-drive2`;
 
 const driveScriptPaths = [
   "js/app-auth.js",
@@ -47,6 +47,7 @@ const driveScriptPaths = [
   "js/app-drive-quality.js",
   "js/app-drive-quality-details.js",
   "js/app-drive-preimport-consistency.js",
+  "js/app-drive-postimport-verify.js",
   "js/app-drive-folder-nav.js",
   "js/app-english-digits.js"
 ];
