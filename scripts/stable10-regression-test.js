@@ -31,6 +31,18 @@ const adminToday = read('public/js/app-admin-today-ops.js');
 assert(adminToday.includes("timeZone:'Asia/Jerusalem'"), 'Admin daily KPIs must use Asia/Jerusalem');
 assert(!adminToday.includes("timeZone:'Asia/Hebron'"), 'Admin daily KPIs must not use the Hebron alias');
 
+const operationalSummaries = read('public/js/app-operational-summaries.js');
+assert(operationalSummaries.includes("timeZone:'Asia/Jerusalem'"), 'Operational summaries must use Asia/Jerusalem');
+assert(operationalSummaries.includes('const elapsedDay=Number(today.slice(8,10))'), 'Operational monthly comparison must use the same elapsed days from the previous month');
+assert(operationalSummaries.includes('Number(date.slice(8,10))<=elapsedDay'), 'Operational previous-month rows must stop at the matching elapsed day');
+assert(operationalSummaries.includes('Math.abs(pct)<0.05'), 'Operational trend stability threshold must remain aligned with monthly/annual reports');
+
+const smartMonthlyCompare = read('public/js/app-smart-monthly-compare.js');
+assert(smartMonthlyCompare.includes("timeZone:'Asia/Jerusalem'"), 'Smart monthly comparison must use Asia/Jerusalem');
+assert(smartMonthlyCompare.includes('elapsedDay=Number(today.slice(8,10))'), 'Smart monthly comparison must use the same elapsed days from the previous month');
+assert(smartMonthlyCompare.includes('Number(date.slice(8,10))<=elapsedDay'), 'Smart previous-month rows must stop at the matching elapsed day');
+assert(smartMonthlyCompare.includes('Math.abs(pctx)<.05'), 'Smart monthly stability threshold must remain aligned with the reports');
+
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
 assert(!homeLayout.includes('setInterval('), 'Home layout must not continuously reorder the DOM');
@@ -55,4 +67,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, elapsed-day monthly comparisons, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
