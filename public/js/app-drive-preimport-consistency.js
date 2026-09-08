@@ -5,6 +5,7 @@
   const norm=v=>text(v).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ًٌٍَُِّْـ]/g,'').toLowerCase();
   const num=v=>{const m=text(v).replace(/,/g,'').match(/-?[\d.]+/);const n=m?Number(m[0]):0;return Number.isFinite(n)?n:0;};
   const same=(a,b)=>Math.abs(Number(a||0)-Number(b||0))<=0.05;
+  const LANDFILL_OPERATION=norm('مكب نفايات المنيا');
 
   function numberAfter(label,value){
     const s=text(value).replace(/,/g,'');
@@ -33,7 +34,7 @@
       const s=text(p.textContent),i=s.indexOf(':');
       if(i<0)continue;
       const name=norm(s.slice(0,i));
-      if(name.includes('مكب نفايات المنيا')){
+      if(name===LANDFILL_OPERATION){
         trucks+=numberAfter('عدد المركبات',s);
         waste+=numberAfter('الكمية',s);
       }else if(name.includes('محطه ترحيل')){
