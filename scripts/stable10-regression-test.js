@@ -33,6 +33,11 @@ assert(!adminToday.includes("timeZone:'Asia/Hebron'"), 'Admin daily KPIs must no
 
 const operationalSummaries = read('public/js/app-operational-summaries.js');
 assert(operationalSummaries.includes("timeZone:'Asia/Jerusalem'"), 'Operational summaries must use Asia/Jerusalem');
+assert(operationalSummaries.includes('const yesterday=dateMinus(today,1)'), 'Daily operational comparison must use yesterday exactly');
+assert(operationalSummaries.includes("String(r.report_date||'')===yesterday"), 'Daily operational comparison must not fall back to an older report');
+assert(operationalSummaries.includes('const prior=previousByDate.get(dateMinus(currentDate,7))'), 'Weekly comparison must match each current day to the same weekday one week earlier');
+assert(operationalSummaries.includes('return {current,previous,matchedDays:current.length};'), 'Weekly comparison must only compare matched day pairs');
+assert(operationalSummaries.includes('المقارنة مبنية على ${comparison.matchedDays} يوم متطابق'), 'Weekly comparison must disclose how many matched days were used');
 assert(operationalSummaries.includes('const elapsedDay=Number(today.slice(8,10))'), 'Operational monthly comparison must use the same elapsed days from the previous month');
 assert(operationalSummaries.includes('Number(date.slice(8,10))<=elapsedDay'), 'Operational previous-month rows must stop at the matching elapsed day');
 assert(operationalSummaries.includes('Math.abs(pct)<0.05'), 'Operational trend stability threshold must remain aligned with monthly/annual reports');
@@ -73,4 +78,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, elapsed-period monthly/annual comparisons, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual comparisons, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
