@@ -17,6 +17,7 @@ for (const moduleName of [
 ]) {
   assert(build.includes(`"${moduleName}"`), `Drive bundle is missing ${moduleName}`);
 }
+assert(build.includes('js/app-monthly-comparison-stable10.js'), 'Stable 10 monthly comparison override is not registered in the app bundle');
 
 const smartOps = read('public/js/app-smart-operations-free.js');
 assert(smartOps.includes("timeZone:'Asia/Jerusalem'"), 'Smart operations must use Asia/Jerusalem');
@@ -48,6 +49,18 @@ assert(smartMonthlyCompare.includes('elapsedDay=Number(today.slice(8,10))'), 'Sm
 assert(smartMonthlyCompare.includes('Number(date.slice(8,10))<=elapsedDay'), 'Smart previous-month rows must stop at the matching elapsed day');
 assert(smartMonthlyCompare.includes('Math.abs(pctx)<.05'), 'Smart monthly stability threshold must remain aligned with the reports');
 
+const monthlyComparison = read('public/js/app-monthly-comparison-stable10.js');
+assert(monthlyComparison.includes("timeZone:'Asia/Jerusalem'"), 'Monthly report comparison must resolve the current date in Asia/Jerusalem');
+assert(monthlyComparison.includes("String(monthValue||'')===jerusalemToday().slice(0,7)"), 'Monthly report comparison must only trim the current month');
+assert(monthlyComparison.includes('Number(date.slice(8,10))<=elapsedDay'), 'Monthly report previous-month comparison must stop at the same elapsed day');
+assert(monthlyComparison.includes("if(!isCurrentMonth(monthValue))return rows;"), 'Historical monthly comparisons must remain full-month comparisons');
+
+const executiveDashboard = read('public/js/app-executive-dashboard.js');
+assert(executiveDashboard.includes("timeZone: 'Asia/Jerusalem'"), 'Executive dashboard must use Asia/Jerusalem');
+assert(executiveDashboard.includes('day: Number(values.day)'), 'Executive dashboard must expose the Jerusalem elapsed day');
+assert(executiveDashboard.includes('Number(date.slice(8, 10)) <= elapsedDay'), 'Executive previous-month data must stop at the same elapsed day');
+assert(executiveDashboard.includes('days: currentReports.length'), 'Executive operating days must equal the number of recorded reports');
+
 const annualComparison = read('public/js/app-annual-comparison.js');
 assert(annualComparison.includes('timeZone: "Asia/Jerusalem"'), 'Annual comparison must resolve the current date in Asia/Jerusalem');
 assert(annualComparison.includes('return Number(year) === currentYear ? today.slice(5) : null;'), 'Annual comparison must limit only the current year to the elapsed period');
@@ -78,4 +91,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual comparisons, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, recorded-day averages, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
