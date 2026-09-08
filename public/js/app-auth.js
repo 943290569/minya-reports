@@ -80,10 +80,10 @@
       loadStyleOnce('/smart-monthly-compare.css?v=stable10-free4','data-minya-smart-compare-style');
       loadScriptOnce('/js/app-smart-monthly-compare.js?v=stable10-free4','data-minya-smart-compare');
       loadStyleOnce('/smart-operations-free.css?v=stable10-free4','data-minya-smart-ops-style');
-      loadScriptOnce('/js/app-smart-operations-free.js?v=stable10-free4','data-minya-smart-ops');
+      loadScriptOnce('/js/app-smart-operations-free.js?v=stable10-free5','data-minya-smart-ops');
       loadStyleOnce('/operational-summaries.css?v=stable10-summary2','data-minya-operational-summary-style');
       loadScriptOnce('/js/app-operational-summaries.js?v=stable10-summary2','data-minya-operational-summary');
-      loadScriptOnce('/js/app-home-layout-stable10.js?v=stable10-home1','data-minya-home-layout');
+      loadScriptOnce('/js/app-home-layout-stable10.js?v=stable10-home2','data-minya-home-layout');
     }
   }
 
