@@ -46,7 +46,11 @@ function reportPayload(overrides={}){
   return {
     report_date:'2099-12-28',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
     total_trucks:1,total_waste_tons:1,total_diesel:1,notes:'runtime payload validation',
-    crews:[],operations:[],stations:[],equipment:[],...overrides
+    crews:[],
+    operations:[{operation_name:'مكب نفايات المنيا',vehicle_count:1,quantity:1,unit:'طن',notes:''}],
+    stations:[],
+    equipment:[{equipment_name:'مدحلة 36 طن',operating_status:'يعمل',working_hours:0,diesel_liters:1,notes:''}],
+    ...overrides
   };
 }
 
@@ -88,7 +92,7 @@ function reportPayload(overrides={}){
 
     x=await json('/api/reports',auth(viewerCookie));
     expectStatus(x,200,'viewer could not read reports');
-    x=await json('/api/reports',auth(viewerCookie,'POST',reportPayload({report_date:'2099-12-29',notes:'viewer must not create'})));
+    x=await json('/api/reports',auth(viewerCookie,'POST',reportPayload({report_date:'2099-12-29',notes:'viewer must not create',total_trucks:999})));
     expectStatus(x,403,'viewer was allowed to create a report');
 
     x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-02-31'})));
@@ -99,21 +103,20 @@ function reportPayload(overrides={}){
     expectStatus(x,400,'non-numeric waste total was accepted');
     x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-12-25',total_diesel:-1})));
     expectStatus(x,400,'negative diesel total was accepted');
+    x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-12-24',total_trucks:2})));
+    expectStatus(x,400,'mismatched canonical truck total was accepted');
+    if(Number(x.data?.expected_totals?.total_trucks)!==1) throw new Error('canonical mismatch response did not expose expected truck total');
 
-    x=await json('/api/reports',auth(adminCookie,'POST',{
-      report_date:'2099-12-31',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
-      total_trucks:1,total_waste_tons:1,total_diesel:1,notes:'runtime attachment smoke',
-      crews:[],operations:[],stations:[],equipment:[]
-    }));
+    x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({
+      report_date:'2099-12-31',notes:'runtime attachment smoke'
+    })));
     expectStatus(x,200,'runtime report creation failed');
     const reportId=Number(x.data?.report?.id||0);
     if(!reportId) throw new Error('runtime report id missing');
 
-    x=await json(`/api/reports/${reportId}`,auth(adminCookie,'PUT',{
-      report_date:'2099-12-31',weather:'صحو',temperature:20,start_time:'04:00',end_time:'19:00',
-      total_trucks:1,total_waste_tons:1,total_diesel:-5,notes:'invalid update must fail',
-      crews:[],operations:[],stations:[],equipment:[]
-    }));
+    x=await json(`/api/reports/${reportId}`,auth(adminCookie,'PUT',reportPayload({
+      report_date:'2099-12-31',total_diesel:-5,notes:'invalid update must fail'
+    })));
     expectStatus(x,400,'invalid report update was accepted');
 
     x=await json(`/api/reports/${reportId}/attachments`,auth(adminCookie,'POST',{name:'bad.txt',mime_type:'text/plain',data_base64:'%%%='}));
@@ -137,11 +140,9 @@ function reportPayload(overrides={}){
     if(!contentType.startsWith('application/octet-stream')) throw new Error(`active attachment was not forced to binary MIME: ${contentType}`);
     if(!disposition.startsWith('attachment;')) throw new Error(`active attachment was not forced to download: ${disposition}`);
 
-    x=await json('/api/reports',auth(editorCookie,'POST',{
-      report_date:'2099-12-30',weather:'صحو',temperature:19,start_time:'04:00',end_time:'19:00',
-      total_trucks:2,total_waste_tons:2,total_diesel:2,notes:'runtime return smoke',
-      crews:[],operations:[],stations:[],equipment:[]
-    }));
+    x=await json('/api/reports',auth(editorCookie,'POST',reportPayload({
+      report_date:'2099-12-30',temperature:19,notes:'runtime return smoke'
+    })));
     expectStatus(x,200,'editor report creation failed');
     const returnedReportId=Number(x.data?.report?.id||0);
     if(!returnedReportId) throw new Error('editor report id missing');
@@ -190,7 +191,7 @@ function reportPayload(overrides={}){
     x=await json('/api/reports',auth(editorCookie));
     expectStatus(x,200,'editor could not use a new session after password change');
 
-    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + report validation + role permissions + session invalidation + safe attachments + returned-report workflow ok.`);
+    console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + canonical report totals + role permissions + session invalidation + safe attachments + returned-report workflow ok.`);
   } catch (error) {
     console.error(output);
     throw error;
