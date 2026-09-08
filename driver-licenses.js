@@ -31,7 +31,21 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
     created_by INTEGER,
     FOREIGN KEY(driver_id) REFERENCES driver_licenses(id) ON DELETE CASCADE
   );
-  CREATE INDEX IF NOT EXISTS idx_driver_license_expiry ON driver_licenses(expiry_date);`);
+  CREATE TABLE IF NOT EXISTS movement_vehicles(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plate_number TEXT NOT NULL UNIQUE,
+    vehicle_type TEXT NOT NULL DEFAULT '',
+    model TEXT DEFAULT '',
+    driver_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'تعمل',
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(driver_id) REFERENCES driver_licenses(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_driver_license_expiry ON driver_licenses(expiry_date);
+  CREATE INDEX IF NOT EXISTS idx_movement_vehicles_driver ON movement_vehicles(driver_id);
+  CREATE INDEX IF NOT EXISTS idx_movement_vehicles_status ON movement_vehicles(status);`);
 
   const cols=new Set(db.pragma('table_info(driver_licenses)').map(x=>x.name));
   if(!cols.has('identity_number')) db.exec(`ALTER TABLE driver_licenses ADD COLUMN identity_number TEXT DEFAULT ''`);
@@ -81,6 +95,7 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
   const cleanDigits=(v,max=12)=>String(v||'').replace(/\D/g,'').slice(0,max);
   const validIdentity=v=>!v||/^\d{6,12}$/.test(v);
   const validLicenseNo=v=>!v||/^\d{5,12}$/.test(v);
+  const cleanText=(v,max=120)=>String(v??'').trim().slice(0,max);
   const trimEvents=id=>db.prepare(`DELETE FROM driver_license_events WHERE driver_id=? AND id NOT IN (SELECT id FROM driver_license_events WHERE driver_id=? ORDER BY id DESC LIMIT 3)`).run(id,id);
   const addEvent=(id,type,details,userId)=>{db.prepare(`INSERT INTO driver_license_events(driver_id,event_type,details,created_by) VALUES(?,?,?,?)`).run(id,type,details,userId);trimEvents(id);};
   const saveImage=(driver,buf,original,mime)=>{
@@ -173,5 +188,53 @@ module.exports=function installDriverLicenses(app,{db,requireAuth,requireRole,au
     db.prepare(`UPDATE driver_licenses SET image_name='',image_original='',image_mime='',updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(id);
     addEvent(id,'حذف مرفق','تم حذف صورة الرخصة',req.user.id);
     res.json({ok:true});
+  });
+
+  const vehicleRowSql=`SELECT v.*,d.name_ar AS driver_name,d.expiry_date AS driver_license_expiry,d.license_class AS driver_license_class
+    FROM movement_vehicles v LEFT JOIN driver_licenses d ON d.id=v.driver_id`;
+  const mapVehicle=x=>x?({...x,driver_license_days:days(x.driver_license_expiry),driver_license_status:status(days(x.driver_license_expiry))}):x;
+
+  app.get('/api/movement-vehicles',requireAuth,(req,res)=>{
+    const rows=db.prepare(`${vehicleRowSql} ORDER BY v.plate_number`).all().map(mapVehicle);
+    res.json({ok:true,rows});
+  });
+
+  app.post('/api/movement-vehicles',requireRole('admin','editor'),(req,res)=>{
+    try{
+      const b=req.body||{};
+      const plate=cleanText(b.plate_number,30),type=cleanText(b.vehicle_type,80),model=cleanText(b.model,80),vehicleStatus=cleanText(b.status,30)||'تعمل',notes=cleanText(b.notes,500);
+      const driverId=b.driver_id?Number(b.driver_id):null;
+      if(!plate)return res.status(400).json({ok:false,message:'رقم اللوحة مطلوب'});
+      if(!type)return res.status(400).json({ok:false,message:'نوع المركبة مطلوب'});
+      if(db.prepare('SELECT id FROM movement_vehicles WHERE plate_number=?').get(plate))return res.status(409).json({ok:false,message:'رقم اللوحة مسجل مسبقًا'});
+      if(driverId&&!db.prepare('SELECT id FROM driver_licenses WHERE id=?').get(driverId))return res.status(400).json({ok:false,message:'السائق المحدد غير موجود ضمن موظفي المجلس'});
+      const r=db.prepare(`INSERT INTO movement_vehicles(plate_number,vehicle_type,model,driver_id,status,notes) VALUES(?,?,?,?,?,?)`).run(plate,type,model,driverId,vehicleStatus,notes);
+      audit?.(req.user,'CREATE_MOVEMENT_VEHICLE','movement_vehicle',r.lastInsertRowid,plate);
+      res.json({ok:true,id:r.lastInsertRowid,message:'تمت إضافة مركبة حركة المكب'});
+    }catch(e){res.status(500).json({ok:false,message:'تعذر إضافة المركبة',error:e.message});}
+  });
+
+  app.put('/api/movement-vehicles/:id',requireRole('admin','editor'),(req,res)=>{
+    try{
+      const id=Number(req.params.id),old=db.prepare('SELECT * FROM movement_vehicles WHERE id=?').get(id),b=req.body||{};
+      if(!old)return res.status(404).json({ok:false,message:'المركبة غير موجودة'});
+      const plate=cleanText(b.plate_number??old.plate_number,30),type=cleanText(b.vehicle_type??old.vehicle_type,80),model=cleanText(b.model??old.model,80),vehicleStatus=cleanText(b.status??old.status,30)||'تعمل',notes=cleanText(b.notes??old.notes,500);
+      const driverId=(b.driver_id===null||b.driver_id===''||b.driver_id===undefined)?null:Number(b.driver_id);
+      if(!plate||!type)return res.status(400).json({ok:false,message:'رقم اللوحة ونوع المركبة مطلوبان'});
+      const dup=db.prepare('SELECT id FROM movement_vehicles WHERE plate_number=? AND id<>?').get(plate,id);
+      if(dup)return res.status(409).json({ok:false,message:'رقم اللوحة مسجل لمركبة أخرى'});
+      if(driverId&&!db.prepare('SELECT id FROM driver_licenses WHERE id=?').get(driverId))return res.status(400).json({ok:false,message:'السائق المحدد غير موجود ضمن موظفي المجلس'});
+      db.prepare(`UPDATE movement_vehicles SET plate_number=?,vehicle_type=?,model=?,driver_id=?,status=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(plate,type,model,driverId,vehicleStatus,notes,id);
+      audit?.(req.user,'UPDATE_MOVEMENT_VEHICLE','movement_vehicle',id,plate);
+      res.json({ok:true,message:'تم تحديث المركبة'});
+    }catch(e){res.status(500).json({ok:false,message:'تعذر تحديث المركبة',error:e.message});}
+  });
+
+  app.delete('/api/movement-vehicles/:id',requireRole('admin','editor'),(req,res)=>{
+    const id=Number(req.params.id),old=db.prepare('SELECT * FROM movement_vehicles WHERE id=?').get(id);
+    if(!old)return res.status(404).json({ok:false,message:'المركبة غير موجودة'});
+    db.prepare('DELETE FROM movement_vehicles WHERE id=?').run(id);
+    audit?.(req.user,'DELETE_MOVEMENT_VEHICLE','movement_vehicle',id,old.plate_number);
+    res.json({ok:true,message:'تم حذف المركبة'});
   });
 };
