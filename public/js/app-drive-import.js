@@ -108,24 +108,21 @@
       }
     }
 
-    let totalTrucks=0,totalWaste=0;
-    const finalRow=findRow(rows,'المجموع النهائي');
-    if(finalRow>=0){totalTrucks=num(rows[finalRow][3]);totalWaste=num(rows[finalRow][4]);}
-    if(!totalTrucks) totalTrucks=operations.filter(x=>normalize(x.operation_name).includes('مكب نفايات المنيا')).reduce((s,x)=>s+num(x.vehicle_count),0)+stations.reduce((s,x)=>s+num(x.truck_count),0);
-    if(!totalWaste) totalWaste=operations.filter(x=>normalize(x.operation_name).includes('مكب نفايات المنيا')).reduce((s,x)=>s+num(x.quantity),0)+stations.reduce((s,x)=>s+num(x.waste_tons),0);
+    const landfill=operations.find(x=>normalize(x.operation_name)===normalize('مكب نفايات المنيا'));
+    const totalTrucks=num(landfill?.vehicle_count)+stations.reduce((s,x)=>s+num(x.truck_count),0);
+    const totalWaste=num(landfill?.quantity)+stations.reduce((s,x)=>s+num(x.waste_tons),0);
 
     const equipment=[];
     const eqHeader=findRow(rows,'اسم الالية');
-    let totalDiesel=0;
     if(eqHeader>=0){
       for(let i=eqHeader+1;i<rows.length;i++){
         const row=rows[i],name=text(row[0]); if(!name)continue;
-        if(normalize(name).includes('مجموع كميه السولار')){totalDiesel=num(row[5]);break;}
+        if(normalize(name).includes('مجموع كميه السولار'))break;
         if(normalize(name).includes('ملاحظات'))break;
         equipment.push({equipment_name:name,operating_status:mapEquipmentStatus(row[1]),status_description:text(row[2]),working_hours:0,diesel_liters:num(row[5]),notes:''});
       }
     }
-    if(!totalDiesel)totalDiesel=equipment.reduce((s,x)=>s+num(x.diesel_liters),0);
+    const totalDiesel=equipment.reduce((s,x)=>s+num(x.diesel_liters),0);
 
     let notes='';
     const notesRow=findRow(rows,'ملاحظات');
@@ -137,7 +134,6 @@
       }
       notes=collected.join('\n');
     }
-    const landfill=operations.find(x=>normalize(x.operation_name).includes('مكب نفايات المنيا'));
     const startTime=landfill?.start_time||'04:00',endTime=landfill?.end_time||'19:00';
     const issues=[];
     if(!reportDate)issues.push('تعذر تحديد تاريخ التقرير');
