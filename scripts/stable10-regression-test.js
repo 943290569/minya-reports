@@ -76,6 +76,17 @@ assert(annualInsights.includes('timeZone: "Asia/Jerusalem"'), 'Annual report ins
 assert(annualInsights.includes('const isCurrentYear = String(year) === currentPeriod.year;'), 'Annual report insights must distinguish the current year from historical years');
 assert(annualInsights.includes('item.monthValue < currentPeriod.month'), 'Annual report best/low/average indicators must exclude the current partial month');
 assert(annualInsights.includes('للأشهر المكتملة فقط'), 'Annual report monthly average must disclose completed-month basis');
+assert(annualInsights.includes('yearWaste / annualReports.length'), 'Annual daily waste average must divide by recorded report days only');
+assert(annualInsights.includes('const highestDay = annualReports.reduce'), 'Annual report must calculate the highest recorded waste day');
+assert(annualInsights.includes('const lowestDay = annualReports.reduce'), 'Annual report must calculate the lowest recorded waste day');
+assert(annualInsights.includes('لأيام التشغيل المسجلة — ${annualReports.length} يوم'), 'Annual daily average must disclose the recorded-day basis');
+
+const annualExport = read('public/js/app-annual-export.js');
+assert(annualExport.includes('const daysTotal = reports.length;'), 'Annual CSV operating days must equal the number of recorded reports');
+assert(annualExport.includes('dailyWasteAverage = daysTotal ? wasteTotal / daysTotal : 0'), 'Annual CSV daily average must use recorded report days only');
+assert(annualExport.includes('const highestDay = reports.reduce'), 'Annual CSV must export the highest recorded waste day');
+assert(annualExport.includes('const lowestDay = reports.reduce'), 'Annual CSV must export the lowest recorded waste day');
+assert(annualExport.includes('متوسط النفايات اليومي طن/يوم مسجل'), 'Annual CSV must label the recorded-day daily average clearly');
 
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
@@ -101,4 +112,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual executive/report indicators, recorded-day averages, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
