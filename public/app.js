@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260907-stable10-summary2";
+const MINYA_ASSET_VERSION = "3.5.0-20260908-stable10-summary3";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 
@@ -172,6 +172,7 @@ document.documentElement.style.setProperty(
   "js/app-print-daily.js",
   "js/app-print-monthly.js",
   "js/app-final.js",
+  "js/app-monthly-chart-stable10.js",
   "js/app-annual-export.js",
   "js/app-print-annual.js",
   "js/app-annual-comparison.js",
