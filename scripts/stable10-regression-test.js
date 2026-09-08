@@ -87,6 +87,20 @@ assert(annualExport.includes('dailyWasteAverage = daysTotal ? wasteTotal / daysT
 assert(annualExport.includes('const highestDay = reports.reduce'), 'Annual CSV must export the highest recorded waste day');
 assert(annualExport.includes('const lowestDay = reports.reduce'), 'Annual CSV must export the lowest recorded waste day');
 assert(annualExport.includes('متوسط النفايات اليومي طن/يوم مسجل'), 'Annual CSV must label the recorded-day daily average clearly');
+assert(annualExport.includes('Number(report.total_trucks || 0)'), 'Annual CSV must use stored total_trucks values');
+assert(annualExport.includes('Number(report.total_diesel || 0)'), 'Annual CSV must use stored total_diesel values');
+assert(!annualExport.includes('getReport('), 'Annual CSV must not recalculate totals from report details');
+assert(!annualExport.includes('diesel_liters'), 'Annual CSV must not recalculate diesel from equipment details');
+
+const appFinal = read('public/js/app-final.js');
+const monthlyExportStart = appFinal.indexOf('async function exportMonthlyCsv()');
+const monthlyExportEnd = appFinal.indexOf('function setupMonthlyExportButton()', monthlyExportStart);
+assert(monthlyExportStart >= 0 && monthlyExportEnd > monthlyExportStart, 'Monthly CSV export function could not be isolated');
+const monthlyExport = appFinal.slice(monthlyExportStart, monthlyExportEnd);
+assert(monthlyExport.includes('Number(report.total_trucks || 0)'), 'Monthly CSV must use stored total_trucks values');
+assert(monthlyExport.includes('Number(report.total_diesel || 0)'), 'Monthly CSV must use stored total_diesel values');
+assert(!monthlyExport.includes('getReport('), 'Monthly CSV must not recalculate totals from report details');
+assert(!monthlyExport.includes('diesel_liters'), 'Monthly CSV must not recalculate diesel from equipment details');
 
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
@@ -112,4 +126,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, stored truck/diesel export totals, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
