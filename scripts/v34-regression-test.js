@@ -17,6 +17,7 @@ const pkg = require('../package.json');
 const loader = read('public/app.js');
 const drivePage = read('public/drive-import.html');
 const driveBundle = read('public/drive-import-bundle.js');
+const buildBundle = read('scripts/build-app-bundle.js');
 const startServer = read('scripts/start-server.js');
 const returnedNotice = read('public/js/app-returned-report-notice.js');
 const workflowSummary = read('public/js/app-admin-workflow-summary.js');
@@ -75,4 +76,10 @@ assert(pivotAdapter.includes('await Promise.all(tasks);success=true;'), 'Pivot i
 assert(pivotAdapter.includes("if(success){state.bypass=true;$('analyzeSourceFilesBtn')?.click();}"), 'Pivot interceptor must only continue analysis after successful normalization');
 assert(!pivotAdapter.includes("finally{state.busy=false;state.bypass=true;$('analyzeSourceFilesBtn')?.click();}"), 'Pivot interceptor must not auto-analyze after a normalization error');
 
-console.log('V3.4 compatibility regression checks passed: workflow + dashboard + WhatsApp + Drive Pivot hard-stop safety + restore safety.');
+const consistencyIndex = buildBundle.indexOf('"js/app-drive-preimport-consistency.js"');
+const backupIndex = buildBundle.indexOf('"js/app-drive-pre-replace-backup.js"');
+const verifyIndex = buildBundle.indexOf('"js/app-drive-postimport-verify.js"');
+assert(consistencyIndex >= 0 && backupIndex > consistencyIndex && verifyIndex > backupIndex, 'Drive safety order must be consistency -> pre-replace backup -> post-import verify');
+assert(buildBundle.includes('const driveAssetVersion = `${assetVersion}-drive4`;'), 'Drive cache version must be drive4 after guard reordering');
+
+console.log('V3.4 compatibility regression checks passed: workflow + dashboard + WhatsApp + Drive Pivot hard-stop/order safety + restore safety.');
