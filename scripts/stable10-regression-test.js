@@ -71,6 +71,12 @@ assert(annualComparison.includes('return Number(year) === currentYear ? today.sl
 assert(annualComparison.includes('return !cutoff || date.slice(5) <= cutoff;'), 'Annual comparison must stop both compared years at the same month/day cutoff');
 assert(annualComparison.includes('calculateAnnualTotals(String(previousYear), cutoff)'), 'Annual previous-year totals must use the same elapsed-period cutoff');
 
+const annualInsights = read('public/js/app-annual-insights.js');
+assert(annualInsights.includes('timeZone: "Asia/Jerusalem"'), 'Annual report insights must resolve the current month in Asia/Jerusalem');
+assert(annualInsights.includes('const isCurrentYear = String(year) === currentPeriod.year;'), 'Annual report insights must distinguish the current year from historical years');
+assert(annualInsights.includes('item.monthValue < currentPeriod.month'), 'Annual report best/low/average indicators must exclude the current partial month');
+assert(annualInsights.includes('للأشهر المكتملة فقط'), 'Annual report monthly average must disclose completed-month basis');
+
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
 assert(!homeLayout.includes('setInterval('), 'Home layout must not continuously reorder the DOM');
@@ -95,4 +101,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual executive indicators, recorded-day averages, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual executive/report indicators, recorded-day averages, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
