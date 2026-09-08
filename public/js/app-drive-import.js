@@ -111,7 +111,7 @@
     let totalTrucks=0,totalWaste=0;
     const finalRow=findRow(rows,'المجموع النهائي');
     if(finalRow>=0){totalTrucks=num(rows[finalRow][3]);totalWaste=num(rows[finalRow][4]);}
-    if(!totalTrucks) totalTrucks=operations.reduce((s,x)=>s+num(x.vehicle_count),0)+stations.reduce((s,x)=>s+num(x.truck_count),0);
+    if(!totalTrucks) totalTrucks=operations.filter(x=>normalize(x.operation_name).includes('مكب نفايات المنيا')).reduce((s,x)=>s+num(x.vehicle_count),0)+stations.reduce((s,x)=>s+num(x.truck_count),0);
     if(!totalWaste) totalWaste=operations.filter(x=>normalize(x.operation_name).includes('مكب نفايات المنيا')).reduce((s,x)=>s+num(x.quantity),0)+stations.reduce((s,x)=>s+num(x.waste_tons),0);
 
     const equipment=[];
