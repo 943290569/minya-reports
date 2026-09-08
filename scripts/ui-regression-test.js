@@ -133,7 +133,7 @@ assert(loader.includes('"js/app-header-menu.js"'), "mobile navigation logic is m
 assert(loader.includes('"mobile-vertical-menu.css"'), "mobile navigation styles are missing from the style bundle");
 assert(loader.indexOf('"mobile-vertical-menu.css"') > loader.indexOf('"final-ui-stabilize.css"'), "mobile navigation must load after the general mobile hiding rules");
 assert(loader.indexOf('"mobile-vertical-menu.css"') > loader.indexOf('"desktop-nav-hero.css"'), "mobile navigation must load after the desktop navigation layer");
-assert(mobileMenu.includes('{label:"رخص السائقين"'), "drivers licenses is missing from the mobile menu");
+assert(mobileMenu.includes('{label:"المركبات والسائقين"'), "vehicles and drivers is missing from the mobile menu");
 assert(mobileMenu.includes('{label:"إدارة النظام"'), "system management is missing from the mobile menu");
 assert(mobileMenu.includes('{label:"المراجعة والاعتماد"'), "reviews is missing from the mobile menu");
 assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
