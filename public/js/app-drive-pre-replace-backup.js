@@ -43,7 +43,12 @@
   async function handle(event){
     if(bypass){bypass=false;return;}
     const duplicates=selectedDuplicates();
-    if(!duplicates.length||busy)return;
+    if(!duplicates.length)return;
+    if(busy){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
     event.preventDefault();
     event.stopImmediatePropagation();
     busy=true;
