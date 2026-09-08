@@ -2,6 +2,7 @@
 (function(){
   function isHome(){const p=location.pathname.replace(/\/+$/,"")||"/";return p==="/";}
   function fmt(v){return Number(v||0).toLocaleString("en-US",{maximumFractionDigits:1});}
+  function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
   function todayIso(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
   function ensure(){
     const home=document.querySelector('.dashboard-home');
@@ -31,7 +32,7 @@
       const stopped=eq.filter(x=>{const s=String(x.operating_status||x.status||'').trim();return s&&!["يعمل","شغال","متاح"].includes(s);});
       document.getElementById('todayStopped').textContent=stopped.length;
       const list=document.getElementById('todayStoppedList');
-      if(stopped.length){list.innerHTML=`<strong>معدات تحتاج متابعة</strong><div>${stopped.map(x=>`<span>${String(x.equipment_name||x.name||'معدة')} — ${String(x.operating_status||x.status||'')}</span>`).join('')}</div>`;}
+      if(stopped.length){list.innerHTML=`<strong>معدات تحتاج متابعة</strong><div>${stopped.map(x=>`<span>${esc(x.equipment_name||x.name||'معدة')} — ${esc(x.operating_status||x.status||'')}</span>`).join('')}</div>`;}
       else list.innerHTML='<span>لا توجد معدات متوقفة في تقرير اليوم.</span>';
     }catch(e){shell.dataset.state='error';console.error('Today dashboard failed',e);}
   }
