@@ -20,7 +20,7 @@
       day: '2-digit'
     }).formatToParts(new Date());
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-    return { year: values.year, month: `${values.year}-${values.month}`, day: Number(values.day) };
+    return { year: values.year, month: `${values.year}-${values.month}`, monthNumber: Number(values.month), day: Number(values.day) };
   }
 
   function monthLabel(monthValue) {
@@ -91,9 +91,9 @@
       </div>
 
       <div class="executive-year-grid">
-        <div class="executive-highlight"><span>أعلى شهر نفايات</span><strong id="execBestMonth">-</strong><small id="execBestMonthValue">-</small></div>
-        <div class="executive-highlight"><span>أقل شهر نفايات</span><strong id="execLowMonth">-</strong><small id="execLowMonthValue">-</small></div>
-        <div class="executive-highlight"><span>متوسط النفايات الشهري</span><strong id="execYearAverage">0</strong><small>طن / شهر مسجل</small></div>
+        <div class="executive-highlight"><span>أعلى شهر مكتمل</span><strong id="execBestMonth">-</strong><small id="execBestMonthValue">-</small></div>
+        <div class="executive-highlight"><span>أقل شهر مكتمل</span><strong id="execLowMonth">-</strong><small id="execLowMonthValue">-</small></div>
+        <div class="executive-highlight"><span>متوسط النفايات للشهور المكتملة</span><strong id="execYearAverage">0</strong><small>طن / شهر مكتمل مسجل</small></div>
       </div>
 
       <div class="executive-trend-panel">
@@ -178,34 +178,43 @@
         const items = byMonth(monthValue);
         return {
           monthValue,
+          monthNumber: index + 1,
           waste: sum(items, "total_waste_tons"),
           days: items.length,
+          isCurrent: index + 1 === currentPeriod.monthNumber,
         };
       });
 
-      const activeMonths = months.filter((item) => item.days > 0);
-      if (activeMonths.length) {
-        const best = activeMonths.reduce((a, b) => b.waste > a.waste ? b : a);
-        const low = activeMonths.reduce((a, b) => b.waste < a.waste ? b : a);
-        const average = activeMonths.reduce((s, item) => s + item.waste, 0) / activeMonths.length;
+      const completedMonths = months.filter((item) => item.days > 0 && item.monthNumber < currentPeriod.monthNumber);
+      if (completedMonths.length) {
+        const best = completedMonths.reduce((a, b) => b.waste > a.waste ? b : a);
+        const low = completedMonths.reduce((a, b) => b.waste < a.waste ? b : a);
+        const average = completedMonths.reduce((s, item) => s + item.waste, 0) / completedMonths.length;
 
         document.getElementById("execBestMonth").textContent = monthLabel(best.monthValue);
         document.getElementById("execBestMonthValue").textContent = `${fmt(best.waste)} طن`;
         document.getElementById("execLowMonth").textContent = monthLabel(low.monthValue);
         document.getElementById("execLowMonthValue").textContent = `${fmt(low.waste)} طن`;
         document.getElementById("execYearAverage").textContent = fmt(average);
+      } else {
+        document.getElementById("execBestMonth").textContent = "لا يوجد شهر مكتمل";
+        document.getElementById("execBestMonthValue").textContent = "-";
+        document.getElementById("execLowMonth").textContent = "لا يوجد شهر مكتمل";
+        document.getElementById("execLowMonthValue").textContent = "-";
+        document.getElementById("execYearAverage").textContent = "0";
       }
 
       const trend = document.getElementById("execYearTrend");
       const trendYear = document.getElementById("execTrendYear");
-      if (trendYear) trendYear.textContent = year;
+      if (trendYear) trendYear.textContent = `${year} · الشهر الحالي جزئي حتى اليوم ${elapsedDay}`;
       if (trend) {
         const max = Math.max(...months.map((item) => item.waste), 1);
         trend.innerHTML = months.map((item, index) => {
           const height = item.waste ? Math.max(8, Math.round((item.waste / max) * 100)) : 3;
-          return `<div class="executive-trend-item" title="${monthLabel(item.monthValue)} — ${fmt(item.waste)} طن">
+          const partial = item.isCurrent ? ` · جزئي حتى اليوم ${elapsedDay}` : "";
+          return `<div class="executive-trend-item" title="${monthLabel(item.monthValue)} — ${fmt(item.waste)} طن${partial}">
             <div class="executive-trend-column"><span style="height:${height}%"></span></div>
-            <small>${index + 1}</small>
+            <small>${index + 1}${item.isCurrent ? "*" : ""}</small>
           </div>`;
         }).join("");
       }
