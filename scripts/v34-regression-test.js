@@ -68,6 +68,7 @@ assert(driveBundle.includes('js/app-source-stations-wide-v9.js'), 'Drive canonic
 assert(driveBundle.includes('js/app-source-usage-note-v22.js'), 'Drive usage note is missing from the bundle');
 assert(stableShim.includes('معاينة مستقرة V33'), 'stable reader shim still exposes an old version label');
 assert(pivotShim.includes('V33 adapter'), 'legacy Pivot shim still points to an old adapter version');
-assert(pivotAdapter.includes('/* V33 Pivot adapter:'), 'canonical Pivot adapter is not V33');
+assert(pivotAdapter.includes('Pivot adapter: single source of truth for landfill/stations/Aziz'), 'canonical Pivot adapter single-source contract is missing');
+assert(pivotAdapter.includes('تم إيقاف القراءة بدل توزيعها بشكل تخميني'), 'canonical Pivot adapter no longer refuses ambiguous station totals');
 
-console.log('V3.4 compatibility regression checks passed: workflow + dashboard + WhatsApp + Drive V33 + restore safety.');
+console.log('V3.4 compatibility regression checks passed: workflow + dashboard + WhatsApp + Drive Pivot safety + restore safety.');
