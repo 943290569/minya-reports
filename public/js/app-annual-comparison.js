@@ -11,6 +11,30 @@ function formatAnnualChange(current, previous) {
   return `${percent > 0 ? "زيادة" : "انخفاض"} ${formatNumber(Math.abs(percent))}%`;
 }
 
+function annualJerusalemToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function annualPeriodCutoff(year) {
+  const today = annualJerusalemToday();
+  const currentYear = Number(today.slice(0, 4));
+  return Number(year) === currentYear ? today.slice(5) : null;
+}
+
+function filterAnnualPeriod(reports, year, cutoff = null) {
+  const prefix = `${year}-`;
+  return reports.filter((report) => {
+    const date = String(report.report_date || "");
+    if (!date.startsWith(prefix)) return false;
+    return !cutoff || date.slice(5) <= cutoff;
+  });
+}
+
 async function getAnnualReportsForYear(year) {
   const localReports = archiveReports.filter((report) =>
     String(report.report_date || "").startsWith(`${year}-`)
@@ -38,8 +62,9 @@ async function getAnnualReportsForYear(year) {
   }
 }
 
-async function calculateAnnualTotals(year) {
-  const reports = await getAnnualReportsForYear(year);
+async function calculateAnnualTotals(year, cutoff = null) {
+  const allReports = await getAnnualReportsForYear(year);
+  const reports = filterAnnualPeriod(allReports, year, cutoff);
   if (!reports.length) return null;
 
   const dieselTotal = reports.reduce(
@@ -95,14 +120,16 @@ async function renderAnnualComparison() {
   }
 
   const previousYear = year - 1;
-  title.textContent = `مقارنة مع السنة السابقة - ${previousYear}`;
+  const cutoff = annualPeriodCutoff(year);
+  const periodLabel = cutoff ? ` حتى ${cutoff.slice(3, 5)}/${cutoff.slice(0, 2)}` : "";
+  title.textContent = `مقارنة مع السنة السابقة - ${previousYear}${periodLabel}`;
   grid.style.display = "none";
   empty.style.display = "block";
   empty.textContent = "جاري تحميل المقارنة...";
 
   const [current, previous] = await Promise.all([
-    calculateAnnualTotals(String(year)),
-    calculateAnnualTotals(String(previousYear)),
+    calculateAnnualTotals(String(year), cutoff),
+    calculateAnnualTotals(String(previousYear), cutoff),
   ]);
 
   if (!current || !previous) {
