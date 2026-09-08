@@ -34,6 +34,7 @@ Current stable version: **3.5.0**
 - SQLite integrity, storage, missing attachment and orphan-file diagnostics.
 - Security response headers and secure session-cookie support in production.
 - Main-branch workflow safety check that prevents auto-writing or `git push` from workflows targeting `main`.
+- Automatic production deployment to the Google SSH server is supported through GitHub Actions.
 
 ## Run
 
