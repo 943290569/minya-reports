@@ -74,6 +74,11 @@ if (!modulePaths.includes(compatibilityModule)) {
   const monthlyIndex = modulePaths.indexOf("js/app-monthly.js");
   modulePaths.splice(monthlyIndex >= 0 ? monthlyIndex + 1 : modulePaths.length, 0, compatibilityModule);
 }
+const monthlyComparisonModule = "js/app-monthly-comparison-stable10.js";
+if (!modulePaths.includes(monthlyComparisonModule)) {
+  const compatibilityIndex = modulePaths.indexOf(compatibilityModule);
+  modulePaths.splice(compatibilityIndex >= 0 ? compatibilityIndex + 1 : modulePaths.length, 0, monthlyComparisonModule);
+}
 const monthlyUnitModule = "js/app-monthly-unit-compat.js";
 if (!modulePaths.includes(monthlyUnitModule)) {
   const printMonthlyIndex = modulePaths.indexOf("js/app-print-monthly.js");
