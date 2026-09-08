@@ -43,6 +43,12 @@ assert(smartMonthlyCompare.includes('elapsedDay=Number(today.slice(8,10))'), 'Sm
 assert(smartMonthlyCompare.includes('Number(date.slice(8,10))<=elapsedDay'), 'Smart previous-month rows must stop at the matching elapsed day');
 assert(smartMonthlyCompare.includes('Math.abs(pctx)<.05'), 'Smart monthly stability threshold must remain aligned with the reports');
 
+const annualComparison = read('public/js/app-annual-comparison.js');
+assert(annualComparison.includes('timeZone: "Asia/Jerusalem"'), 'Annual comparison must resolve the current date in Asia/Jerusalem');
+assert(annualComparison.includes('return Number(year) === currentYear ? today.slice(5) : null;'), 'Annual comparison must limit only the current year to the elapsed period');
+assert(annualComparison.includes('return !cutoff || date.slice(5) <= cutoff;'), 'Annual comparison must stop both compared years at the same month/day cutoff');
+assert(annualComparison.includes('calculateAnnualTotals(String(previousYear), cutoff)'), 'Annual previous-year totals must use the same elapsed-period cutoff');
+
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
 assert(!homeLayout.includes('setInterval('), 'Home layout must not continuously reorder the DOM');
@@ -67,4 +73,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, elapsed-day monthly comparisons, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, elapsed-period monthly/annual comparisons, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
