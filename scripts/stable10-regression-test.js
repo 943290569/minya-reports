@@ -111,6 +111,23 @@ assert(monthlyChart.includes('Number(report.total_diesel || 0)'), 'Monthly diese
 assert(!monthlyChart.includes('getReport('), 'Monthly chart override must not fetch report details');
 assert(!monthlyChart.includes('diesel_liters'), 'Monthly diesel chart must not recalculate equipment diesel');
 
+const monthlyPrint = read('public/js/app-print-monthly.js');
+assert(monthlyPrint.includes('timeZone: "Asia/Jerusalem"'), 'Monthly print must resolve the current month in Asia/Jerusalem');
+assert(monthlyPrint.includes('Number(date.slice(8, 10)) <= elapsedDay'), 'Monthly print previous-month comparison must stop at the matching elapsed day');
+assert(monthlyPrint.includes('Number(report.total_diesel || 0)'), 'Monthly print must use stored total_diesel values');
+assert(!monthlyPrint.includes('calculateDieselFromDetailedReports'), 'Monthly print must not recalculate diesel from equipment details');
+assert(!monthlyPrint.includes('dieselByReportId'), 'Monthly print daily diesel rows must use stored report totals');
+assert(monthlyPrint.includes('margin-right: -10mm; margin-left: -4mm;'), 'Monthly print footer margins must remain unchanged');
+assert(monthlyPrint.includes('width: 202mm; min-width: 202mm; max-width: 202mm;'), 'Monthly print table width must remain 202mm');
+
+const annualPrint = read('public/js/app-print-annual.js');
+assert(annualPrint.includes('Number(report.total_trucks || 0)'), 'Annual print must use stored total_trucks values');
+assert(annualPrint.includes('Number(report.total_diesel || 0)'), 'Annual print must use stored total_diesel values');
+assert(!annualPrint.includes('getReport('), 'Annual print must not recalculate totals from report details');
+assert(!annualPrint.includes('diesel_liters'), 'Annual print must not recalculate diesel from equipment details');
+assert(annualPrint.includes('margin-right: -10mm; margin-left: -4mm;'), 'Annual print footer margins must remain unchanged');
+assert(annualPrint.includes('width: 202mm; min-width: 202mm; max-width: 202mm;'), 'Annual print table width must remain 202mm');
+
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
 assert(!homeLayout.includes('setInterval('), 'Home layout must not continuously reorder the DOM');
@@ -135,4 +152,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, stored truck/diesel export and monthly chart totals, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard/print comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, stored truck/diesel export/chart/print totals, protected print layout, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
