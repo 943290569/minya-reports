@@ -70,5 +70,9 @@ assert(stableShim.includes('معاينة مستقرة V33'), 'stable reader shim
 assert(pivotShim.includes('V33 adapter'), 'legacy Pivot shim still points to an old adapter version');
 assert(pivotAdapter.includes('Pivot adapter: single source of truth for landfill/stations/Aziz'), 'canonical Pivot adapter single-source contract is missing');
 assert(pivotAdapter.includes('تم إيقاف القراءة بدل توزيعها بشكل تخميني'), 'canonical Pivot adapter no longer refuses ambiguous station totals');
+assert(pivotAdapter.includes('let success=false'), 'Pivot interceptor must start with a failed normalization state');
+assert(pivotAdapter.includes('await Promise.all(tasks);success=true;'), 'Pivot interceptor must mark success only after all normalization tasks finish');
+assert(pivotAdapter.includes("if(success){state.bypass=true;$('analyzeSourceFilesBtn')?.click();}"), 'Pivot interceptor must only continue analysis after successful normalization');
+assert(!pivotAdapter.includes("finally{state.busy=false;state.bypass=true;$('analyzeSourceFilesBtn')?.click();}"), 'Pivot interceptor must not auto-analyze after a normalization error');
 
-console.log('V3.4 compatibility regression checks passed: workflow + dashboard + WhatsApp + Drive Pivot safety + restore safety.');
+console.log('V3.4 compatibility regression checks passed: workflow + dashboard + WhatsApp + Drive Pivot hard-stop safety + restore safety.');
