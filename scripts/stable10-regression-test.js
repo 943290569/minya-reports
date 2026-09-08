@@ -102,6 +102,15 @@ assert(monthlyExport.includes('Number(report.total_diesel || 0)'), 'Monthly CSV 
 assert(!monthlyExport.includes('getReport('), 'Monthly CSV must not recalculate totals from report details');
 assert(!monthlyExport.includes('diesel_liters'), 'Monthly CSV must not recalculate diesel from equipment details');
 
+const appLoader = read('public/app.js');
+assert(appLoader.includes('js/app-monthly-chart-stable10.js'), 'Stored-total monthly chart override must be loaded');
+assert(appLoader.includes('3.5.0-20260908-stable10-summary3'), 'Main asset version must force the stored-total chart update');
+const monthlyChart = read('public/js/app-monthly-chart-stable10.js');
+assert(monthlyChart.includes('Number(report.total_trucks || 0)'), 'Monthly trucks chart must use stored total_trucks values');
+assert(monthlyChart.includes('Number(report.total_diesel || 0)'), 'Monthly diesel chart must use stored total_diesel values');
+assert(!monthlyChart.includes('getReport('), 'Monthly chart override must not fetch report details');
+assert(!monthlyChart.includes('diesel_liters'), 'Monthly diesel chart must not recalculate equipment diesel');
+
 const homeLayout = read('public/js/app-home-layout-stable10.js');
 assert(homeLayout.includes('MutationObserver'), 'Home layout must react to dynamically inserted sections');
 assert(!homeLayout.includes('setInterval('), 'Home layout must not continuously reorder the DOM');
@@ -126,4 +135,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, stored truck/diesel export totals, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, stored truck/diesel export and monthly chart totals, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
