@@ -3,7 +3,12 @@
   const state={reports:[],details:[],notifications:[]};
   const fmt=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:1});
   const avg=a=>a.length?a.reduce((s,v)=>s+Number(v||0),0)/a.length:0;
-  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+  const localDateParts=()=>{
+    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const get=t=>parts.find(x=>x.type===t)?.value||'';
+    return {year:Number(get('year')),month:Number(get('month')),day:Number(get('day')),iso:`${get('year')}-${get('month')}-${get('day')}`};
+  };
+  const today=()=>localDateParts().iso;
   const thisMonth=()=>today().slice(0,7);
   const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
   const getJson=async url=>{const r=await fetch(url,{cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'فشل تحميل البيانات');return d;};
@@ -35,7 +40,8 @@
     const recentWaste=avg(waste.slice(-7));
     const recentDiesel=avg(diesel.slice(-7));
     const recentTrucks=avg(trucks.slice(-7));
-    const d=new Date(); const daysInMonth=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    const p=localDateParts();
+    const daysInMonth=new Date(Date.UTC(p.year,p.month,0)).getUTCDate();
     return {
       days:rows.length,
       dailyWaste:recentWaste,
