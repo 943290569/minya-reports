@@ -122,7 +122,7 @@ assert(server.includes("incoming_waste_tons:landfillWaste+stationWaste"), "incom
 assert(monthly.includes('window.renderLinkedPeriodSummary("monthly"'), "monthly report does not render linked Summary totals");
 assert(annualLoader.includes('window.renderLinkedPeriodSummary("annual"'), "annual report does not render linked Summary totals");
 assert(loader.includes('"js/app-period-linked-summary.js"'), "linked Summary component is missing from the frontend bundle");
-assert(loader.includes('"period-linked-summary.css"'), "linked Summary styles are missing from the frontend bundle");
+assert(loader.includes('"period-linked-summary.css"'), "linked Summary styles are missing from the style bundle");
 assert(linkedSummary.includes("نفايات مكب المنيا"), "landfill waste is not labeled separately");
 assert(linkedSummary.includes("نفايات محطات الترحيل"), "transfer-station waste is not labeled separately");
 assert(linkedSummary.includes("إجمالي الوارد لمكب المنيا"), "incoming waste grand total is not labeled clearly");
@@ -145,7 +145,7 @@ assert(loader.indexOf('"report-mobile-scroll.css"') > loader.indexOf('"final-ui-
 assert(reportMobileScroll.includes('overflow-x: auto'), "daily report table containers cannot scroll horizontally");
 assert(reportMobileScroll.includes('touch-action: pan-x pan-y'), "daily report table touch scrolling is not enabled");
 assert(reportMobileScroll.includes('@media print'), "daily report mobile scrolling is not neutralized for printing");
-assert(!/stable[0-8]/.test(publicHtml), "an HTML page still references a frontend release older than stable9");
+assert(!/stable[0-8](?!\d)/.test(publicHtml), "an HTML page still references a frontend release older than stable9");
 assert(read("public/system.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa8'), "system page is not using the current stable9 styles");
 assert(read("public/drivers-licenses.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa8'), "drivers licenses page is not using the current stable9 styles");
 assert(server.includes('ALTER TABLE users ADD COLUMN mobile'), "existing users do not receive the mobile field migration");
