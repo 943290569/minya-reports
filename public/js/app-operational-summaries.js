@@ -28,7 +28,12 @@
       const to=dateMinus(today,7),from=dateMinus(today,13);
       return state.reports.filter(r=>String(r.report_date||'')>=from&&String(r.report_date||'')<=to);
     }
-    const month=previousMonth(today.slice(0,7));return state.reports.filter(r=>String(r.report_date||'').startsWith(month));
+    const month=previousMonth(today.slice(0,7));
+    const elapsedDay=Number(today.slice(8,10));
+    return state.reports.filter(r=>{
+      const date=String(r.report_date||'');
+      return date.startsWith(month)&&Number(date.slice(8,10))<=elapsedDay;
+    });
   }
 
   function latestReport(){return [...state.reports].sort((a,b)=>String(b.report_date||'').localeCompare(String(a.report_date||'')))[0]||null;}
@@ -48,7 +53,7 @@
     current=Number(current||0);previous=Number(previous||0);
     if(!previous)return {text:'لا توجد مقارنة سابقة',tone:'neutral'};
     const pct=((current-previous)/previous)*100;
-    if(Math.abs(pct)<0.5)return {text:'مستقر تقريبًا',tone:'neutral'};
+    if(Math.abs(pct)<0.05)return {text:'مستقر تقريبًا',tone:'neutral'};
     return {text:`${pct>0?'ارتفاع':'انخفاض'} ${Math.abs(pct).toLocaleString('en-US',{maximumFractionDigits:1})}%`,tone:pct>0?'up':'down'};
   }
   function trendRows(rows,previousRows){
