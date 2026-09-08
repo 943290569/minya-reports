@@ -45,8 +45,14 @@ function validReport(overrides={}){return{report_date:'2099-01-31',report_no:'MI
     x=await json('/api/backup/validate',auth(cookie,backup(validReport({total_diesel:-1}))));
     expectStatus(x,400,'negative diesel total accepted');
 
+    const invalidAttachmentBackup=backup(validReport());
+    invalidAttachmentBackup.reports[0].attachments=[{original_name:'bad.txt',mime_type:'text/plain',data_base64:'%%%not-base64%%%'}];
+    x=await json('/api/backup/validate',auth(cookie,invalidAttachmentBackup));
+    expectStatus(x,400,'invalid attachment base64 accepted');
+
     const returnedReason='اختبار حفظ سبب الإعادة بعد الاستعادة';
     const returnedAt='2099-01-30T10:11:12.000Z';
+    const attachmentText='backup attachment restored correctly';
     const restoreBackup=backup(validReport({
       workflow_status:'draft',
       returned_reason:returnedReason,
@@ -54,6 +60,12 @@ function validReport(overrides={}){return{report_date:'2099-01-31',report_no:'MI
       returned_by:41,
       returned_to:42
     }));
+    restoreBackup.reports[0].attachments=[{
+      original_name:'backup-test.txt',
+      mime_type:'text/plain',
+      data_base64:Buffer.from(attachmentText,'utf8').toString('base64'),
+      created_at:'2099-01-30T10:12:00.000Z'
+    }];
     x=await json('/api/backup/restore',auth(cookie,restoreBackup));
     expectStatus(x,200,'backup restore failed');
 
@@ -67,6 +79,16 @@ function validReport(overrides={}){return{report_date:'2099-01-31',report_no:'MI
     if(Number(restored.returned_by)!==41)throw new Error('returned_by was lost during restore');
     if(Number(restored.returned_to)!==42)throw new Error('returned_to was lost during restore');
 
-    console.log('Backup smoke passed: validation rules enforced and returned-report metadata preserved by restore.');
+    x=await json(`/api/reports/${restored.id}/attachments`,{headers:{cookie}});
+    expectStatus(x,200,'attachments list after restore failed');
+    const attachments=Array.isArray(x.data?.attachments)?x.data.attachments:[];
+    if(attachments.length!==1)throw new Error(`expected one restored attachment, got ${attachments.length}`);
+    if(attachments[0].original_name!=='backup-test.txt')throw new Error('restored attachment name changed');
+    const attachmentResponse=await fetch(`${base}/api/attachments/${attachments[0].id}/download`,{headers:{cookie}});
+    if(!attachmentResponse.ok)throw new Error(`restored attachment download failed: ${attachmentResponse.status}`);
+    const downloadedText=await attachmentResponse.text();
+    if(downloadedText!==attachmentText)throw new Error('restored attachment content changed');
+
+    console.log('Backup smoke passed: validation rules enforced, returned-report metadata preserved, invalid attachment rejected, and attachment restore verified.');
   }catch(error){console.error(output);throw error;}finally{child.kill('SIGTERM');fs.rmSync(tmp,{recursive:true,force:true});}
 })().catch(error=>{console.error(error.stack||error.message||error);process.exit(1);});
