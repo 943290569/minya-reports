@@ -7,7 +7,7 @@
     {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
     {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
-    {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
+    {label:"المركبات والسائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"التقرير الأسبوعي", href:"/weekly", icon:"≋"},
     {label:"البحث المتقدم", href:"/search", icon:"⌕"},
     {label:"التقرير الإداري", href:"/managerial", icon:"▧"},
