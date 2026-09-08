@@ -20,7 +20,7 @@
       day: '2-digit'
     }).formatToParts(new Date());
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-    return { year: values.year, month: `${values.year}-${values.month}` };
+    return { year: values.year, month: `${values.year}-${values.month}`, day: Number(values.day) };
   }
 
   function monthLabel(monthValue) {
@@ -125,12 +125,16 @@
       const year = String(currentPeriod.year);
       const month = currentPeriod.month;
       const prevMonth = previousMonth(month);
+      const elapsedDay = currentPeriod.day;
 
       const byMonth = (value) => reports.filter((r) => String(r.report_date || "").startsWith(value));
       const sum = (items, key) => items.reduce((total, item) => total + Number(item[key] || 0), 0);
 
       const currentReports = byMonth(month);
-      const prevReports = byMonth(prevMonth);
+      const prevReports = byMonth(prevMonth).filter((r) => {
+        const date = String(r.report_date || "");
+        return Number(date.slice(8, 10)) <= elapsedDay;
+      });
 
       const current = {
         waste: sum(currentReports, "total_waste_tons"),
@@ -165,7 +169,7 @@
         const el = document.getElementById(id);
         if (!el) return;
         const result = changeText(c, p);
-        el.textContent = `${result.text} مقارنة بـ ${monthLabel(prevMonth)}`;
+        el.textContent = `${result.text} مقارنة بـ ${monthLabel(prevMonth)} حتى اليوم ${elapsedDay}`;
         el.dataset.tone = result.tone;
       });
 
