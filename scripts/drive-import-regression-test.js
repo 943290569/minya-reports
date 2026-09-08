@@ -35,6 +35,7 @@ rows[5] = ['سائقين جرافات واليات', '', 4];
 rows[11] = ['المجموع', '', 4];
 rows[14] = ['موقع مكب المنيا', 'وقت البداية', 'وقت النهاية', 'عدد المركبات', 'الكمية', 'الوحدة'];
 rows[15] = ['مكب نفايات المنيا', '4:00 AM', '7:00 PM', 90, 919.13, 'طن'];
+rows[16] = ['مواد التغطية (طمم)', '', '', 3, 20, 'نقلة'];
 rows[24] = ['موقع محطات الترحيل', '', '', 'عدد الشاحنات', 'الكمية', 'الوحدة'];
 rows[25] = ['محطة ترحيل ترقوميا', '', '', 5, 78.82, 'طن'];
 rows[26] = ['محطة ترحيل يطا', '', '', 12, 372.32, 'طن'];
@@ -52,4 +53,11 @@ assert(parsed.stations.reduce((sum, row) => sum + row.truck_count, 0) === 17, 's
 assert(parsed.total_trucks === 107, 'final truck total is incorrect');
 assert(parsed.total_waste_tons === 1370.27, 'final waste total is incorrect');
 
-console.log('Drive import regression checks passed: current compact dates + operation vehicles + station trucks + final totals.');
+const fallbackRows = rows.map(row => [...row]);
+fallbackRows[30] = [];
+const fallback = parseDailySheet('01112025', fallbackRows);
+assert(fallback.total_trucks === 107, `fallback truck total must use landfill + stations only, got ${fallback.total_trucks}`);
+assert(fallback.total_waste_tons === 1370.27, `fallback waste total must use landfill + stations only, got ${fallback.total_waste_tons}`);
+assert(fallback.operations.some(row => row.operation_name === 'مواد التغطية (طمم)' && row.vehicle_count === 3), 'support-operation vehicle count should remain in operation details');
+
+console.log('Drive import regression checks passed: compact dates + canonical totals + fallback excludes support-operation vehicles.');
