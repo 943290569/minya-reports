@@ -27,11 +27,21 @@ function setupAnnualInsights() {
     <div style="border:1px solid #d1d5db;border-radius:8px;padding:14px 10px;text-align:center;background:#fff;">
       <span style="display:block;color:#6b7280;margin-bottom:6px;">متوسط النفايات الشهري</span>
       <strong id="annualMonthlyWasteAverage" style="display:block;font-size:18px;">0 طن</strong>
-      <small style="display:block;margin-top:4px;color:#6b7280;">للأشهر التي تحتوي بيانات</small>
+      <small id="annualMonthlyWasteAverageNote" style="display:block;margin-top:4px;color:#6b7280;">للأشهر التي تحتوي بيانات</small>
     </div>
   `;
 
   cards.insertAdjacentElement("afterend", insights);
+}
+
+function annualJerusalemPeriod() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return { year: String(values.year), month: `${values.year}-${values.month}` };
 }
 
 function renderAnnualInsights() {
@@ -43,6 +53,7 @@ function renderAnnualInsights() {
   const worstMonth = document.getElementById("annualWorstMonth");
   const worstValue = document.getElementById("annualWorstMonthValue");
   const averageValue = document.getElementById("annualMonthlyWasteAverage");
+  const averageNote = document.getElementById("annualMonthlyWasteAverageNote");
 
   if (!bestMonth || !bestValue || !worstMonth || !worstValue || !averageValue) return;
 
@@ -52,8 +63,12 @@ function renderAnnualInsights() {
     worstMonth.textContent = "-";
     worstValue.textContent = "-";
     averageValue.textContent = "0 طن";
+    if (averageNote) averageNote.textContent = "للأشهر التي تحتوي بيانات";
     return;
   }
+
+  const currentPeriod = annualJerusalemPeriod();
+  const isCurrentYear = String(year) === currentPeriod.year;
 
   const months = Array.from({ length: 12 }, (_, index) => {
     const monthNumber = String(index + 1).padStart(2, "0");
@@ -66,14 +81,15 @@ function renderAnnualInsights() {
       reportsCount: reports.length,
       waste: reports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0),
     };
-  }).filter((item) => item.reportsCount > 0);
+  }).filter((item) => item.reportsCount > 0 && (!isCurrentYear || item.monthValue < currentPeriod.month));
 
   if (!months.length) {
     bestMonth.textContent = "-";
-    bestValue.textContent = "لا توجد بيانات";
+    bestValue.textContent = isCurrentYear ? "لا توجد أشهر مكتملة" : "لا توجد بيانات";
     worstMonth.textContent = "-";
-    worstValue.textContent = "لا توجد بيانات";
+    worstValue.textContent = isCurrentYear ? "لا توجد أشهر مكتملة" : "لا توجد بيانات";
     averageValue.textContent = "0 طن";
+    if (averageNote) averageNote.textContent = isCurrentYear ? "يُحسب بعد اكتمال أول شهر" : "للأشهر التي تحتوي بيانات";
     return;
   }
 
@@ -87,6 +103,9 @@ function renderAnnualInsights() {
   worstMonth.textContent = getMonthName(lowest.monthValue);
   worstValue.textContent = `${formatNumber(lowest.waste)} طن`;
   averageValue.textContent = `${formatNumber(monthlyAverage)} طن`;
+  if (averageNote) averageNote.textContent = isCurrentYear
+    ? `للأشهر المكتملة فقط — ${months.length} شهر`
+    : `للأشهر التي تحتوي بيانات — ${months.length} شهر`;
 }
 
 setupAnnualInsights();
