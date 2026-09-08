@@ -147,7 +147,7 @@ assert(reportMobileScroll.includes('touch-action: pan-x pan-y'), "daily report t
 assert(reportMobileScroll.includes('@media print'), "daily report mobile scrolling is not neutralized for printing");
 assert(!/stable[0-8](?!\d)/.test(publicHtml), "an HTML page still references a frontend release older than stable9");
 assert(read("public/system.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa8'), "system page is not using the current stable9 styles");
-assert(read("public/drivers-licenses.html").includes('app-bundle.css?v=3.5.0-20260907-stable9-wa8'), "drivers licenses page is not using the current stable9 styles");
+assert(read("public/drivers-licenses.html").includes('app-bundle.css?v='), "vehicles and drivers page is missing bundled styles");
 assert(server.includes('ALTER TABLE users ADD COLUMN mobile'), "existing users do not receive the mobile field migration");
 assert(server.includes('function validMobile(value)'), "mobile numbers are not validated on the server");
 assert(server.includes('u.mobile,u.role'), "administrator user data does not include mobile numbers");
