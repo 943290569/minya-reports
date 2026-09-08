@@ -1,5 +1,26 @@
 (function(){
+  function setVehiclesDriversScope(){
+    const nav=document.querySelector('.top-header nav');
+    const link=nav&&nav.querySelector('a[href="/drivers-licenses.html"]');
+    if(link){
+      const badge=link.querySelector('.driver-license-alert-badge');
+      link.childNodes.forEach(node=>{if(node.nodeType===Node.TEXT_NODE)node.remove();});
+      link.insertBefore(document.createTextNode('المركبات والسائقين'),badge||link.firstChild);
+    }
+
+    if(location.pathname==='/drivers-licenses.html'){
+      document.title='المركبات والسائقين';
+      const headerText=document.querySelector('.top-header > div > p');
+      if(headerText)headerText.textContent='مركبات حركة المكب وسائقو المجلس';
+      const mainTitle=document.querySelector('main.container .panel h2');
+      if(mainTitle)mainTitle.textContent='رخص سائقي حركة المكب';
+      const mainDesc=mainTitle&&mainTitle.parentElement&&mainTitle.parentElement.querySelector('p');
+      if(mainDesc)mainDesc.textContent='سجل سائقي المجلس العاملين على مركبات حركة المكب ومتابعة رخصهم ومرفقاتها وتواريخ انتهائها.';
+    }
+  }
+
   function ensureBadge(count){
+    setVehiclesDriversScope();
     const nav=document.querySelector('.top-header nav');
     if(!nav)return false;
     const link=nav.querySelector('a[href="/drivers-licenses.html"]');
@@ -17,6 +38,7 @@
     return true;
   }
   async function refresh(){
+    setVehiclesDriversScope();
     try{
       const r=await fetch('/api/driver-licenses',{cache:'no-store'});
       if(!r.ok)return;
