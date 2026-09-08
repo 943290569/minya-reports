@@ -6,15 +6,15 @@
   const fmt=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 
-  function hebronDateFor(date){
-    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Hebron',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+  function jerusalemDateFor(date){
+    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
     const map=Object.fromEntries(parts.filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
     return `${map.year}-${map.month}-${map.day}`;
   }
 
   function todayAndYesterday(){
     const now=new Date();
-    return {today:hebronDateFor(now),yesterday:hebronDateFor(new Date(now.getTime()-86400000))};
+    return {today:jerusalemDateFor(now),yesterday:jerusalemDateFor(new Date(now.getTime()-86400000))};
   }
 
   async function api(url){
