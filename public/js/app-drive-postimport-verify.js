@@ -6,6 +6,9 @@
   const num=v=>{const n=Number(String(v??'').replace(/,/g,''));return Number.isFinite(n)?n:0;};
   const same=(a,b,t=0.05)=>Math.abs(num(a)-num(b))<=t;
   const fmt=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:2});
+  let activeObserver=null;
+  let activeTimeout=null;
+  let verificationInFlight=false;
 
   function isoFromCard(card){
     const s=clean(card.querySelector('.drive-report-main strong')?.textContent||'');
@@ -30,13 +33,13 @@
     return {date:isoFromCard(card),totalWaste:values['النفايات']||0,totalTrucks:values['الشاحنات']||0,totalDiesel:values['السولار']||0,operations,stations};
   }
   function selectedSnapshots(){
-    const out=[];
+    const byDate=new Map();
     for(const cb of document.querySelectorAll('#previewReports [data-import-check]:checked')){
       if(cb.disabled)continue;
       const card=cb.closest('.drive-report-card');if(!card)continue;
-      const s=snapshotCard(card);if(s.date)out.push(s);
+      const s=snapshotCard(card);if(s.date)byDate.set(s.date,s);
     }
-    return out;
+    return [...byDate.values()];
   }
   function findLoose(rows,key,name){
     const n=norm(name);
@@ -88,17 +91,31 @@
     box.innerHTML=`<strong>${clean(message)}</strong>${details.length?`<details style="margin-top:6px"><summary>عرض التفاصيل</summary>${details.slice(0,30).map(x=>`<div>${clean(x)}</div>`).join('')}</details>`:''}`;
     box.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
+  function clearActiveObserver(){
+    if(activeObserver)activeObserver.disconnect();
+    if(activeTimeout)clearTimeout(activeTimeout);
+    activeObserver=null;
+    activeTimeout=null;
+  }
   function arm(){
+    if(activeObserver||verificationInFlight)return;
     const snapshots=selectedSnapshots();if(!snapshots.length)return;
     const progress=$('importProgress');if(!progress)return;
     let done=false;
     const observer=new MutationObserver(()=>{
       const t=clean(progress.textContent);
       if(done||!t.startsWith('اكتملت العملية:'))return;
-      done=true;observer.disconnect();setTimeout(()=>verify(snapshots),700);
+      done=true;
+      clearActiveObserver();
+      verificationInFlight=true;
+      setTimeout(async()=>{
+        try{await verify(snapshots);}
+        finally{verificationInFlight=false;}
+      },700);
     });
+    activeObserver=observer;
     observer.observe(progress,{childList:true,subtree:true,characterData:true});
-    setTimeout(()=>{if(!done)observer.disconnect();},180000);
+    activeTimeout=setTimeout(()=>{if(!done)clearActiveObserver();},180000);
   }
   function init(){
     const btn=$('approveImportBtn');if(!btn)return;
