@@ -9,6 +9,17 @@ function getPreviousMonthValue(monthValue) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getMonthlyPrintJerusalemToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function calculateChangePercent(current, previous) {
   const currentValue = Number(current || 0);
   const previousValue = Number(previous || 0);
@@ -27,9 +38,14 @@ async function buildPreviousMonthComparison(monthValue) {
   const previousMonth = getPreviousMonthValue(monthValue);
   if (!previousMonth) return null;
 
-  const reports = archiveReports.filter((report) =>
-    String(report.report_date || "").startsWith(previousMonth)
-  );
+  const today = getMonthlyPrintJerusalemToday();
+  const isCurrentMonth = String(monthValue || "") === today.slice(0, 7);
+  const elapsedDay = Number(today.slice(8, 10));
+  const reports = archiveReports.filter((report) => {
+    const date = String(report.report_date || "");
+    if (!date.startsWith(previousMonth)) return false;
+    return !isCurrentMonth || Number(date.slice(8, 10)) <= elapsedDay;
+  });
 
   if (!reports.length) {
     return {
@@ -50,18 +66,10 @@ async function buildPreviousMonthComparison(monthValue) {
     (sum, report) => sum + Number(report.total_trucks || 0),
     0
   );
-
-  let dieselTotal = reports.reduce(
+  const dieselTotal = reports.reduce(
     (sum, report) => sum + Number(report.total_diesel || 0),
     0
   );
-
-  try {
-    const detailedReports = await getMonthlyDetailedReports(previousMonth);
-    dieselTotal = calculateDieselFromDetailedReports(detailedReports).dieselTotal;
-  } catch (error) {
-    console.error("فشل حساب سولار الشهر السابق", error);
-  }
 
   return {
     month: previousMonth,
@@ -94,21 +102,15 @@ async function buildMonthlyReportHtml() {
     externalTammQuantity: 0,
   };
 
-  const dieselData = monthlyOperationsData?.diesel || {
-    dieselTotal: monthly.dieselTotal,
-    dieselByReportId: new Map(),
-  };
-
-  const dieselTotal = Number(dieselData.dieselTotal || 0);
+  const dieselTotal = monthly.reports.reduce(
+    (sum, report) => sum + Number(report.total_diesel || 0),
+    0
+  );
   const dieselAverage = monthly.days > 0 ? dieselTotal / monthly.days : 0;
   const previous = await buildPreviousMonthComparison(monthly.month);
 
   const rows = monthly.reports.map((report) => {
-    const id = Number(report.id);
-    const dailyDiesel = dieselData.dieselByReportId?.has(id)
-      ? dieselData.dieselByReportId.get(id)
-      : Number(report.total_diesel || 0);
-
+    const dailyDiesel = Number(report.total_diesel || 0);
     return `<tr><td>${formatDate(report.report_date)}</td><td>${formatNumber(report.total_trucks)}</td><td>${formatNumber(report.total_waste_tons)}</td><td>${formatNumber(dailyDiesel)}</td></tr>`;
   }).join("");
 
