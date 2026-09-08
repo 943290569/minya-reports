@@ -48,10 +48,6 @@ module.exports=function installReportTotalsGuard(app){
   }
 
   function validateAndNormalize(req,res,next){
-    const isCreate=req.method==='POST'&&req.path==='/api/reports';
-    const isUpdate=req.method==='PUT'&&/^\/api\/reports\/\d+$/.test(req.path);
-    if(!isCreate&&!isUpdate)return next();
-
     const body=req.body&&typeof req.body==='object'?req.body:{};
     const result=canonicalTotals(body);
     if(result.error)return res.status(400).json({ok:false,message:result.error});
@@ -78,5 +74,19 @@ module.exports=function installReportTotalsGuard(app){
     next();
   }
 
-  app.use(validateAndNormalize);
+  const originalPost=app.post.bind(app);
+  const originalPut=app.put.bind(app);
+
+  app.post=function(path,...handlers){
+    if(path==='/api/reports'&&handlers.length>=2){
+      return originalPost(path,handlers[0],validateAndNormalize,...handlers.slice(1));
+    }
+    return originalPost(path,...handlers);
+  };
+  app.put=function(path,...handlers){
+    if(path==='/api/reports/:id'&&handlers.length>=2){
+      return originalPut(path,handlers[0],validateAndNormalize,...handlers.slice(1));
+    }
+    return originalPut(path,...handlers);
+  };
 };
