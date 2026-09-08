@@ -21,8 +21,8 @@
   function previousRowsFor(mode){
     const today=localDate();
     if(mode==='daily'){
-      const prior=[...state.reports].filter(r=>String(r.report_date||'')<today).sort((a,b)=>String(b.report_date||'').localeCompare(String(a.report_date||'')))[0];
-      return prior?[prior]:[];
+      const yesterday=dateMinus(today,1);
+      return state.reports.filter(r=>String(r.report_date||'')===yesterday);
     }
     if(mode==='weekly'){
       const to=dateMinus(today,7),from=dateMinus(today,13);
@@ -34,6 +34,17 @@
       const date=String(r.report_date||'');
       return date.startsWith(month)&&Number(date.slice(8,10))<=elapsedDay;
     });
+  }
+  function comparisonRowsFor(mode,rows,previousRows){
+    if(mode!=='weekly')return {current:rows,previous:previousRows,matchedDays:null};
+    const previousByDate=new Map(previousRows.map(r=>[String(r.report_date||''),r]));
+    const current=[];const previous=[];
+    for(const row of rows){
+      const currentDate=String(row.report_date||'');
+      const prior=previousByDate.get(dateMinus(currentDate,7));
+      if(prior){current.push(row);previous.push(prior);}
+    }
+    return {current,previous,matchedDays:current.length};
   }
 
   function latestReport(){return [...state.reports].sort((a,b)=>String(b.report_date||'').localeCompare(String(a.report_date||'')))[0]||null;}
@@ -73,6 +84,11 @@
     if(mode==='daily') return `تم تسجيل ${fmt(waste)} طن عبر ${fmt(trucks)} شاحنة، واستهلاك ${fmt(diesel)} لتر سولار.`;
     return `إجمالي ${fmt(waste)} طن، ${fmt(trucks)} شاحنة، و${fmt(diesel)} لتر سولار خلال ${rows.length} يوم مسجل.`;
   }
+  function comparisonNote(mode,comparison){
+    if(mode==='daily')return comparison.previous.length?'المقارنة مع تقرير أمس.':'لا يوجد تقرير أمس للمقارنة.';
+    if(mode==='weekly')return comparison.matchedDays?`المقارنة مبنية على ${comparison.matchedDays} يوم متطابق مع الأسبوع السابق.`:'لا توجد أيام متطابقة كافية مع الأسبوع السابق.';
+    return '';
+  }
 
   function ensureUi(){
     const dash=document.querySelector('.dashboard-home');if(!dash||document.getElementById('operationalSummaries'))return;
@@ -92,8 +108,8 @@
     try{
       const payload={saved_at:new Date().toISOString(),updated_label:state.updatedAt||localDateTime(),modes:{}};
       ['daily','weekly','monthly'].forEach(mode=>{
-        const rows=rowsFor(mode),prev=previousRowsFor(mode);
-        payload.modes[mode]={label:labelFor(mode,rows),summary:summaryText(mode,rows),waste:sum(rows,'total_waste_tons'),trucks:sum(rows,'total_trucks'),diesel:sum(rows,'total_diesel'),trends:trendRows(rows,prev)};
+        const rows=rowsFor(mode),prev=previousRowsFor(mode),comparison=comparisonRowsFor(mode,rows,prev);
+        payload.modes[mode]={label:labelFor(mode,rows),summary:summaryText(mode,rows),waste:sum(rows,'total_waste_tons'),trucks:sum(rows,'total_trucks'),diesel:sum(rows,'total_diesel'),trends:trendRows(comparison.current,comparison.previous),comparison_note:comparisonNote(mode,comparison)};
       });
       localStorage.setItem(SNAPSHOT_KEY,JSON.stringify(payload));
     }catch{}
@@ -102,20 +118,21 @@
     try{
       const snap=JSON.parse(localStorage.getItem(SNAPSHOT_KEY)||'null');
       const box=document.getElementById('opsSummaryBody');const data=snap?.modes?.[state.mode];if(!box||!data)return false;
-      box.innerHTML=`<div class="ops-summary-period">${esc(data.label||'آخر ملخص محفوظ')}</div><div class="ops-summary-cards"><div><span>النفايات</span><strong>${fmt(data.waste)} طن</strong></div><div><span>الشاحنات</span><strong>${fmt(data.trucks)}</strong></div><div><span>السولار</span><strong>${fmt(data.diesel)} لتر</strong></div></div><p class="ops-summary-text">${esc(data.summary||'')}</p><div class="ops-summary-updated">آخر ملخص محفوظ: ${esc(snap.updated_label||'')}</div>`;
+      box.innerHTML=`<div class="ops-summary-period">${esc(data.label||'آخر ملخص محفوظ')}</div><div class="ops-summary-cards"><div><span>النفايات</span><strong>${fmt(data.waste)} طن</strong></div><div><span>الشاحنات</span><strong>${fmt(data.trucks)}</strong></div><div><span>السولار</span><strong>${fmt(data.diesel)} لتر</strong></div></div><p class="ops-summary-text">${esc(data.summary||'')}</p>${data.comparison_note?`<div class="ops-summary-updated">${esc(data.comparison_note)}</div>`:''}<div class="ops-summary-updated">آخر ملخص محفوظ: ${esc(snap.updated_label||'')}</div>`;
       return true;
     }catch{return false;}
   }
 
   function render(){
     const box=document.getElementById('opsSummaryBody');if(!box)return;
-    const rows=rowsFor(state.mode),previousRows=previousRowsFor(state.mode);
+    const rows=rowsFor(state.mode),previousRows=previousRowsFor(state.mode),comparison=comparisonRowsFor(state.mode,rows,previousRows);
     const waste=sum(rows,'total_waste_tons'),trucks=sum(rows,'total_trucks'),diesel=sum(rows,'total_diesel');
     const issues=equipmentIssuesForLatest();
     const avgWaste=avg(rows,'total_waste_tons'),avgTrucks=avg(rows,'total_trucks');
     const cards=state.mode==='daily'?[['النفايات',`${fmt(waste)} طن`],['الشاحنات',fmt(trucks)],['السولار',`${fmt(diesel)} لتر`]]:[['إجمالي النفايات',`${fmt(waste)} طن`],['متوسط النفايات',`${fmt(avgWaste)} طن/يوم`],['متوسط الشاحنات',`${fmt(avgTrucks)} شاحنة/يوم`],['السولار',`${fmt(diesel)} لتر`]];
-    const trends=trendRows(rows,previousRows);
-    box.innerHTML=`<div class="ops-summary-period">${esc(labelFor(state.mode,rows))}</div><div class="ops-summary-cards">${cards.map(([a,b])=>`<div><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join('')}</div><div class="ops-summary-trends">${trends.map(t=>`<div data-tone="${esc(t.tone)}"><span>${esc(t.label)}</span><strong>${esc(t.text)}</strong></div>`).join('')}</div><p class="ops-summary-text">${esc(summaryText(state.mode,rows))}</p><div class="ops-summary-followup"><strong>متابعة المعدات:</strong> ${issues.length?`${issues.length} معدة تحتاج مراجعة في آخر تقرير.`:'لا تظهر معدات متوقفة في آخر تقرير.'}</div><div class="ops-summary-updated">آخر تحديث: ${esc(state.updatedAt||localDateTime())}</div>`;
+    const trends=trendRows(comparison.current,comparison.previous);
+    const note=comparisonNote(state.mode,comparison);
+    box.innerHTML=`<div class="ops-summary-period">${esc(labelFor(state.mode,rows))}</div><div class="ops-summary-cards">${cards.map(([a,b])=>`<div><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join('')}</div><div class="ops-summary-trends">${trends.map(t=>`<div data-tone="${esc(t.tone)}"><span>${esc(t.label)}</span><strong>${esc(t.text)}</strong></div>`).join('')}</div>${note?`<div class="ops-summary-updated">${esc(note)}</div>`:''}<p class="ops-summary-text">${esc(summaryText(state.mode,rows))}</p><div class="ops-summary-followup"><strong>متابعة المعدات:</strong> ${issues.length?`${issues.length} معدة تحتاج مراجعة في آخر تقرير.`:'لا تظهر معدات متوقفة في آخر تقرير.'}</div><div class="ops-summary-updated">آخر تحديث: ${esc(state.updatedAt||localDateTime())}</div>`;
     saveSnapshot();
   }
 
