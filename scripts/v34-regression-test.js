@@ -48,7 +48,7 @@ assert(workflowSummary.includes("metric('متأخر أكثر من 24 ساعة'")
 assert(workflowSummary.includes("metric('معاد للتعديل'"), 'admin returned-report metric is missing');
 assert(workflowSummary.includes("metric('معتمد اليوم'"), 'admin approved-today metric is missing');
 
-assert(todayOps.includes("timeZone:'Asia/Hebron'"), 'daily KPI dates are not resolved in Asia/Hebron');
+assert(todayOps.includes("timeZone:'Asia/Jerusalem'"), 'daily KPI dates are not resolved in Asia/Jerusalem');
 assert(todayOps.includes("metricCard('النفايات'"), 'daily waste KPI is missing');
 assert(todayOps.includes("metricCard('الشاحنات'"), 'daily truck KPI is missing');
 assert(todayOps.includes("metricCard('السولار'"), 'daily diesel KPI is missing');
