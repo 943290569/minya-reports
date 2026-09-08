@@ -60,6 +60,10 @@ assert(executiveDashboard.includes("timeZone: 'Asia/Jerusalem'"), 'Executive das
 assert(executiveDashboard.includes('day: Number(values.day)'), 'Executive dashboard must expose the Jerusalem elapsed day');
 assert(executiveDashboard.includes('Number(date.slice(8, 10)) <= elapsedDay'), 'Executive previous-month data must stop at the same elapsed day');
 assert(executiveDashboard.includes('days: currentReports.length'), 'Executive operating days must equal the number of recorded reports');
+assert(executiveDashboard.includes('item.monthNumber < currentPeriod.monthNumber'), 'Executive annual best/low/average indicators must use completed months only');
+assert(executiveDashboard.includes('متوسط النفايات للشهور المكتملة'), 'Executive annual average label must disclose completed-month basis');
+assert(executiveDashboard.includes('الشهر الحالي جزئي حتى اليوم ${elapsedDay}'), 'Executive annual trend must disclose that the current month is partial');
+assert(executiveDashboard.includes('item.isCurrent ? "*" : ""'), 'Executive annual trend must visually mark the current partial month');
 
 const annualComparison = read('public/js/app-annual-comparison.js');
 assert(annualComparison.includes('timeZone: "Asia/Jerusalem"'), 'Annual comparison must resolve the current date in Asia/Jerusalem');
@@ -91,4 +95,4 @@ const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
 
-console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, recorded-day averages, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
+console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard comparisons, completed-month annual executive indicators, recorded-day averages, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
