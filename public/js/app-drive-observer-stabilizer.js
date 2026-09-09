@@ -52,6 +52,58 @@
     document.head.appendChild(style);
   }
 
+  function normalizeArabic(value){
+    return String(value||'')
+      .replace(/[أإآ]/g,'ا')
+      .replace(/ة/g,'ه')
+      .replace(/ى/g,'ي')
+      .replace(/[ًٌٍَُِّْـ]/g,'')
+      .replace(/\s+/g,' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function isRainyWeather(value){
+    const weather=normalizeArabic(value);
+    return /ماطر|ممطر|امطار|مطر|ثلج/.test(weather);
+  }
+
+  function isWaterOperation(value){
+    const name=normalizeArabic(value);
+    return name.includes('كميات المياه')
+      || name.includes('كميه المياه')
+      || (name.includes('المياه')&&name.includes('تعقيم'))
+      || (name.includes('المياه')&&name.includes('ترطيب'))
+      || name.includes('عدد مرات رش المياه')
+      || name.includes('رش المياه');
+  }
+
+  function applyRainyRuleToPayload(payload){
+    if(!payload||!isRainyWeather(payload.weather)||!Array.isArray(payload.operations))return payload;
+    payload.operations=payload.operations.map((operation)=>{
+      if(!operation||!isWaterOperation(operation.operation_name))return operation;
+      return {...operation,vehicle_count:0,quantity:0};
+    });
+    return payload;
+  }
+
+  function installDirectDriveRainySaveGuard(){
+    if(window.__MINYA_DRIVE_RAINY_SAVE_GUARD__)return;
+    window.__MINYA_DRIVE_RAINY_SAVE_GUARD__=true;
+    const NativeFetch=window.fetch.bind(window);
+    window.fetch=async function(input,init){
+      const url=typeof input==='string'?input:String(input?.url||'');
+      const method=String(init?.method||'GET').toUpperCase();
+      if((method==='POST'||method==='PUT')&&/\/api\/reports(?:\/\d+)?(?:[?#]|$)/.test(url)&&typeof init?.body==='string'){
+        try{
+          const payload=applyRainyRuleToPayload(JSON.parse(init.body));
+          init={...init,body:JSON.stringify(payload)};
+        }catch(_){ }
+      }
+      return NativeFetch(input,init);
+    };
+  }
+
   function enforceRainyWaterZero(){
     const root=document.getElementById('sourceFilesPreview');
     if(!root)return;
@@ -59,7 +111,7 @@
       const cells=tr.querySelectorAll('td');
       if(cells.length<6)return;
       const weather=String(cells[1]?.textContent||'').replace(/\s+/g,' ').trim();
-      if(!/ماطر|ممطر|امطار|أمطار|مطر|ثلجي/.test(weather))return;
+      if(!isRainyWeather(weather))return;
       if(String(cells[4].textContent||'').trim()!=='0')cells[4].textContent='0';
       if(String(cells[5].textContent||'').trim()!=='0')cells[5].textContent='0';
     });
@@ -75,9 +127,11 @@
 
   function init(){
     installMobileApprovalBarFix();
+    installDirectDriveRainySaveGuard();
     installRainyWaterRule();
   }
 
+  installDirectDriveRainySaveGuard();
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',init,{once:true});
   }else{
