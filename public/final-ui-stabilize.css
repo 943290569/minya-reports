@@ -263,3 +263,53 @@
     }
   }
 }
+
+/* Keep the header comfortable when the user increases the global text size. */
+@media screen and (min-width: 761px) {
+  html[data-font-size] .top-header {
+    gap: 10px !important;
+    padding-top: 14px !important;
+    padding-bottom: 13px !important;
+  }
+
+  html[data-font-size] .top-header nav,
+  html[data-font-size] .top-header nav.minya-legacy-nav-hidden {
+    min-height: calc(var(--appearance-font-size) + 22px) !important;
+    gap: 6px !important;
+  }
+
+  html[data-font-size] .top-header nav .app-nav-link,
+  html[data-font-size] .top-header nav a,
+  html[data-font-size] .top-header nav button {
+    height: auto !important;
+    min-height: calc(var(--appearance-font-size) + 22px) !important;
+    padding: 7px 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  html[data-font-size] #minyaLogoutBtn {
+    height: auto !important;
+    min-height: calc(var(--appearance-font-size) + 18px) !important;
+    padding: 6px 11px !important;
+    line-height: 1.2 !important;
+  }
+}
+
+@media screen and (max-width: 760px) {
+  html[data-font-size] .top-header {
+    min-height: calc(var(--appearance-font-size) + 56px) !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+  html[data-font-size] .top-header h1 {
+    line-height: 1.28 !important;
+  }
+
+  html[data-font-size] #minyaLogoutBtn,
+  html[data-font-size] #minyaMenuButton {
+    height: auto !important;
+    min-height: calc(var(--appearance-font-size) + 18px) !important;
+    line-height: 1.2 !important;
+  }
+}
