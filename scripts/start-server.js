@@ -16,7 +16,7 @@ const replacements = [
   ],
   [
     'require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});',
-    'require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});\nrequire("./web-push-notifications")(app,{db,requireAuth,audit});\nrequire("./report-totals-guard")(app);'
+    'require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});\nrequire("./web-push-notifications")(app,{db,requireAuth,audit});\nrequire("./report-totals-guard")(app);\nrequire("./workday-classification")(app,{db,requireAuth,audit});'
   ],
   [
     'if(!r.report_date){ invalidReports++; return; }\n    dates.push(String(r.report_date));',
