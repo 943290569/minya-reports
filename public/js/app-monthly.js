@@ -410,8 +410,6 @@ async function loadMonthlyArchiveData(showStatus = false) {
     let currentReports = Array.isArray(current.reports) ? current.reports : [];
     let previousReports = (previousResponse.ok && previous.ok && Array.isArray(previous.reports)) ? previous.reports : [];
 
-    // Defensive fallback: if the monthly endpoint returns an empty set while reports exist,
-    // load the archive once and filter locally. This prevents a false all-zero monthly page.
     if (!currentReports.length) {
       try {
         const archiveResponse = await fetch(`${API}/api/reports`, { cache: "no-store" });
@@ -427,11 +425,7 @@ async function loadMonthlyArchiveData(showStatus = false) {
       }
     }
 
-    archiveReports = [
-      ...currentReports,
-      ...previousReports
-    ];
-
+    archiveReports = [...currentReports, ...previousReports];
     window.MINYA_MONTHLY_LINKED_SUMMARY = current.details || null;
 
     renderArchiveReports();
@@ -439,16 +433,9 @@ async function loadMonthlyArchiveData(showStatus = false) {
     if (typeof window.renderLinkedPeriodSummary === "function") {
       window.renderLinkedPeriodSummary("monthly", current.details || null);
     }
-
-    if (typeof renderMonthlyMetricChart === "function") {
-      await renderMonthlyMetricChart("waste");
-    }
-    if (typeof renderMonthlyTable === "function") {
-      renderMonthlyTable();
-    }
-    if (typeof window.renderMonthlyComparisonStable10 === "function") {
-      await window.renderMonthlyComparisonStable10();
-    }
+    if (typeof renderMonthlyMetricChart === "function") await renderMonthlyMetricChart("waste");
+    if (typeof renderMonthlyTable === "function") renderMonthlyTable();
+    if (typeof window.renderMonthlyComparisonStable10 === "function") await window.renderMonthlyComparisonStable10();
 
     if (showStatus) showMessage(`تم تحميل ${currentReports.length} تقرير لشهر ${getMonthName(month)}`);
   } catch (error) {
