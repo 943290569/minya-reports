@@ -90,6 +90,8 @@ jobs:
             npm install --omit=dev
           fi
 
+          npm run build:app
+
           pm2 restart "$DEPLOY_PM2_NAME" --update-env
           pm2 save
 
