@@ -125,7 +125,8 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
     const auto=automaticWorkday(date);
     const override=readOverrides()[date];
-    const status=override==='holiday'||override==='official'?override:auto.status;
+    const manual=override==='holiday'||override==='official';
+    const status=manual?override:auto.status;
     const reason=override==='holiday'?'محدد يدويًا: عطلة رسمية / دوام طوارئ':override==='official'?'محدد يدويًا: دوام رسمي':auto.reason;
     if(cells[3])cells[3].textContent=String(status==='holiday'?EMERGENCY_CREW_TOTAL:NORMAL_CREW_TOTAL);
     tr.classList.toggle('minya-official-holiday',status==='holiday');
@@ -136,7 +137,7 @@
       cell.className='minya-workday-cell';
       tr.appendChild(cell);
     }
-    cell.innerHTML=`<select class="minya-workday-select" data-workday-date="${date}">
+    cell.innerHTML=`<select class="minya-workday-select" data-workday-date="${date}" data-workday-manual="${manual?'1':'0'}">
       <option value="holiday" ${status==='holiday'?'selected':''}>عطلة رسمية - دوام طوارئ</option>
       <option value="official" ${status==='official'?'selected':''}>دوام رسمي</option>
     </select><small class="minya-workday-reason">${reason}</small>`;
