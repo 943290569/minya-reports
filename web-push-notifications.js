@@ -36,7 +36,7 @@ module.exports = function installWebPush(app,{db,requireAuth,audit}){
       saveSetting('push_vapid_public',publicKey);
       saveSetting('push_vapid_private',privateKey);
     }
-    const subject=process.env.WEB_PUSH_SUBJECT || 'https://minya-landfill.duckdns.org';
+    const subject=process.env.WEB_PUSH_SUBJECT || 'https://alminya-landfill.duckdns.org';
     webpush.setVapidDetails(subject,publicKey,privateKey);
     return {publicKey,privateKey};
   }
