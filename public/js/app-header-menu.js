@@ -40,6 +40,67 @@
     }).join("");
   }
 
+  function mountBackToTop(){
+    if(document.getElementById("minyaBackToTop")) return;
+
+    const style=document.createElement("style");
+    style.id="minyaBackToTopStyle";
+    style.textContent=`
+      #minyaBackToTop{
+        position:fixed;
+        right:18px;
+        bottom:18px;
+        z-index:1690;
+        width:46px;
+        height:46px;
+        min-width:46px;
+        min-height:46px;
+        padding:0 !important;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:1px solid rgba(255,255,255,.28) !important;
+        border-radius:50% !important;
+        background:var(--appearance-accent,#176b4f) !important;
+        color:#fff !important;
+        box-shadow:0 10px 26px rgba(10,45,34,.24) !important;
+        font-size:24px !important;
+        font-weight:900 !important;
+        line-height:1 !important;
+        cursor:pointer;
+        transition:transform .18s ease,opacity .18s ease;
+      }
+      #minyaBackToTop[hidden]{display:none !important;}
+      #minyaBackToTop:hover{transform:translateY(-2px);}
+      #minyaBackToTop:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:3px;}
+      @media (max-width:760px){
+        #minyaBackToTop{right:12px;bottom:14px;width:44px;height:44px;min-width:44px;min-height:44px;font-size:23px !important;}
+      }
+      @media print{#minyaBackToTop{display:none !important;}}
+    `;
+    document.head.appendChild(style);
+
+    const btn=document.createElement("button");
+    btn.id="minyaBackToTop";
+    btn.type="button";
+    btn.hidden=true;
+    btn.setAttribute("aria-label","العودة إلى بداية الصفحة");
+    btn.setAttribute("title","العودة إلى أعلى الصفحة");
+    btn.innerHTML='<span aria-hidden="true">↑</span>';
+    document.body.appendChild(btn);
+
+    const sync=()=>{
+      btn.hidden=(window.scrollY || document.documentElement.scrollTop || 0)<320;
+    };
+
+    btn.addEventListener("click",()=>{
+      const reduced=document.documentElement.dataset.motion==="reduced" || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      window.scrollTo({top:0,left:0,behavior:reduced?"auto":"smooth"});
+    });
+    window.addEventListener("scroll",sync,{passive:true});
+    sync();
+  }
+
   function build(){
     if(!window.matchMedia("(max-width: 760px)").matches) return;
     const header=document.querySelector(".top-header");
@@ -96,6 +157,7 @@
   }
 
   function start(){
+    mountBackToTop();
     build();
     let tries=0,lastRole=currentRole();
     const timer=setInterval(()=>{
