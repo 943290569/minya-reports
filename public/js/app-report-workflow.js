@@ -68,6 +68,8 @@
 
     if (locked) {
       main.querySelectorAll("#reportAttachmentsPanel button[data-delete], #reportAttachmentsPanel .attachment-delete").forEach((element) => setControlLocked(element, true));
+    } else if (window.MINYA_USER?.role === "admin") {
+      main.querySelectorAll("#reportAttachmentsPanel button[data-delete], #reportAttachmentsPanel .attachment-delete").forEach((element) => setControlLocked(element, false));
     }
 
     let notice = document.getElementById("workflowReadOnlyNotice");
@@ -75,7 +77,7 @@
       notice = document.createElement("div");
       notice.id = "workflowReadOnlyNotice";
       notice.className = "workflow-readonly-notice no-print";
-      notice.textContent = "التقرير للقراءة فقط. يمكن للمدير تعديله مباشرة، أو إعادة فتحه كمسودة للمحرر.";
+      notice.textContent = "التقرير للقراءة فقط. المدير يستطيع تعديل التقرير كاملًا مباشرة، أما المحرر فيلزم إعادة فتحه كمسودة.";
       const panel = document.getElementById("reportWorkflowPanel");
       panel?.after(notice);
     } else if (!locked && notice) notice.remove();
@@ -90,10 +92,11 @@
     }
 
     const status = report.workflow_status || "draft"; const info = statusInfo[status] || statusInfo.draft; const role = window.MINYA_USER?.role || "viewer";
+    panel.dataset.workflowStatus = status;
     const canSubmit = status === "draft" && (role === "admin" || role === "editor"); const canApprove = status === "pending" && role === "admin"; const canReopen = status !== "draft" && role === "admin";
     let detail = "التقرير قابل للتعديل والحفظ.";
-    if (status === "pending") detail = "التقرير مقفل حاليًا بانتظار مراجعة المدير واعتماده.";
-    if (status === "approved") detail = `تم اعتماد التقرير${report.approved_by_name ? ` بواسطة ${escapeHtml(report.approved_by_name)}` : ""}${report.approved_at ? ` بتاريخ ${formatDateTime(report.approved_at)}` : ""}.`;
+    if (status === "pending") detail = role === "admin" ? "التقرير مرسل للمراجعة، والمدير يستطيع تعديل كامل التقرير مباشرة ثم حفظه مع اعتماده." : "التقرير مقفل حاليًا بانتظار مراجعة المدير واعتماده.";
+    if (status === "approved") detail = `تم اعتماد التقرير${report.approved_by_name ? ` بواسطة ${escapeHtml(report.approved_by_name)}` : ""}${report.approved_at ? ` بتاريخ ${formatDateTime(report.approved_at)}` : ""}.${role === "admin" ? " المدير يستطيع تعديل كامل التقرير مباشرة مع بقاءه معتمدًا بعد الحفظ." : ""}`;
 
     panel.innerHTML = `<div class="workflow-summary"><div><span class="workflow-kicker">حالة التقرير</span><div class="workflow-status-line"><strong>${escapeHtml(report.report_no || "تقرير محفوظ")}</strong><span class="workflow-badge ${info.className}">${info.label}</span></div><small>${detail}</small></div><div class="workflow-actions">${canSubmit ? `<button type="button" data-workflow-action="submit" class="workflow-primary">إرسال للمراجعة</button>` : ""}${canApprove ? `<button type="button" data-workflow-action="approve" class="workflow-approve">اعتماد التقرير</button>` : ""}${canReopen ? `<button type="button" data-workflow-action="reopen" class="workflow-secondary">إعادة فتح كمسودة</button>` : ""}</div></div><div class="workflow-steps"><div class="${status === "draft" ? "active" : "done"}"><i>1</i><span>مسودة</span></div><b></b><div class="${status === "pending" ? "active" : status === "approved" ? "done" : ""}"><i>2</i><span>مراجعة</span></div><b></b><div class="${status === "approved" ? "active done" : ""}"><i>3</i><span>معتمد</span></div></div>`;
     panel.querySelectorAll("[data-workflow-action]").forEach((button) => button.addEventListener("click", () => runWorkflowAction(button.dataset.workflowAction, report)));
@@ -101,7 +104,7 @@
   }
 
   async function runWorkflowAction(action, report) {
-    const messages = { submit: "إرسال التقرير للمراجعة؟ بعد الإرسال سيتوقف التعديل حتى يعيد المدير فتحه.", approve: "اعتماد هذا التقرير نهائيًا؟ سيصبح مقفلًا بعد الاعتماد.", reopen: "إعادة فتح التقرير كمسودة؟ سيتم إلغاء حالة المراجعة/الاعتماد الحالية." };
+    const messages = { submit: "إرسال التقرير للمراجعة؟ بعد الإرسال سيتوقف التعديل للمحرر حتى يعيد المدير فتحه.", approve: "اعتماد هذا التقرير؟ سيبقى المدير قادرًا على تعديل كامل التقرير بعد الاعتماد.", reopen: "إعادة فتح التقرير كمسودة؟ سيتم إلغاء حالة المراجعة/الاعتماد الحالية." };
     if (!confirm(messages[action] || "متابعة؟")) return;
     try {
       const data = await api(`/api/reports/${report.id}/${action}`, { method: "POST" });
@@ -112,7 +115,11 @@
 
   async function refreshReportWorkflow(force = false) {
     if (pathName !== "/report") return; const id = getCurrentReportId(); if (!id) return;
-    if (!force && workflowReportId === id && document.getElementById("reportWorkflowPanel")) return;
+    const existingPanel = document.getElementById("reportWorkflowPanel");
+    if (!force && workflowReportId === id && existingPanel) {
+      applyReportLock(existingPanel.dataset.workflowStatus || "draft");
+      return;
+    }
     try { const data = await api(`/api/reports/${id}`); workflowReportId = id; buildWorkflowPanel(data.report || data); } catch (error) { console.error("Report workflow load failed", error); }
   }
 
