@@ -105,4 +105,37 @@ table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;borde
   .panel{padding:13px}.panel>h2{font-size:16px}.daily-summary>div,.archive-summary>div,.monthly-summary>div{min-height:82px}
 }
 
+/* Appearance setting: one control scales text across the entire interactive site. */
+@media screen {
+  html[data-font-size] body { font-size: var(--appearance-font-size) !important; }
+  html[data-font-size] :is(button,input,select,textarea,label,td,th,a,p,li) {
+    font-size: var(--appearance-font-size) !important;
+  }
+  html[data-font-size] small,
+  html[data-font-size] .top-header p,
+  html[data-font-size] .daily-summary small,
+  html[data-font-size] .archive-summary small,
+  html[data-font-size] .monthly-summary small {
+    font-size: max(10px, calc(var(--appearance-font-size) - 4px)) !important;
+  }
+  html[data-font-size] .top-header h1 {
+    font-size: calc(var(--appearance-font-size) + 10px) !important;
+  }
+  html[data-font-size] :is(h1,h2) {
+    font-size: calc(var(--appearance-font-size) + 8px) !important;
+  }
+  html[data-font-size] :is(h3,h4,.panel>h2) {
+    font-size: calc(var(--appearance-font-size) + 3px) !important;
+  }
+  html[data-font-size] :is(.daily-summary span,.archive-summary span,.monthly-summary span) {
+    font-size: max(11px, calc(var(--appearance-font-size) - 2px)) !important;
+  }
+  html[data-font-size] :is(.daily-summary strong,.archive-summary strong,.monthly-summary strong,.dashboard-metric-card strong,.today-operations-grid strong) {
+    font-size: calc(var(--appearance-font-size) + 7px) !important;
+  }
+  html[data-font-size] :is(.minya-menu-item,#minyaMenuButton,#minyaLogoutBtn,.app-nav-link) {
+    font-size: var(--appearance-font-size) !important;
+  }
+}
+
 @media print{.top-header,.container{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
