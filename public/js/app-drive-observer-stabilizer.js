@@ -52,9 +52,35 @@
     document.head.appendChild(style);
   }
 
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',installMobileApprovalBarFix,{once:true});
-  }else{
+  function enforceRainyWaterZero(){
+    const root=document.getElementById('sourceFilesPreview');
+    if(!root)return;
+    root.querySelectorAll('.source-import-table tbody tr').forEach((tr)=>{
+      const cells=tr.querySelectorAll('td');
+      if(cells.length<6)return;
+      const weather=String(cells[1]?.textContent||'').replace(/\s+/g,' ').trim();
+      if(!/ماطر|ممطر|امطار|أمطار|مطر|ثلجي/.test(weather))return;
+      if(String(cells[4].textContent||'').trim()!=='0')cells[4].textContent='0';
+      if(String(cells[5].textContent||'').trim()!=='0')cells[5].textContent='0';
+    });
+  }
+
+  function installRainyWaterRule(){
+    const root=document.getElementById('sourceFilesPreview');
+    if(!root)return;
+    enforceRainyWaterZero();
+    const observer=new NativeMutationObserver(()=>enforceRainyWaterZero());
+    observer.observe(root,{childList:true,subtree:true,characterData:true});
+  }
+
+  function init(){
     installMobileApprovalBarFix();
+    installRainyWaterRule();
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',init,{once:true});
+  }else{
+    init();
   }
 })();
