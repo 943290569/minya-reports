@@ -345,7 +345,7 @@ async function loadArchive(showStatus = true) {
   try {
     if (showStatus) showMessage("جاري تحميل الأرشيف...");
 
-    const response = await fetch(`${API}/api/reports`);
+    const response = await fetch(`${API}/api/reports`, { cache: "no-store" });
     const data = await response.json();
 
     if (!response.ok || !data.ok) {
@@ -446,9 +446,7 @@ async function loadMonthlyArchiveData(showStatus = false) {
 
 document.getElementById("archiveMonthFilter")?.addEventListener("change", () => {
   const path = location.pathname.replace(/\/+$/, "") || "/";
-  if (path === "/monthly") {
-    loadMonthlyArchiveData(false);
-  }
+  if (path === "/monthly") loadMonthlyArchiveData(false);
 });
 
 window.loadMonthlyArchiveData = loadMonthlyArchiveData;
