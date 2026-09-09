@@ -393,26 +393,32 @@ async function loadMonthlyArchiveData(showStatus = false) {
     const previousMonth = getPreviousMonthForArchive(month);
     if (showStatus) showMessage("جاري تحميل التقرير الشهري...");
 
-    const [currentResponse, previousResponse] = await Promise.all([
-      fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(month)}`, { cache: "no-store" }),
-      fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(previousMonth)}`, { cache: "no-store" })
-    ]);
+    let currentReports = [];
+    let previousReports = [];
+    let current = { ok: false, details: null };
 
-    const current = await currentResponse.json();
-    const previous = await previousResponse.json();
-    if (!currentResponse.ok || !current.ok) throw new Error(current.message || "فشل تحميل الشهر");
-
-    let currentReports = Array.isArray(current.reports) ? current.reports : [];
-    let previousReports = previousResponse.ok && previous.ok && Array.isArray(previous.reports) ? previous.reports : [];
+    try {
+      const [currentResponse, previousResponse] = await Promise.all([
+        fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(month)}`, { cache: "no-store" }),
+        fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(previousMonth)}`, { cache: "no-store" })
+      ]);
+      current = await currentResponse.json();
+      const previous = await previousResponse.json();
+      if (currentResponse.ok && current.ok && Array.isArray(current.reports)) currentReports = current.reports;
+      if (previousResponse.ok && previous.ok && Array.isArray(previous.reports)) previousReports = previous.reports;
+    } catch (monthlyError) {
+      console.error("فشل مسار الملخص الشهري، سيتم استخدام الأرشيف", monthlyError);
+    }
 
     if (!currentReports.length) {
       const archiveResponse = await fetch(`${API}/api/reports`, { cache: "no-store" });
       const archiveData = await archiveResponse.json();
-      if (archiveResponse.ok && archiveData.ok && Array.isArray(archiveData.reports)) {
-        currentReports = archiveData.reports.filter((report) => String(report.report_date || "").startsWith(month));
-        if (!previousReports.length && previousMonth) {
-          previousReports = archiveData.reports.filter((report) => String(report.report_date || "").startsWith(previousMonth));
-        }
+      if (!archiveResponse.ok || !archiveData.ok || !Array.isArray(archiveData.reports)) {
+        throw new Error(archiveData.message || "فشل تحميل تقارير الشهر");
+      }
+      currentReports = archiveData.reports.filter((report) => String(report.report_date || "").startsWith(month));
+      if (!previousReports.length && previousMonth) {
+        previousReports = archiveData.reports.filter((report) => String(report.report_date || "").startsWith(previousMonth));
       }
     }
 
