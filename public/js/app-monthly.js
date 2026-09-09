@@ -1,1 +1,467 @@
-/* test */
+/* =========================================================
+   التقرير الشهري والأرشيف
+========================================================= */
+
+async function getMonthlyDetailedReports(monthValue) {
+  const monthlyReports = archiveReports.filter((report) =>
+    String(report.report_date || "").startsWith(monthValue)
+  );
+
+  const detailedReports = await Promise.all(
+    monthlyReports.map(async (report) => {
+      try {
+        return await getReport(report.id);
+      } catch (error) {
+        console.error(`فشل تحميل التقرير ${report.id}`, error);
+        return null;
+      }
+    })
+  );
+
+  return detailedReports.filter(Boolean);
+}
+
+function calculateMonthlyOperations(detailedReports) {
+  const totals = {
+    coverAslobVehicles: 0,
+    coverAslobQuantity: 0,
+    coverTammVehicles: 0,
+    coverTammQuantity: 0,
+    waterVehicles: 0,
+    waterQuantity: 0,
+    waterSprays: 0,
+    leachateVehicles: 0,
+    leachateQuantity: 0,
+    sortingVehicles: 0,
+    sortingQuantity: 0,
+    externalTammVehicles: 0,
+    externalTammQuantity: 0,
+  };
+
+  detailedReports.forEach((data) => {
+    (data.operations || []).forEach((item) => {
+      const name = String(item.operation_name || "").trim();
+      const vehicles = Number(item.vehicle_count || 0);
+      const quantity = Number(item.quantity || 0);
+
+      if (name === "مواد التغطية (اسلوب)") {
+        totals.coverAslobVehicles += vehicles;
+        totals.coverAslobQuantity += quantity;
+      } else if (name === "مواد التغطية (طمم)") {
+        totals.coverTammVehicles += vehicles;
+        totals.coverTammQuantity += quantity;
+      } else if (name === "كميات المياه للتعقيم والترطيب") {
+        totals.waterVehicles += vehicles;
+        totals.waterQuantity += quantity;
+      } else if (name === "عدد مرات رش المياه") {
+        totals.waterSprays += quantity;
+      } else if (name === "كميات العصارة المرحلة") {
+        totals.leachateVehicles += vehicles;
+        totals.leachateQuantity += quantity;
+      } else if (name === "خط الفرز") {
+        totals.sortingVehicles += vehicles;
+        totals.sortingQuantity += quantity;
+      } else if (name === "طمم خارجي") {
+        totals.externalTammVehicles += vehicles;
+        totals.externalTammQuantity += quantity;
+      }
+    });
+  });
+
+  return totals;
+}
+
+function calculateDieselFromDetailedReports(detailedReports) {
+  const dieselByReportId = new Map();
+  let dieselTotal = 0;
+
+  detailedReports.forEach((data) => {
+    const reportId = Number(data.report?.id || 0);
+    const storedDieselRaw = data.report?.total_diesel;
+    const storedDiesel = Number(storedDieselRaw);
+    const equipmentDiesel = (data.equipment || []).reduce(
+      (sum, item) => sum + Number(item.diesel_liters || 0),
+      0
+    );
+    const reportDiesel = storedDieselRaw !== undefined &&
+      storedDieselRaw !== null &&
+      Number.isFinite(storedDiesel)
+      ? storedDiesel
+      : equipmentDiesel;
+
+    dieselByReportId.set(reportId, reportDiesel);
+    dieselTotal += reportDiesel;
+  });
+
+  return { dieselTotal, dieselByReportId };
+}
+
+async function buildMonthlyOperationsData() {
+  const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+  if (!monthValue) return null;
+
+  const detailedReports = await getMonthlyDetailedReports(monthValue);
+  return {
+    monthValue,
+    detailedReports,
+    operationsTotals: calculateMonthlyOperations(detailedReports),
+    diesel: calculateDieselFromDetailedReports(detailedReports),
+  };
+}
+
+function getPreviousMonthForArchive(monthValue) {
+  const [year, month] = String(monthValue || "").split("-").map(Number);
+  if (!year || !month) return "";
+  const date = new Date(year, month - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatArchiveChange(current, previous) {
+  const currentValue = Number(current || 0);
+  const previousValue = Number(previous || 0);
+  if (previousValue === 0) return "-";
+  const percent = ((currentValue - previousValue) / previousValue) * 100;
+  if (Math.abs(percent) < 0.05) return "بدون تغير";
+  return `${percent > 0 ? "زيادة" : "انخفاض"} ${formatNumber(Math.abs(percent))}%`;
+}
+
+async function updateMonthlyComparison(monthValue, currentDieselTotal = null) {
+  const title = document.getElementById("monthlyComparisonTitle");
+  const grid = document.getElementById("monthlyComparisonGrid");
+  const empty = document.getElementById("monthlyComparisonEmpty");
+
+  if (!title || !grid || !empty) return;
+
+  const setValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  };
+
+  if (!monthValue) {
+    title.textContent = "مقارنة مع الشهر السابق";
+    grid.classList.add("hidden");
+    empty.classList.remove("hidden");
+    empty.textContent = "اختر شهرًا لعرض المقارنة.";
+    return;
+  }
+
+  const currentReports = archiveReports.filter((report) =>
+    String(report.report_date || "").startsWith(monthValue)
+  );
+
+  const previousMonth = getPreviousMonthForArchive(monthValue);
+  const previousReports = archiveReports.filter((report) =>
+    String(report.report_date || "").startsWith(previousMonth)
+  );
+
+  title.textContent = `مقارنة مع الشهر السابق - ${getMonthName(previousMonth)}`;
+
+  if (!currentReports.length || !previousReports.length) {
+    grid.classList.add("hidden");
+    empty.classList.remove("hidden");
+    empty.textContent = "لا توجد بيانات محفوظة للشهر السابق للمقارنة.";
+    return;
+  }
+
+  const currentWaste = currentReports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const currentTrucks = currentReports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+  const previousWaste = previousReports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const previousTrucks = previousReports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+
+  let currentDiesel = currentDieselTotal;
+  if (currentDiesel === null) {
+    const currentDetails = await getMonthlyDetailedReports(monthValue);
+    currentDiesel = calculateDieselFromDetailedReports(currentDetails).dieselTotal;
+  }
+
+  let previousDiesel = previousReports.reduce((sum, report) => sum + Number(report.total_diesel || 0), 0);
+  try {
+    const previousDetails = await getMonthlyDetailedReports(previousMonth);
+    previousDiesel = calculateDieselFromDetailedReports(previousDetails).dieselTotal;
+  } catch (error) {
+    console.error("فشل حساب سولار الشهر السابق", error);
+  }
+
+  setValue("monthlyWasteChange", formatArchiveChange(currentWaste, previousWaste));
+  setValue("monthlyWasteChangeValues", `${formatNumber(previousWaste)} ← ${formatNumber(currentWaste)} طن`);
+  setValue("monthlyTrucksChange", formatArchiveChange(currentTrucks, previousTrucks));
+  setValue("monthlyTrucksChangeValues", `${formatNumber(previousTrucks)} ← ${formatNumber(currentTrucks)}`);
+  setValue("monthlyDieselChange", formatArchiveChange(currentDiesel, previousDiesel));
+  setValue("monthlyDieselChangeValues", `${formatNumber(previousDiesel)} ← ${formatNumber(currentDiesel)} لتر`);
+
+  empty.classList.add("hidden");
+  grid.classList.remove("hidden");
+}
+
+function calculateMonthlyReport() {
+  const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+
+  if (!monthValue) {
+    return {
+      month: "",
+      reports: [],
+      days: 0,
+      wasteTotal: 0,
+      wasteAverage: 0,
+      trucksTotal: 0,
+      trucksAverage: 0,
+      dieselTotal: 0,
+      dieselAverage: 0,
+      maxWaste: 0,
+      maxWasteDate: "-",
+      minWaste: 0,
+      minWasteDate: "-",
+    };
+  }
+
+  const reports = archiveReports.filter((report) =>
+    String(report.report_date || "").startsWith(monthValue)
+  );
+  const days = reports.length;
+  const wasteTotal = reports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const trucksTotal = reports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+  const dieselTotal = reports.reduce((sum, report) => sum + Number(report.total_diesel || 0), 0);
+
+  let maxReport = null;
+  let minReport = null;
+  if (reports.length) {
+    maxReport = reports.reduce((max, report) =>
+      Number(report.total_waste_tons || 0) > Number(max.total_waste_tons || 0) ? report : max
+    );
+    minReport = reports.reduce((min, report) =>
+      Number(report.total_waste_tons || 0) < Number(min.total_waste_tons || 0) ? report : min
+    );
+  }
+
+  return {
+    month: monthValue,
+    reports,
+    days,
+    wasteTotal,
+    wasteAverage: days ? wasteTotal / days : 0,
+    trucksTotal,
+    trucksAverage: days ? trucksTotal / days : 0,
+    dieselTotal,
+    dieselAverage: days ? dieselTotal / days : 0,
+    maxWaste: maxReport ? Number(maxReport.total_waste_tons || 0) : 0,
+    maxWasteDate: maxReport ? maxReport.report_date : "-",
+    minWaste: minReport ? Number(minReport.total_waste_tons || 0) : 0,
+    minWasteDate: minReport ? minReport.report_date : "-",
+  };
+}
+
+async function updateMonthlySummary() {
+  const monthly = calculateMonthlyReport();
+  const setValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  };
+
+  setValue("monthlyDaysCount", formatNumber(monthly.days));
+  setValue("monthlyWasteTotal", formatNumber(monthly.wasteTotal));
+  setValue("monthlyWasteAverage", formatNumber(monthly.wasteAverage));
+  setValue("monthlyTrucksTotal", formatNumber(monthly.trucksTotal));
+  setValue("monthlyTrucksAverage", formatNumber(monthly.trucksAverage));
+  setValue("monthlyMaxWaste", formatNumber(monthly.maxWaste));
+  setValue("monthlyMaxWasteDate", monthly.maxWasteDate === "-" ? "-" : formatDate(monthly.maxWasteDate));
+  setValue("monthlyMinWaste", formatNumber(monthly.minWaste));
+  setValue("monthlyMinWasteDate", monthly.minWasteDate === "-" ? "-" : formatDate(monthly.minWasteDate));
+
+  if (!monthly.month || !monthly.reports.length) {
+    setValue("monthlyDieselTotal", "0");
+    setValue("monthlyDieselAverage", "0");
+    await updateMonthlyComparison(monthly.month, 0);
+    return;
+  }
+
+  setValue("monthlyDieselTotal", formatNumber(monthly.dieselTotal));
+  setValue("monthlyDieselAverage", formatNumber(monthly.dieselAverage));
+  await updateMonthlyComparison(monthly.month, monthly.dieselTotal);
+}
+
+async function refreshArchiveDiesel(filteredReports) {
+  const target = document.getElementById("archiveDieselTotal");
+  if (!target) return;
+  if (!filteredReports.length) {
+    target.textContent = "0";
+    return;
+  }
+
+  const dieselTotal = filteredReports.reduce(
+    (sum, report) => sum + Number(report.total_diesel || 0),
+    0
+  );
+  target.textContent = formatNumber(dieselTotal);
+}
+
+function goToEditReport(id) {
+  window.location.href = `/report?edit=${encodeURIComponent(id)}`;
+}
+
+function renderArchiveReports() {
+  const dateFilter = document.getElementById("archiveDateFilter")?.value || "";
+  const monthFilter = document.getElementById("archiveMonthFilter")?.value || "";
+  let filteredReports = [...archiveReports];
+
+  if (dateFilter) filteredReports = filteredReports.filter((report) => report.report_date === dateFilter);
+  if (monthFilter) {
+    filteredReports = filteredReports.filter((report) =>
+      String(report.report_date || "").startsWith(monthFilter)
+    );
+  }
+
+  const wasteTotal = filteredReports.reduce((sum, report) => sum + Number(report.total_waste_tons || 0), 0);
+  const trucksTotal = filteredReports.reduce((sum, report) => sum + Number(report.total_trucks || 0), 0);
+  const dieselFallback = filteredReports.reduce((sum, report) => sum + Number(report.total_diesel || 0), 0);
+
+  document.getElementById("archiveReportsCount").textContent = filteredReports.length;
+  document.getElementById("archiveWasteTotal").textContent = formatNumber(wasteTotal);
+  document.getElementById("archiveTrucksTotal").textContent = formatNumber(trucksTotal);
+  document.getElementById("archiveDieselTotal").textContent = formatNumber(dieselFallback);
+
+  archiveBody.innerHTML = filteredReports.length === 0
+    ? `<tr><td colspan="6">لا توجد تقارير مطابقة</td></tr>`
+    : filteredReports.map((report) => `
+      <tr>
+        <td>${escapeHtml(report.report_no)}</td>
+        <td>${formatDate(report.report_date)}</td>
+        <td>${formatNumber(report.total_waste_tons)}</td>
+        <td>${formatNumber(report.total_trucks)}</td>
+        <td>${formatNumber(report.total_diesel)}</td>
+        <td>
+          <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
+          <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
+          <button class="archive-print" onclick="printReport(${report.id})">طباعة</button>
+          <button class="role-admin-action" onclick="deleteReport(${report.id})" style="background:#b91c1c">حذف</button>
+        </td>
+      </tr>`).join("");
+
+  refreshArchiveDiesel(filteredReports);
+  updateMonthlySummary();
+  if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
+}
+
+async function loadArchive(showStatus = true) {
+  try {
+    if (showStatus) showMessage("جاري تحميل الأرشيف...");
+
+    const response = await fetch(`${API}/api/reports`);
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      showMessage(data.message || "فشل تحميل الأرشيف");
+      return;
+    }
+
+    archiveReports = data.reports || [];
+    renderArchiveReports();
+    document.getElementById("archiveSection").classList.remove("hidden");
+    if (showStatus) showMessage(`تم تحميل ${archiveReports.length} تقرير`);
+  } catch (error) {
+    console.error(error);
+    showMessage("حدث خطأ أثناء تحميل الأرشيف");
+  }
+}
+
+/* =========================================================
+   V3.2 - تحميل بيانات الشهر فقط
+========================================================= */
+
+function normalizeMonthlyFilterValue(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{4})-(\d{1,2})$/);
+  if (!match) return text;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return text;
+  return `${match[1]}-${String(month).padStart(2, "0")}`;
+}
+
+async function loadMonthlyArchiveData(showStatus = false) {
+  try {
+    const monthInput = document.getElementById("archiveMonthFilter");
+    if (!monthInput) return;
+
+    if (!monthInput.value) {
+      const now = new Date();
+      monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    const month = normalizeMonthlyFilterValue(monthInput.value);
+    if (month !== monthInput.value) monthInput.value = month;
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      throw new Error("قيمة الشهر غير صالحة");
+    }
+    const previousMonth = getPreviousMonthForArchive(month);
+
+    if (showStatus) showMessage("جاري تحميل التقرير الشهري...");
+
+    const [currentResponse, previousResponse] = await Promise.all([
+      fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(month)}`, { cache: "no-store" }),
+      fetch(`${API}/api/monthly-summary?month=${encodeURIComponent(previousMonth)}`, { cache: "no-store" })
+    ]);
+
+    const current = await currentResponse.json();
+    const previous = await previousResponse.json();
+
+    if (!currentResponse.ok || !current.ok) {
+      throw new Error(current.message || "فشل تحميل الشهر");
+    }
+
+    let currentReports = Array.isArray(current.reports) ? current.reports : [];
+    let previousReports = (previousResponse.ok && previous.ok && Array.isArray(previous.reports)) ? previous.reports : [];
+
+    // Defensive fallback: if the monthly endpoint returns an empty set while reports exist,
+    // load the archive once and filter locally. This prevents a false all-zero monthly page.
+    if (!currentReports.length) {
+      try {
+        const archiveResponse = await fetch(`${API}/api/reports`, { cache: "no-store" });
+        const archiveData = await archiveResponse.json();
+        if (archiveResponse.ok && archiveData.ok && Array.isArray(archiveData.reports)) {
+          currentReports = archiveData.reports.filter((report) => String(report.report_date || "").startsWith(month));
+          if (!previousReports.length && previousMonth) {
+            previousReports = archiveData.reports.filter((report) => String(report.report_date || "").startsWith(previousMonth));
+          }
+        }
+      } catch (fallbackError) {
+        console.error("فشل التحميل الاحتياطي لبيانات الشهر", fallbackError);
+      }
+    }
+
+    archiveReports = [
+      ...currentReports,
+      ...previousReports
+    ];
+
+    window.MINYA_MONTHLY_LINKED_SUMMARY = current.details || null;
+
+    renderArchiveReports();
+    await updateMonthlySummary();
+    if (typeof window.renderLinkedPeriodSummary === "function") {
+      window.renderLinkedPeriodSummary("monthly", current.details || null);
+    }
+
+    if (typeof renderMonthlyMetricChart === "function") {
+      await renderMonthlyMetricChart("waste");
+    }
+    if (typeof renderMonthlyTable === "function") {
+      renderMonthlyTable();
+    }
+    if (typeof window.renderMonthlyComparisonStable10 === "function") {
+      await window.renderMonthlyComparisonStable10();
+    }
+
+    if (showStatus) showMessage(`تم تحميل ${currentReports.length} تقرير لشهر ${getMonthName(month)}`);
+  } catch (error) {
+    console.error(error);
+    showMessage(error.message || "حدث خطأ أثناء تحميل التقرير الشهري");
+  }
+}
+
+document.getElementById("archiveMonthFilter")?.addEventListener("change", () => {
+  const path = location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/monthly") {
+    loadMonthlyArchiveData(false);
+  }
+});
+
+window.loadMonthlyArchiveData = loadMonthlyArchiveData;
