@@ -7,7 +7,6 @@ function buildFullReportHtml(data, autoPrint = false) {
   const totalWorkers = data.crews.reduce((sum, item) => sum + Number(item.crew_count || 0), 0);
   const totalDiesel = data.equipment.reduce((sum, item) => sum + Number(item.diesel_liters || 0), 0);
   const workdayType = report.workday_type === "holiday" ? "عطلة رسمية - دوام طوارئ" : "دوام رسمي";
-  const workdayReason = String(report.workday_reason || "").trim();
 
   const crewRows = data.crews.map((item) => `
       <tr><td>${escapeHtml(item.crew_name)}</td><td>${formatNumber(item.crew_count)}</td><td>${escapeHtml(item.notes || "-")}</td></tr>`).join("");
@@ -50,14 +49,11 @@ body { font-family: Arial, Tahoma, sans-serif; direction: rtl; color: #111; back
 .report-title { text-align: center; border-top: 1px solid #444; border-bottom: 1px solid #444; padding: 1.5mm 1mm; margin-bottom: 1mm; }
 .report-title h1 { margin: 0; font-size: 13px; }
 .report-number { direction: ltr; margin-top: 1mm; font-size: 9px; font-weight: bold; }
-.info-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1mm; margin-bottom: 1mm; }
-.info-box { border: 1px solid #444; text-align: center; padding: 1mm 0.5mm; }
+.info-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1mm; margin-bottom: 1mm; }
+.info-box { border: 1px solid #444; text-align: center; padding: 1mm 0.5mm; min-width: 0; }
 .info-box span { display: block; font-size: 8px; color: #555; margin-bottom: 0.5mm; }
-.info-box strong { font-size: 9px; }
-.workday-strip { border: 1px solid #444; display: grid; grid-template-columns: 36mm 1fr; align-items: center; margin-bottom: 1mm; min-height: 6mm; }
-.workday-strip span { background: #f5f5f5; border-left: 1px solid #444; font-size: 8.5px; font-weight: bold; text-align: center; padding: 1mm; }
-.workday-strip strong { font-size: 9px; text-align: center; padding: 1mm; }
-.workday-strip small { font-size: 7.5px; font-weight: normal; color: #555; margin-inline-start: 2mm; }
+.info-box strong { display: block; font-size: 9px; line-height: 1.15; overflow-wrap: anywhere; }
+.info-box.workday-box strong { font-size: 8.2px; }
 .section-title { background: #eeeeee; border: 1px solid #444; text-align: center; font-weight: bold; font-size: 9.5px; padding: 0.7mm; margin: 0.8mm 0 0.5mm; }
 table { width: 100%; max-width: 100%; margin: 0; border-collapse: collapse; table-layout: fixed; }
 th, td { border: 1px solid #555; padding: calc(0.55mm + 0.5px) 0.7mm; text-align: center; vertical-align: middle; font-size: 9px; line-height: 1.05; overflow-wrap: anywhere; word-break: normal; }
@@ -87,12 +83,12 @@ th { background: #f5f5f5; font-weight: bold; }
     <div class="report-title"><h1>التقرير اليومي لمهام العمل داخل مكب المنيا</h1><div class="report-number">${escapeHtml(report.report_no)}</div></div>
     <div class="info-grid">
       <div class="info-box"><span>التاريخ</span><strong>${formatDate(report.report_date)}</strong></div>
+      <div class="info-box workday-box"><span>طبيعة الدوام</span><strong>${escapeHtml(workdayType)}</strong></div>
       <div class="info-box"><span>حالة الطقس</span><strong>${escapeHtml(report.weather || "-")}</strong></div>
       <div class="info-box"><span>درجة الحرارة</span><strong>${formatNumber(report.temperature)}</strong></div>
       <div class="info-box"><span>وقت البداية</span><strong>${formatTime(report.start_time)}</strong></div>
       <div class="info-box"><span>وقت النهاية</span><strong>${formatTime(report.end_time)}</strong></div>
     </div>
-    <div class="workday-strip"><span>نوع الدوام</span><strong>${escapeHtml(workdayType)}${workdayReason ? `<small>${escapeHtml(workdayReason)}</small>` : ""}</strong></div>
     <div class="section-title">شؤون الموظفين</div>
     <table><thead><tr><th>طواقم العمل</th><th>العدد</th><th>الملاحظات</th></tr></thead><tbody>${crewRows}<tr><th>المجموع</th><th>${formatNumber(totalWorkers)}</th><th>-</th></tr></tbody></table>
     <div class="section-title">العمليات</div>
