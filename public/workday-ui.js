@@ -46,15 +46,26 @@
     let select=$('workdayType');
     if(!select){
       const wrap=document.createElement('label');wrap.className='minya-workday-label';wrap.innerHTML='نوع الدوام<select id="workdayType"><option value="official">دوام رسمي</option><option value="holiday">عطلة رسمية - دوام طوارئ</option></select><small id="workdayReason" class="minya-workday-reason-text"></small>';grid.appendChild(wrap);select=$('workdayType');
-      select.addEventListener('change',()=>{select.dataset.manual='1';const text=select.value==='holiday'?'محدد يدويًا: عطلة رسمية / دوام طوارئ':'محدد يدويًا: دوام رسمي';if($('workdayReason')?.textContent!==text)$('workdayReason').textContent=text;});
-      $('reportDate')?.addEventListener('change',syncReportField);
+      select.addEventListener('change',()=>{
+        select.dataset.manual='1';
+        const text=select.value==='holiday'?'محدد يدويًا: عطلة رسمية / دوام طوارئ':'محدد يدويًا: دوام رسمي';
+        if($('workdayReason')?.textContent!==text)$('workdayReason').textContent=text;
+      });
+      $('reportDate')?.addEventListener('change',()=>{
+        select.dataset.manual='0';
+        syncReportField(true);
+      });
     }
-    syncReportField();
+    if(select.dataset.manual!=='1')syncReportField();
   }
-  async function syncReportField(){
+  async function syncReportField(force=false){
     const select=$('workdayType'),date=$('reportDate')?.value;if(!select||!date)return;
-    await loadWorkdays();const saved=rowForDate(date),auto=automatic(date),value=saved?.workday_type||auto.type,manual=String(Number(saved?.workday_manual||0)),reason=saved?.workday_reason||auto.reason;
-    if(select.value!==value)select.value=value;if(select.dataset.manual!==manual)select.dataset.manual=manual;
+    if(!force&&select.dataset.manual==='1')return;
+    await loadWorkdays();
+    if(!force&&select.dataset.manual==='1')return;
+    const saved=rowForDate(date),auto=automatic(date),value=saved?.workday_type||auto.type,manual=String(Number(saved?.workday_manual||0)),reason=saved?.workday_reason||auto.reason;
+    if(select.value!==value)select.value=value;
+    if(select.dataset.manual!==manual)select.dataset.manual=manual;
     if($('workdayReason')?.textContent!==reason)$('workdayReason').textContent=reason;
   }
 
@@ -99,7 +110,7 @@
       }catch{}
     }
     const response=await nativeFetch(input,init);
-    if(((method==='POST'||method==='PUT')&&/\/api\/reports/.test(url))&&response.ok){setTimeout(async()=>{await loadWorkdays(true);syncReportField();renderPeriodSummary();decorateDates();},150);}
+    if(((method==='POST'||method==='PUT')&&/\/api\/reports/.test(url))&&response.ok){setTimeout(async()=>{await loadWorkdays(true);const select=$('workdayType');if(select)select.dataset.manual='0';syncReportField(true);renderPeriodSummary();decorateDates();},150);}
     return response;
   };
 
