@@ -8,6 +8,52 @@ function isArchiveSearchPage() {
   return (location.pathname.replace(/\/+$/, "") || "/") === "/archive";
 }
 
+function buildArchiveSummaryParams() {
+  const dateValue = document.getElementById("archiveDateFilter")?.value || "";
+  const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+  const searchValue = document.getElementById("archiveQuickSearch")?.value?.trim() || "";
+  const params = new URLSearchParams({ page: "1", limit: "10" });
+
+  if (searchValue) params.set("q", searchValue);
+
+  if (dateValue) {
+    params.set("from", dateValue);
+    params.set("to", dateValue);
+  } else if (monthValue) {
+    const [year, month] = monthValue.split("-").map(Number);
+    if (year && month >= 1 && month <= 12) {
+      const normalizedMonth = `${year}-${String(month).padStart(2, "0")}`;
+      const lastDay = new Date(year, month, 0).getDate();
+      params.set("from", `${normalizedMonth}-01`);
+      params.set("to", `${normalizedMonth}-${String(lastDay).padStart(2, "0")}`);
+    }
+  }
+
+  return params;
+}
+
+async function syncArchiveSummaryCards() {
+  if (!isArchiveSearchPage()) return;
+  try {
+    const response = await fetch(`${API}/api/archive?${buildArchiveSummaryParams()}`, { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل ملخص الأرشيف");
+
+    const summary = data.summary || {};
+    const setValue = (id, value) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = typeof formatNumber === "function" ? formatNumber(value) : String(value ?? 0);
+    };
+
+    setValue("archiveReportsCount", Number(data.count || 0));
+    setValue("archiveWasteTotal", Number(summary.total_waste_tons || 0));
+    setValue("archiveTrucksTotal", Number(summary.total_trucks || 0));
+    setValue("archiveDieselTotal", Number(summary.total_diesel || 0));
+  } catch (error) {
+    console.error("فشل تحديث بطاقات ملخص الأرشيف", error);
+  }
+}
+
 function setupArchiveQuickSearch() {
   if (!isArchiveSearchPage()) return;
 
@@ -32,6 +78,7 @@ function setupArchiveQuickSearch() {
     clearTimeout(archiveSearchTimer);
     archiveSearchTimer = setTimeout(() => {
       if (typeof window.loadArchivePage === "function") window.loadArchivePage(1);
+      syncArchiveSummaryCards();
     }, 300);
   });
 
@@ -40,15 +87,29 @@ function setupArchiveQuickSearch() {
     clearTimeout(archiveSearchTimer);
     setTimeout(() => {
       if (typeof window.loadArchivePage === "function") window.loadArchivePage(1);
+      syncArchiveSummaryCards();
     }, 80);
   });
 }
 
 if (isArchiveSearchPage()) {
   setupArchiveQuickSearch();
-  document.getElementById("archiveBtn")?.addEventListener("click", () => {
-    setTimeout(setupArchiveQuickSearch, 200);
+
+  document.addEventListener("change", (event) => {
+    if (["archiveDateFilter", "archiveMonthFilter"].includes(event.target?.id)) {
+      setTimeout(syncArchiveSummaryCards, 30);
+    }
   });
+
+  document.getElementById("archiveBtn")?.addEventListener("click", () => {
+    setTimeout(() => {
+      setupArchiveQuickSearch();
+      syncArchiveSummaryCards();
+    }, 200);
+  });
+
+  setTimeout(syncArchiveSummaryCards, 100);
 }
 
 window.setupArchiveQuickSearch = setupArchiveQuickSearch;
+window.syncArchiveSummaryCards = syncArchiveSummaryCards;
