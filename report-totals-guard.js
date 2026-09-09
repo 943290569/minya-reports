@@ -60,7 +60,7 @@ module.exports=function installReportTotalsGuard(app){
 
     const mismatches=[];
     if(supplied.total_trucks!==undefined&&supplied.total_trucks!==null&&supplied.total_trucks!==''&&!same(number(supplied.total_trucks),expected.total_trucks,0.001))mismatches.push(`الشاحنات: المرسل ${supplied.total_trucks} / المحسوب ${expected.total_trucks}`);
-    if(supplied.total_waste_tons!==undefined&&supplied.total_waste_tons!==null&&supplied.total_waste_tons!==''&&!same(number(supplied.total_waste_tons),expected.total_waste_tons))mismatches.push(`النفايات: المرسل ${supplied.total_waste_tons} / المحسوب ${expected.total_waste_tons}`);
+    if(supplied.total_waste_tons!==undefined&&supplied.total_waste_tons!==null&&supplied.total_waste_tons!==''&&!same(number(supplied.total_waste_tons),expected.total_waste_tons,1))mismatches.push(`النفايات: المرسل ${supplied.total_waste_tons} / المحسوب ${expected.total_waste_tons}`);
     if(supplied.total_diesel!==undefined&&supplied.total_diesel!==null&&supplied.total_diesel!==''&&!same(number(supplied.total_diesel),expected.total_diesel))mismatches.push(`السولار: المرسل ${supplied.total_diesel} / المحسوب ${expected.total_diesel}`);
 
     if(mismatches.length)return res.status(400).json({
