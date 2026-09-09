@@ -4,7 +4,7 @@
     '01-01':'رأس السنة الميلادية','01-07':'عيد الميلاد المجيد الشرقي','03-08':'يوم المرأة العالمي',
     '04-12':'عيد الفصح المجيد','05-01':'عيد العمال','11-15':'عيد الاستقلال','12-25':'عيد الميلاد المجيد الغربي'
   };
-  let workdays=[];let loading=null;
+  let workdays=[];let loading=null;let refreshTimer=null;
   const $=id=>document.getElementById(id);
 
   function islamicHoliday(date){
@@ -46,16 +46,16 @@
     let select=$('workdayType');
     if(!select){
       const wrap=document.createElement('label');wrap.className='minya-workday-label';wrap.innerHTML='نوع الدوام<select id="workdayType"><option value="official">دوام رسمي</option><option value="holiday">عطلة رسمية - دوام طوارئ</option></select><small id="workdayReason" class="minya-workday-reason-text"></small>';grid.appendChild(wrap);select=$('workdayType');
-      select.addEventListener('change',()=>{select.dataset.manual='1';$('workdayReason').textContent=select.value==='holiday'?'محدد يدويًا: عطلة رسمية / دوام طوارئ':'محدد يدويًا: دوام رسمي';});
+      select.addEventListener('change',()=>{select.dataset.manual='1';const text=select.value==='holiday'?'محدد يدويًا: عطلة رسمية / دوام طوارئ':'محدد يدويًا: دوام رسمي';if($('workdayReason')?.textContent!==text)$('workdayReason').textContent=text;});
       $('reportDate')?.addEventListener('change',syncReportField);
     }
     syncReportField();
   }
   async function syncReportField(){
     const select=$('workdayType'),date=$('reportDate')?.value;if(!select||!date)return;
-    await loadWorkdays();const saved=rowForDate(date),auto=automatic(date);
-    select.value=saved?.workday_type||auto.type;select.dataset.manual=String(Number(saved?.workday_manual||0));
-    $('workdayReason').textContent=saved?.workday_reason||auto.reason;
+    await loadWorkdays();const saved=rowForDate(date),auto=automatic(date),value=saved?.workday_type||auto.type,manual=String(Number(saved?.workday_manual||0)),reason=saved?.workday_reason||auto.reason;
+    if(select.value!==value)select.value=value;if(select.dataset.manual!==manual)select.dataset.manual=manual;
+    if($('workdayReason')?.textContent!==reason)$('workdayReason').textContent=reason;
   }
 
   function periodFilter(rows){
@@ -69,7 +69,8 @@
     const summary=document.querySelector('.archive-summary,.monthly-summary');if(!summary)return;
     await loadWorkdays();const rows=periodFilter(workdays);const holiday=rows.filter(x=>x.workday_type==='holiday').length,official=rows.length-holiday;
     let box=$('workdayPeriodSummary');if(!box){box=document.createElement('div');box.id='workdayPeriodSummary';box.className='minya-workday-period';summary.insertAdjacentElement('afterend',box);}
-    box.innerHTML=`<span>أيام الدوام الرسمي: <strong>${official}</strong></span><span>العطل الرسمية / دوام الطوارئ: <strong>${holiday}</strong></span>`;
+    const html=`<span>أيام الدوام الرسمي: <strong>${official}</strong></span><span>العطل الرسمية / دوام الطوارئ: <strong>${holiday}</strong></span>`;
+    if(box.innerHTML!==html)box.innerHTML=html;
   }
 
   function decorateDates(){
@@ -85,12 +86,12 @@
 
   const nativeFetch=window.fetch.bind(window);
   window.fetch=async function(input,init={}){
-    let url=typeof input==='string'?input:(input?.url||'');const method=String(init?.method||(input?.method)||'GET').toUpperCase();
+    const url=typeof input==='string'?input:(input?.url||''),method=String(init?.method||(input?.method)||'GET').toUpperCase();
     if((method==='POST'&&/\/api\/reports(?:\?|$)/.test(url))||(method==='PUT'&&/\/api\/reports\/\d+/.test(url))){
       try{
-        const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const type=headers.get('content-type')||'';
+        const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined)),type=headers.get('content-type')||'';
         if(type.includes('application/json')&&typeof init.body==='string'){
-          const body=JSON.parse(init.body);const date=String(body.report_date||'');let manualType='';let reason='';
+          const body=JSON.parse(init.body),date=String(body.report_date||'');let manualType='',reason='';
           const formSelect=$('workdayType');if(formSelect&&$('reportDate')?.value===date&&formSelect.dataset.manual==='1'){manualType=formSelect.value;reason=$('workdayReason')?.textContent||'';}
           if(!manualType){const sourceSelect=document.querySelector(`.minya-workday-select[data-workday-date="${CSS.escape(date)}"][data-workday-manual="1"]`);if(sourceSelect){manualType=sourceSelect.value;reason=sourceSelect.closest('td')?.querySelector('.minya-workday-reason')?.textContent||'';}}
           if(manualType==='official'||manualType==='holiday'){body.workday_type=manualType;body.workday_reason=reason;init={...init,body:JSON.stringify(body)};}
@@ -103,8 +104,9 @@
   };
 
   function bindFilters(){['archiveDateFilter','archiveMonthFilter','annualYear'].forEach(id=>$(id)?.addEventListener('change',()=>{renderPeriodSummary();setTimeout(decorateDates,50);}));}
+  function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{ensureReportField();renderPeriodSummary();decorateDates();},120);}
   async function init(){installStyle();ensureReportField();bindFilters();await loadWorkdays();renderPeriodSummary();decorateDates();
-    const observer=new MutationObserver(()=>{ensureReportField();renderPeriodSummary();decorateDates();});observer.observe(document.body,{childList:true,subtree:true});
+    const observer=new MutationObserver(scheduleRefresh);observer.observe(document.body,{childList:true,subtree:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
