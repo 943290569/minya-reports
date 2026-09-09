@@ -66,6 +66,14 @@ assert.deepStrictEqual({
   total_diesel:missing.req.body.total_diesel
 },expected);
 
+const wasteWithinTolerance=execute('POST','/api/reports','/api/reports',{...details,...expected,total_waste_tons:1371.27});
+assert.strictEqual(wasteWithinTolerance.statusCode,200,'waste totals within plus/minus 1 ton must pass');
+assert.strictEqual(wasteWithinTolerance.req.body.total_waste_tons,expected.total_waste_tons,'accepted waste totals must still normalize to canonical detail total');
+
+const wasteOutsideTolerance=execute('POST','/api/reports','/api/reports',{...details,...expected,total_waste_tons:1371.28});
+assert.strictEqual(wasteOutsideTolerance.statusCode,400,'waste totals beyond plus/minus 1 ton must be blocked');
+assert.ok((wasteOutsideTolerance.payload?.mismatches||[]).some(v=>String(v).includes('النفايات')),'waste mismatch must be reported when difference exceeds 1 ton');
+
 const bad=execute('PUT','/api/reports/:id','/api/reports/42',{...details,...expected,total_trucks:110});
 assert.strictEqual(bad.statusCode,400,'mismatched totals must be blocked');
 assert.strictEqual(bad.payload?.ok,false);
