@@ -19,6 +19,7 @@
         <label>الشهر<select id="monthSelect"></select></label>
         <button id="loadBtn" class="me-btn me-secondary" type="button">تحميل الشهر</button>
         <button id="saveBtn" class="me-btn me-primary" type="button">تحديث البيانات</button>
+        <button id="undoBtn" class="me-btn me-secondary" type="button" disabled>↶ تراجع</button>
         <label>إذا كان التقرير موجودًا
           <select id="existingAction">
             <option value="cancel">إلغاء الاعتماد</option>
@@ -29,7 +30,7 @@
         <button id="commitBtn" class="me-btn me-primary" type="button">اعتماد التقارير</button>
         <span id="status" class="me-status">جاهز</span>
       </div>
-      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. يمكنك لصق مجموعة خلايا من Excel، كما يمكنك تحديد نطاق داخل الجدول: اضغط الخانة الأولى ثم Shift + اضغط الخانة الأخيرة.</p>
+      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. يمكنك لصق مجموعة خلايا من Excel، تحديد نطاق داخل الجدول، والتراجع عن آخر تعديل من زر تراجع أو Ctrl + Z.</p>
     </section>
 
     <section class="me-panel"><div id="summary" class="me-summary"></div></section>
@@ -66,5 +67,6 @@
   <script src="monthly-entry-recovery.js?v=20260910-1"></script>
   <script src="monthly-entry-paste.js?v=20260910-1"></script>
   <script src="monthly-entry-selection.js?v=20260910-1"></script>
+  <script src="monthly-entry-undo.js?v=20260910-1"></script>
 </body>
 </html>
