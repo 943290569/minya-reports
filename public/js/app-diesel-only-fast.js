@@ -35,9 +35,19 @@
   }
   function onlyDiesel(){return !!$('sourceFile_diesel')?.files?.[0]&&!$('sourceFile_landfill')?.files?.[0]&&!$('sourceFile_stations')?.files?.[0]&&!$('sourceFile_aziz')?.files?.[0]&&!$('sourceFile_cover')?.files?.[0];}
 
-  function dayCard(day){
+  function activeCount(day){return equipment.filter(eq=>num(day.by[eq.name])>0).length;}
+  function dayCard(day,index){
     const rows=equipment.map(eq=>`<tr><td><strong>${esc(eq.name)}</strong></td><td>يعمل</td><td></td><td>0</td><td><strong>${fmt(day.by[eq.name]||0)}</strong></td></tr>`).join('');
-    return `<section class="diesel-day-card" style="margin:14px 0 20px;border:1px solid #d8e4df;border-radius:14px;overflow:hidden;background:#fff"><div style="display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 16px;background:#f5faf7"><strong>التاريخ: ${esc(day.date)}</strong><strong>المجموع اليومي: ${fmt(day.total)} لتر</strong></div><div class="source-import-table-wrap"><table class="v3-table source-import-table"><thead><tr><th>اسم الآلية</th><th>حالة الآلية</th><th>وصف الحالة</th><th>ساعات العمل</th><th>كمية السولار (لتر)</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="4">المجموع اليومي</th><th><strong>${fmt(day.total)}</strong></th></tr></tfoot></table></div></section>`;
+    return `<details class="diesel-day-card" ${index===0?'open':''} style="margin:10px 0;border:1px solid #d8e4df;border-radius:12px;overflow:hidden;background:#fff">
+      <summary style="cursor:pointer;display:grid;grid-template-columns:minmax(140px,1fr) auto auto;gap:16px;align-items:center;padding:12px 14px;background:#f5faf7;font-weight:800;list-style-position:inside">
+        <span>${esc(day.date)}</span><span>${activeCount(day)} معدة</span><span>${fmt(day.total)} لتر</span>
+      </summary>
+      <div class="source-import-table-wrap" style="max-height:360px;overflow:auto"><table class="v3-table source-import-table"><thead><tr><th>اسم الآلية</th><th>حالة الآلية</th><th>وصف الحالة</th><th>ساعات العمل</th><th>كمية السولار (لتر)</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="4">المجموع اليومي</th><th><strong>${fmt(day.total)}</strong></th></tr></tfoot></table></div>
+    </details>`;
+  }
+
+  function dailySummaryTable(days){
+    return `<section style="margin:14px 0"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0">ملخص الأيام</h3><div style="display:flex;gap:8px"><button type="button" class="drive-secondary" data-diesel-expand>فتح الكل</button><button type="button" class="drive-secondary" data-diesel-collapse>إغلاق الكل</button></div></div><div class="source-import-table-wrap" style="max-height:420px;overflow:auto"><table class="v3-table source-import-table"><thead><tr><th>التاريخ</th><th>عدد المعدات المستخدمة</th><th>المجموع اليومي (لتر)</th></tr></thead><tbody>${days.map(d=>`<tr><td>${esc(d.date)}</td><td>${activeCount(d)}</td><td><strong>${fmt(d.total)}</strong></td></tr>`).join('')}</tbody></table></div></section>`;
   }
 
   async function analyzeDiesel(file){
@@ -68,7 +78,7 @@
       const equipmentTotals=Object.fromEntries(equipment.map(eq=>[eq.name,days.reduce((s,d)=>s+num(d.by[eq.name]),0)]));
       const total=days.reduce((s,d)=>s+d.total,0);
       const finalRows=equipment.map(eq=>`<tr><td><strong>${esc(eq.name)}</strong></td><td><strong>${fmt(equipmentTotals[eq.name])}</strong></td></tr>`).join('');
-      if(root)root.innerHTML=`<div class="source-import-summary"><div><span>الأيام المقروءة</span><strong>${days.length}</strong></div><div><span>إجمالي سولار الشهر</span><strong>${fmt(total)} لتر</strong></div><div><span>المعدات</span><strong>${equipment.length}</strong></div></div><div class="drive-preview-note"><strong>كشف السولار فقط:</strong> كل يوم يظهر بنفس ترتيب معدات التقرير اليومي. حقول الحالة وساعات العمل معروضة بشكل التقرير، بينما كمية السولار مأخوذة من الكشف.</div>${days.map(dayCard).join('')}<section class="diesel-final-card" style="margin-top:22px"><h3>المجموع النهائي للشهر</h3><div class="source-import-table-wrap"><table class="v3-table source-import-table"><thead><tr><th>اسم الآلية</th><th>إجمالي السولار (لتر)</th></tr></thead><tbody>${finalRows}</tbody><tfoot><tr><th>الإجمالي النهائي</th><th><strong>${fmt(total)}</strong></th></tr></tfoot></table></div></section>`;
+      if(root)root.innerHTML=`<div class="source-import-summary"><div><span>الأيام المقروءة</span><strong>${days.length}</strong></div><div><span>إجمالي سولار الشهر</span><strong>${fmt(total)} لتر</strong></div><div><span>المعدات</span><strong>${equipment.length}</strong></div></div><div class="drive-preview-note"><strong>كشف السولار فقط:</strong> تم ترتيب العرض ليكون مختصرًا. افتح اليوم المطلوب فقط لعرض جدول معداته.</div>${dailySummaryTable(days)}<h3 style="margin:18px 0 8px">تفاصيل الأيام</h3>${days.map(dayCard).join('')}<section class="diesel-final-card" style="margin-top:22px"><h3>المجموع النهائي للشهر</h3><div class="source-import-table-wrap"><table class="v3-table source-import-table"><thead><tr><th>اسم الآلية</th><th>إجمالي السولار (لتر)</th></tr></thead><tbody>${finalRows}</tbody><tfoot><tr><th>الإجمالي النهائي</th><th><strong>${fmt(total)}</strong></th></tr></tfoot></table></div></section>`;
       $('sourceFilesPanel')?.classList.add('source-import-has-preview');
       if(msg)msg.textContent=`اكتمل تحليل كشف السولار: ${days.length} يوم، الإجمالي ${fmt(total)} لتر.`;
       window.MINYA_DIESEL_ONLY_PREVIEW={days:days.map(d=>({date:d.date,totalDiesel:d.total,diesel:d.by,equipment:equipment.map(eq=>({equipment_name:eq.name,count:1,status:'يعمل',status_description:'',working_hours:0,diesel_quantity:num(d.by[eq.name])}))})),equipmentTotals,total};
@@ -77,6 +87,10 @@
   }
 
   document.addEventListener('click',e=>{
+    const expand=e.target?.closest?.('[data-diesel-expand]');
+    if(expand){document.querySelectorAll('.diesel-day-card').forEach(x=>x.open=true);return;}
+    const collapse=e.target?.closest?.('[data-diesel-collapse]');
+    if(collapse){document.querySelectorAll('.diesel-day-card').forEach(x=>x.open=false);return;}
     const btn=e.target?.closest?.('#analyzeSourceFilesBtn');if(!btn||!onlyDiesel())return;
     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
     analyzeDiesel($('sourceFile_diesel').files[0]);
