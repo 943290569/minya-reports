@@ -59,12 +59,16 @@
       }
       const days=[...daily.values()].sort((a,b)=>a.date.localeCompare(b.date));
       if(!days.length)throw new Error('لم يتم العثور على بيانات سولار يومية');
+      const used=[...new Set(cols.map(c=>c.name))].sort((a,b)=>equipment.findIndex(e=>e.name===a)-equipment.findIndex(e=>e.name===b));
+      const equipmentTotals=Object.fromEntries(used.map(name=>[name,days.reduce((s,d)=>s+num(d.by[name]),0)]));
       const total=days.reduce((s,d)=>s+d.total,0);
-      const used=[...new Set(cols.map(c=>c.name))];
-      if(root)root.innerHTML=`<div class="source-import-summary"><div><span>الأيام المقروءة</span><strong>${days.length}</strong></div><div><span>سولار آليات المكب</span><strong>${fmt(total)} لتر</strong></div><div><span>الآليات المقروءة</span><strong>${used.length}</strong></div></div><div class="drive-preview-note"><strong>وضع السولار فقط:</strong> تم تحليل كشف السولار وحده بدون الطقس وبدون ملفات المكب والمحطات أو عزيز.</div><div class="source-import-table-wrap"><table class="v3-table source-import-table"><thead><tr><th>التاريخ</th><th>السولار (لتر)</th></tr></thead><tbody>${days.map(d=>`<tr><td>${esc(d.date)}</td><td><strong>${fmt(d.total)}</strong></td></tr>`).join('')}</tbody></table></div>`;
+      const headerCells=used.map(name=>`<th>${esc(name)}<br><small>(لتر)</small></th>`).join('');
+      const bodyRows=days.map(d=>`<tr><td>${esc(d.date)}</td>${used.map(name=>`<td>${fmt(d.by[name]||0)}</td>`).join('')}<td><strong>${fmt(d.total)}</strong></td></tr>`).join('');
+      const footerCells=used.map(name=>`<th>${fmt(equipmentTotals[name])}</th>`).join('');
+      if(root)root.innerHTML=`<div class="source-import-summary"><div><span>الأيام المقروءة</span><strong>${days.length}</strong></div><div><span>إجمالي سولار الشهر</span><strong>${fmt(total)} لتر</strong></div><div><span>الآليات المقروءة</span><strong>${used.length}</strong></div></div><div class="drive-preview-note"><strong>كشف السولار:</strong> الكمية لكل معدة حسب اليوم، مع مجموع يومي ومجموع نهائي لكل معدة وللشهر.</div><div class="source-import-table-wrap"><table class="v3-table source-import-table"><thead><tr><th>التاريخ</th>${headerCells}<th>المجموع اليومي<br><small>(لتر)</small></th></tr></thead><tbody>${bodyRows}</tbody><tfoot><tr><th>المجموع النهائي</th>${footerCells}<th><strong>${fmt(total)}</strong></th></tr></tfoot></table></div>`;
       $('sourceFilesPanel')?.classList.add('source-import-has-preview');
-      if(msg)msg.textContent=`اكتمل تحليل كشف السولار فقط (${days.length} يوم) بدون أي عمليات إضافية.`;
-      window.MINYA_DIESEL_ONLY_PREVIEW={days:days.map(d=>({date:d.date,totalDiesel:d.total,diesel:d.by})),total};
+      if(msg)msg.textContent=`اكتمل تحليل كشف السولار: ${days.length} يوم، ${used.length} معدة، الإجمالي ${fmt(total)} لتر.`;
+      window.MINYA_DIESEL_ONLY_PREVIEW={days:days.map(d=>({date:d.date,totalDiesel:d.total,diesel:d.by})),equipmentTotals,total};
     }catch(e){console.error(e);if(msg)msg.textContent=e.message||'تعذر تحليل كشف السولار';}
     finally{if(btn)btn.disabled=false;}
   }
