@@ -70,19 +70,16 @@
     refreshButton();
   }
 
-  // Keep the value that existed before a normal edit begins.
   table.addEventListener('focusin',e=>{
     if(restoring||pasteMode||!e.target.matches(selector))return;
     pending=identity(e.target);
   },true);
 
-  // Capture BEFORE the app's own input handler can rebuild the row/table.
   table.addEventListener('input',e=>{
     if(restoring||pasteMode||!e.target.matches(selector))return;
     if(pending){push({type:'cell',item:pending});pending=null;}
   },true);
 
-  // Multi-cell paste is a single undo step.
   table.addEventListener('paste',e=>{
     if(restoring||!e.target.matches(selector))return;
     const text=e.clipboardData?.getData('text/plain')||'';
@@ -94,9 +91,15 @@
     setTimeout(()=>{pasteMode=false;},0);
   },true);
 
-  document.addEventListener('keydown',e=>{
-    if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&String(e.key).toLowerCase()==='z'){
+  // Use the physical KeyZ code as well as the produced character.
+  // This makes Ctrl+Z work even when the active keyboard layout is Arabic (KeyZ => ئ).
+  window.addEventListener('keydown',e=>{
+    const ctrl=e.ctrlKey||e.metaKey;
+    const key=String(e.key||'').toLowerCase();
+    const isZ=e.code==='KeyZ'||e.keyCode===90||key==='z'||key==='ئ';
+    if(ctrl&&!e.shiftKey&&isZ){
       e.preventDefault();
+      e.stopPropagation();
       undo();
     }
   },true);
