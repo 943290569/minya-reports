@@ -98,5 +98,6 @@ module.exports = function installWorkdayClassification(app,{db,requireAuth,audit
     res.json({ok:true,count:changed});
   });
 
+  require('./monthly-entry')(app,{db,requireAuth,audit});
   return {classify};
 };
