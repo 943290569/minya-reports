@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>إدخال بيانات الشهر - مكب المنيا</title>
+  <link rel="stylesheet" href="monthly-entry.css?v=20260910-1">
+</head>
+<body>
+  <header class="me-header">
+    <div><h1>إدخال بيانات الشهر</h1><p>جدول شهري كامل لإنشاء وتحديث التقارير اليومية</p></div>
+    <a href="/">العودة للنظام</a>
+  </header>
+
+  <main class="me-wrap">
+    <section class="me-panel">
+      <div class="me-toolbar">
+        <label>السنة<select id="yearSelect"></select></label>
+        <label>الشهر<select id="monthSelect"></select></label>
+        <button id="loadBtn" class="me-btn me-secondary" type="button">تحميل الشهر</button>
+        <button id="saveBtn" class="me-btn me-primary" type="button">تحديث البيانات</button>
+        <label>إذا كان التقرير موجودًا
+          <select id="existingAction">
+            <option value="cancel">إلغاء الاعتماد</option>
+            <option value="ignore">تجاهل الموجود</option>
+            <option value="replace">استبدال الموجود</option>
+          </select>
+        </label>
+        <button id="commitBtn" class="me-btn me-primary" type="button">اعتماد التقارير</button>
+        <span id="status" class="me-status">جاهز</span>
+      </div>
+      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. اعتماد التقارير هو الذي ينشئ أو يستبدل التقارير اليومية. القيم التلقائية تبقى قابلة للتعديل من تفاصيل اليوم.</p>
+    </section>
+
+    <section class="me-panel">
+      <div id="summary" class="me-summary"></div>
+    </section>
+
+    <section class="me-panel">
+      <div class="me-table-wrap">
+        <table class="me-table">
+          <thead><tr>
+            <th>اليوم</th><th>الحالة</th><th>الطقس</th><th>الحرارة</th><th>نوع الدوام</th>
+            <th>المكب عدد</th><th>المكب طن</th><th>ترقوميا عدد</th><th>ترقوميا طن</th><th>يطا عدد</th><th>يطا طن</th><th>الخليل عدد</th><th>الخليل طن</th>
+            <th>العصارة عدد</th><th>العصارة كمية</th><th>طمم خارجي عدد</th><th>طمم خارجي كمية</th><th>طمم داخلي عدد</th><th>طمم داخلي كمية</th>
+            <th>أسلوب عدد</th><th>أسلوب كمية</th><th>الفرز عدد</th><th>الفرز كمية</th><th>المياه كمية</th><th>مرات الرش</th><th>السولار</th><th>تفاصيل</th>
+          </tr></thead>
+          <tbody id="rowsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="modalBackdrop" class="me-modal-backdrop"></div>
+  <section id="detailModal" class="me-modal" aria-hidden="true">
+    <div class="me-modal-head"><h2 id="modalTitle">تفاصيل التقرير</h2><button id="closeModal" class="me-close" type="button">×</button></div>
+    <div class="me-modal-body">
+      <div id="detailCore" class="me-grid"></div>
+      <div class="me-section"><h3>طواقم العمل</h3><div id="crewDetails"></div></div>
+      <div class="me-section"><h3>العمليات</h3><div id="operationDetails"></div></div>
+      <div class="me-section"><h3>محطات الترحيل</h3><div id="stationDetails"></div></div>
+      <div class="me-section"><h3>المعدات والسولار</h3><div id="equipmentDetails"></div></div>
+      <div class="me-modal-actions"><button id="applyDetails" class="me-btn me-primary" type="button">حفظ تعديلات اليوم</button><button id="cancelDetails" class="me-btn me-secondary" type="button">إغلاق</button></div>
+    </div>
+  </section>
+
+  <script src="monthly-entry.js?v=20260910-1"></script>
+</body>
+</html>
