@@ -41,10 +41,14 @@
       c.style.fontWeight='700';
       c.style.whiteSpace='nowrap';
     });
+    const status=document.getElementById('status');
+    if(status&&document.activeElement?.id==='refreshTotalsBtn') status.textContent='تم تحديث المجاميع';
   }
   let raf=0;const schedule=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(renderTotals);};
   document.addEventListener('input',e=>{if(e.target?.closest?.('#rowsBody'))schedule();},true);
   document.addEventListener('change',e=>{if(e.target?.closest?.('#rowsBody'))schedule();},true);
+  document.addEventListener('click',e=>{if(e.target?.closest?.('#refreshTotalsBtn')){e.preventDefault();renderTotals();}},true);
+  window.refreshMonthlyTotals=renderTotals;
   document.addEventListener('DOMContentLoaded',()=>{
     const body=document.getElementById('rowsBody');
     if(body)new MutationObserver(schedule).observe(body,{childList:true,subtree:true,characterData:true});
