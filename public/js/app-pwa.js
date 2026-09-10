@@ -42,42 +42,79 @@
     return window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone===true;
   }
 
+  async function runInstall(){
+    const prompt=deferredPrompt||window.__MINYA_INSTALL_PROMPT__;
+    if(prompt){
+      try{
+        prompt.prompt();
+        await prompt.userChoice;
+        deferredPrompt=null;
+        window.__MINYA_INSTALL_PROMPT__=null;
+        if(isStandalone())document.getElementById('minyaInstallAppBtn')?.remove();
+      }catch(_){}
+      return;
+    }
+    alert('إذا لم تظهر نافذة التثبيت تلقائيًا: افتح قائمة المتصفح ⋮ ثم اختر "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق".');
+  }
+
   function installButton(){
-    if(document.getElementById('minyaInstallAppBtn')||isStandalone())return;
-    const header=document.querySelector('.top-header');if(!header)return;
-    const b=document.createElement('button');
-    b.id='minyaInstallAppBtn';b.type='button';b.textContent='تثبيت التطبيق';b.hidden=false;b.className='minya-install-app';
-    b.onclick=async()=>{
-      const prompt=deferredPrompt||window.__MINYA_INSTALL_PROMPT__;
-      if(prompt){
-        try{
-          prompt.prompt();
-          await prompt.userChoice;
-          deferredPrompt=null;window.__MINYA_INSTALL_PROMPT__=null;
-          if(isStandalone())b.remove();
-        }catch(_){}
-        return;
-      }
-      alert('إذا لم تظهر نافذة التثبيت تلقائيًا: افتح قائمة المتصفح ⋮ ثم اختر "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق".');
-    };
-    header.appendChild(b);
+    const existing=document.getElementById('minyaInstallAppBtn');
+    if(isStandalone()){
+      existing?.remove();
+      return true;
+    }
+
+    const panel=document.getElementById('minyaAppearancePanel');
+    const actions=panel?.querySelector('.appearance-actions');
+    if(!actions){
+      if(existing && existing.closest('.top-header')) existing.remove();
+      return false;
+    }
+
+    let button=document.getElementById('minyaInstallAppBtn');
+    if(!button){
+      button=document.createElement('button');
+      button.id='minyaInstallAppBtn';
+      button.type='button';
+      button.className='minya-install-app';
+      button.innerHTML='<span aria-hidden="true">⬇</span><b>تثبيت التطبيق</b>';
+      button.onclick=runInstall;
+    }
+    if(button.parentElement!==actions) actions.insertBefore(button,actions.firstChild);
+    button.hidden=false;
+    return true;
+  }
+
+  function keepInstallInsideAppearance(){
+    if(installButton()) return;
+    let attempts=0;
+    const timer=setInterval(()=>{
+      attempts+=1;
+      if(installButton()||attempts>=40)clearInterval(timer);
+    },250);
   }
 
   function init(){
     ensureManifest();
-    installButton();
+    keepInstallInsideAppearance();
     if('serviceWorker' in navigator){
       navigator.serviceWorker.register('/sw.js?v=stable10-pwa5',{scope:'/'}).catch(()=>{});
     }
     window.addEventListener('beforeinstallprompt',e=>{
       e.preventDefault();
-      deferredPrompt=e;window.__MINYA_INSTALL_PROMPT__=e;
-      installButton();
-      const b=document.getElementById('minyaInstallAppBtn');if(b)b.hidden=false;
+      deferredPrompt=e;
+      window.__MINYA_INSTALL_PROMPT__=e;
+      keepInstallInsideAppearance();
     });
     window.addEventListener('appinstalled',()=>{document.getElementById('minyaInstallAppBtn')?.remove();});
     window.addEventListener('online',()=>{document.getElementById('minyaOfflineCard')?.remove();saveSnapshot();});
     window.addEventListener('offline',offlineCard);
+    const observer=new MutationObserver(()=>{
+      const button=document.getElementById('minyaInstallAppBtn');
+      if(button?.closest('.top-header')) button.remove();
+      if(!isStandalone() && document.getElementById('minyaAppearancePanel')) installButton();
+    });
+    observer.observe(document.body,{childList:true,subtree:true});
     saveSnapshot();offlineCard();
   }
 
