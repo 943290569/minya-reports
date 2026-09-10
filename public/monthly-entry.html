@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>إدخال بيانات الشهر - مكب المنيا</title>
-  <link rel="stylesheet" href="monthly-entry.css?v=20260910-2">
+  <link rel="stylesheet" href="monthly-entry.css?v=20260910-3">
 </head>
 <body>
   <header class="me-header">
@@ -29,12 +29,10 @@
         <button id="commitBtn" class="me-btn me-primary" type="button">اعتماد التقارير</button>
         <span id="status" class="me-status">جاهز</span>
       </div>
-      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. اعتماد التقارير هو الذي ينشئ أو يستبدل التقارير اليومية. عند تحميل شهر موجود تُقرأ قيم التقارير المحفوظة، وللأيام الجديدة يتم جلب الطقس والحرارة تلقائيًا عند توفر بيانات حقيقية.</p>
+      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. اعتماد التقارير هو الذي ينشئ أو يستبدل التقارير اليومية. عند تحميل شهر موجود تُقرأ قيم التقارير المحفوظة مباشرة من الأرشيف، وللأيام الجديدة يتم جلب الطقس والحرارة تلقائيًا عند توفر بيانات حقيقية.</p>
     </section>
 
-    <section class="me-panel">
-      <div id="summary" class="me-summary"></div>
-    </section>
+    <section class="me-panel"><div id="summary" class="me-summary"></div></section>
 
     <section class="me-panel">
       <div class="me-table-wrap">
@@ -64,6 +62,7 @@
     </div>
   </section>
 
-  <script src="monthly-entry.js?v=20260910-2"></script>
+  <script src="monthly-entry.js?v=20260910-3"></script>
+  <script src="monthly-entry-recovery.js?v=20260910-1"></script>
 </body>
 </html>
