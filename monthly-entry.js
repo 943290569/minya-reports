@@ -1,4 +1,4 @@
-module.exports = function installMonthlyEntry(app, { db, requireAuth, requireRole, audit }) {
+module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS monthly_entry_rows (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -10,6 +10,13 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, requireRol
     CREATE INDEX IF NOT EXISTS idx_monthly_entry_date ON monthly_entry_rows(report_date);
   `);
 
+  const canEdit=(req,res)=>{
+    if(!['admin','editor'].includes(req.user?.role)){
+      res.status(403).json({ok:false,message:'لا توجد صلاحية للتعديل'});
+      return false;
+    }
+    return true;
+  };
   const defaultCrews = () => [
     { crew_name: 'سائقين جرافات واليات', crew_count: 4, notes: '' },
     { crew_name: 'سائقين شحن(قلابات)', crew_count: 2, notes: '' },
@@ -114,16 +121,18 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, requireRol
     res.json({ok:true,month,rows,existing});
   });
 
-  app.put('/api/monthly-entry', requireRole('admin','editor'), (req,res)=>{
+  app.put('/api/monthly-entry', requireAuth, (req,res)=>{
+    if(!canEdit(req,res)) return;
     const month=normalizeMonth(req.body?.month); const rows=Array.isArray(req.body?.rows)?req.body.rows:[];
     if(!month) return res.status(400).json({ok:false,message:'الشهر غير صالح'});
     if(rows.length>31) return res.status(400).json({ok:false,message:'الحد الأقصى 31 يومًا'});
     const upsert=db.prepare(`INSERT INTO monthly_entry_rows (report_date,data_json,updated_by,updated_at) VALUES (?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(report_date) DO UPDATE SET data_json=excluded.data_json,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP`);
     const tx=db.transaction(()=>{ for(const item of rows){ const date=String(item.report_date||''); if(!isValidDate(date)||!date.startsWith(`${month}-`)) throw new Error(`تاريخ غير صالح: ${date}`); const data=normalizeRow(item.data||item,date); upsert.run(date,JSON.stringify(data),req.user.id); } });
-    try { tx(); audit(req.user,'SAVE_MONTHLY_ENTRY','monthly_entry',month,`${rows.length} rows`); res.json({ok:true,saved:rows.length,message:'تم تحديث بيانات الشهر'}); } catch(error){ res.status(400).json({ok:false,message:error.message}); }
+    try { tx(); audit?.(req.user,'SAVE_MONTHLY_ENTRY','monthly_entry',month,`${rows.length} rows`); res.json({ok:true,saved:rows.length,message:'تم تحديث بيانات الشهر'}); } catch(error){ res.status(400).json({ok:false,message:error.message}); }
   });
 
-  app.post('/api/monthly-entry/commit', requireRole('admin','editor'), (req,res)=>{
+  app.post('/api/monthly-entry/commit', requireAuth, (req,res)=>{
+    if(!canEdit(req,res)) return;
     const month=normalizeMonth(req.body?.month); const existingAction=String(req.body?.existing_action||'cancel');
     if(!month) return res.status(400).json({ok:false,message:'الشهر غير صالح'});
     if(!['ignore','replace','cancel'].includes(existingAction)) return res.status(400).json({ok:false,message:'خيار التقارير الموجودة غير صالح'});
@@ -142,6 +151,6 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, requireRol
         result.dates.push(item.report_date);
       }
     });
-    try { tx(); audit(req.user,'COMMIT_MONTHLY_ENTRY','monthly_entry',month,JSON.stringify(result)); res.json({ok:true,...result,message:`تم إنشاء ${result.created} واستبدال ${result.replaced} وتجاهل ${result.ignored}`}); } catch(error){ res.status(500).json({ok:false,message:'فشل اعتماد تقارير الشهر',error:error.message}); }
+    try { tx(); audit?.(req.user,'COMMIT_MONTHLY_ENTRY','monthly_entry',month,JSON.stringify(result)); res.json({ok:true,...result,message:`تم إنشاء ${result.created} واستبدال ${result.replaced} وتجاهل ${result.ignored}`}); } catch(error){ res.status(500).json({ok:false,message:'فشل اعتماد تقارير الشهر',error:error.message}); }
   });
 };
