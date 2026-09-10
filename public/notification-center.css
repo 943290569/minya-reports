@@ -30,3 +30,23 @@
     left:0!important;
   }
 }
+
+/* Softer notification action colors inside the green header. */
+.top-header>.minya-notification-host .minya-notification-button{
+  background:rgba(255,255,255,.12)!important;
+  border-color:rgba(255,255,255,.24)!important;
+  color:rgba(255,255,255,.96)!important;
+  box-shadow:none!important;
+}
+.top-header>.minya-notification-host .minya-notification-button:hover{
+  background:rgba(255,255,255,.18)!important;
+  border-color:rgba(255,255,255,.30)!important;
+}
+.top-header>.minya-notification-host .minya-notification-button strong{
+  background:rgba(185,28,28,.78)!important;
+  color:#fff!important;
+}
+.top-header>.minya-notification-host .minya-notification-button strong[data-empty="true"]{
+  background:rgba(255,255,255,.22)!important;
+  color:rgba(255,255,255,.92)!important;
+}
