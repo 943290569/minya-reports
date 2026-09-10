@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>إدخال بيانات الشهر - مكب المنيا</title>
-  <link rel="stylesheet" href="monthly-entry.css?v=20260910-5">
+  <link rel="stylesheet" href="monthly-entry.css?v=20260911-1">
 </head>
 <body>
   <header class="me-header">
-    <div><h1>إدخال بيانات الشهر</h1><p>جدول شهري كامل لإنشاء وتحديث التقارير اليومية</p></div>
+    <div><h1>إدخال بيانات الشهر</h1><p>جميع خانات التقرير اليومي ضمن جدول شهري كامل</p></div>
     <a href="/drive-import.html">العودة إلى الاستيراد</a>
   </header>
 
@@ -31,7 +31,7 @@
         <button id="commitBtn" class="me-btn me-primary" type="button">اعتماد التقارير</button>
         <span id="status" class="me-status">جاهز</span>
       </div>
-      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. يمكنك لصق مجموعة خلايا من Excel، تحديد نطاق داخل الجدول، والتراجع عن آخر تعديل من زر تراجع أو Ctrl + Z.</p>
+      <p class="me-note">تعرض الصفحة جميع خانات التقرير: البيانات العامة، الطواقم، العمليات، محطات الترحيل، المعدات، السولار والملاحظات. يتم حساب المياه وعدد مرات الرش تلقائيًا حسب القواعد المعتمدة، ويمكن عرض كل مجموعة أعمدة على حدة لتسهيل الإدخال.</p>
     </section>
 
     <section class="me-panel"><div id="summary" class="me-summary"></div></section>
@@ -39,37 +39,15 @@
     <section class="me-panel">
       <div class="me-table-wrap">
         <table class="me-table">
-          <thead><tr>
-            <th>اليوم</th><th>الحالة</th><th>الطقس</th><th>الحرارة (°م)</th><th>نوع الدوام</th>
-            <th>المكب عدد (شاحنة)</th><th>المكب كمية (طن)</th><th>ترقوميا عدد (شاحنة)</th><th>ترقوميا كمية (طن)</th><th>يطا عدد (شاحنة)</th><th>يطا كمية (طن)</th><th>الخليل عدد (شاحنة)</th><th>الخليل كمية (طن)</th>
-            <th>العصارة عدد (نقلة)</th><th>العصارة كمية (م³)</th><th>طمم خارجي عدد (نقلة)</th><th>طمم خارجي كمية (م³)</th><th>طمم داخلي عدد (نقلة)</th><th>طمم داخلي كمية (م³)</th>
-            <th>أسلوب عدد (نقلة)</th><th>أسلوب كمية (م³)</th><th>الفرز عدد (نقلة)</th><th>الفرز كمية (طن)</th><th>المياه كمية (م³)</th><th>مرات الرش (مرة)</th><th>السولار (لتر)</th><th>تفاصيل</th>
-          </tr></thead>
+          <thead></thead>
           <tbody id="rowsBody"></tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <div id="modalBackdrop" class="me-modal-backdrop"></div>
-  <section id="detailModal" class="me-modal" aria-hidden="true">
-    <div class="me-modal-head"><h2 id="modalTitle">تفاصيل التقرير</h2><button id="closeModal" class="me-close" type="button">×</button></div>
-    <div class="me-modal-body">
-      <div id="detailCore" class="me-grid"></div>
-      <div class="me-section"><h3>طواقم العمل</h3><div id="crewDetails"></div></div>
-      <div class="me-section"><h3>العمليات</h3><div id="operationDetails"></div></div>
-      <div class="me-section"><h3>محطات الترحيل</h3><div id="stationDetails"></div></div>
-      <div class="me-section"><h3>المعدات والسولار</h3><div id="equipmentDetails"></div></div>
-      <div class="me-modal-actions"><button id="applyDetails" class="me-btn me-primary" type="button">حفظ تعديلات اليوم</button><button id="cancelDetails" class="me-btn me-secondary" type="button">إغلاق</button></div>
-    </div>
-  </section>
-
-  <script src="monthly-entry.js?v=20260910-3"></script>
-  <script src="monthly-entry-recovery.js?v=20260910-1"></script>
-  <script src="monthly-entry-paste.js?v=20260910-1"></script>
-  <script src="monthly-entry-selection.js?v=20260910-1"></script>
-  <script src="monthly-entry-undo.js?v=20260910-3"></script>
-  <script src="monthly-entry-totals.js?v=20260910-2"></script>
+  <script src="monthly-entry-full-init.js?v=20260911-1"></script>
+  <script src="monthly-entry-full-grid.js?v=20260911-1"></script>
   <script src="monthly-entry-horizontal-scroll.js?v=20260910-1"></script>
 </body>
 </html>
