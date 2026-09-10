@@ -19,6 +19,7 @@
         <label>الشهر<select id="monthSelect"></select></label>
         <button id="loadBtn" class="me-btn me-secondary" type="button">تحميل الشهر</button>
         <button id="saveBtn" class="me-btn me-primary" type="button">تحديث البيانات</button>
+        <button id="refreshTotalsBtn" class="me-btn me-secondary" type="button">تحديث المجاميع</button>
         <button id="undoBtn" class="me-btn me-secondary" type="button" disabled>↶ تراجع</button>
         <label>إذا كان التقرير موجودًا
           <select id="existingAction">
@@ -30,7 +31,7 @@
         <button id="commitBtn" class="me-btn me-primary" type="button">اعتماد التقارير</button>
         <span id="status" class="me-status">جاهز</span>
       </div>
-      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. يمكنك لصق مجموعة خلايا من Excel، تحديد نطاق داخل الجدول، والتراجع عن آخر تعديل من زر تراجع أو Ctrl + Z. تظهر مجاميع الشهر تلقائيًا في نهاية الجدول.</p>
+      <p class="me-note">تحديث البيانات يحفظ الجدول فقط. يمكنك لصق مجموعة خلايا من Excel، تحديد نطاق داخل الجدول، والتراجع عن آخر تعديل من زر تراجع أو Ctrl + Z.</p>
     </section>
 
     <section class="me-panel"><div id="summary" class="me-summary"></div></section>
@@ -68,6 +69,6 @@
   <script src="monthly-entry-paste.js?v=20260910-1"></script>
   <script src="monthly-entry-selection.js?v=20260910-1"></script>
   <script src="monthly-entry-undo.js?v=20260910-3"></script>
-  <script src="monthly-entry-totals.js?v=20260910-1"></script>
+  <script src="monthly-entry-totals.js?v=20260910-2"></script>
 </body>
 </html>
