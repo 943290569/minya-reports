@@ -7,14 +7,11 @@
     const hidden=[];
     detailHead.forEach((th,i)=>{
       const txt=String(th.textContent||'').trim();
-      const isEquipmentStatus=/ - الحالة$/.test(txt);
-      const isEquipmentHours=/ - ساعات العمل$/.test(txt);
-      const hide=/وصف الحالة|ملاحظات/.test(txt)||isEquipmentStatus||isEquipmentHours;
+      const hide=/وصف الحالة|ملاحظات|ساعات العمل| - الحالة$/.test(txt);
       th.style.display=hide?'none':'';
       if(hide) hidden.push(i);
     });
     [...(t.tBodies?.[0]?.rows||[])].forEach(tr=>{
-      [...tr.cells].forEach((td,idx)=>{if(idx>0)td.style.display='';});
       hidden.forEach(i=>{const td=tr.cells[i+1]; if(td) td.style.display='none';});
     });
     const groups=[...headRows[0].cells].slice(1);
