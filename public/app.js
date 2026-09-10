@@ -191,6 +191,7 @@ document.documentElement.style.setProperty(
   "js/app-system-link.js",
   "js/app-credit.js",
   "js/app-v3-pages.js",
+  "js/app-monthly-entry-link.js",
   "js/app-driver-license-badge.js",
   "js/app-report-attachments.js",
   "js/app-permissions-ui.js",
