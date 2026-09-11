@@ -32,14 +32,7 @@ module.exports = function installGuestAccess(app, { db, requireRole, audit, COOK
     }
     const salt = crypto.randomBytes(16).toString('hex');
     const passwordHash = crypto.scryptSync(crypto.randomBytes(32), salt, 64).toString('hex');
-    const result = db.prepare(`INSERT INTO users (username,display_name,email,mobile,password_hash,salt,role,is_active) VALUES (?,?,?,?,?,?, 'viewer',1)`).run(
-      username,
-      'زائر عبر رابط',
-      '',
-      '',
-      passwordHash,
-      salt
-    );
+    const result = db.prepare(`INSERT INTO users (username,display_name,email,mobile,password_hash,salt,role,is_active) VALUES (?,?,?,?,?,?, 'viewer',1)`).run(username,'زائر عبر رابط','','',passwordHash,salt);
     return db.prepare(`SELECT * FROM users WHERE id=?`).get(result.lastInsertRowid);
   }
 
@@ -73,11 +66,9 @@ module.exports = function installGuestAccess(app, { db, requireRole, audit, COOK
     try {
       const token = String(req.query.token || '').trim();
       if (!/^[a-f0-9]{64}$/i.test(token)) return res.status(400).send('رابط الدخول غير صالح');
-      const now = new Date();
       const row = db.prepare(`SELECT * FROM guest_access_links WHERE token_hash=?`).get(hash(token));
-      if (!row || !row.is_active || new Date(row.expires_at).getTime() <= now.getTime()) return res.status(410).send('انتهت صلاحية رابط الدخول أو تم إلغاؤه');
+      if (!row || !row.is_active || new Date(row.expires_at).getTime() <= Date.now()) return res.status(410).send('انتهت صلاحية رابط الدخول أو تم إلغاؤه');
       if (Number(row.max_uses || 0) > 0 && Number(row.use_count || 0) >= Number(row.max_uses)) return res.status(410).send('تم استهلاك رابط الدخول');
-
       const guest = ensureGuestViewer();
       const sessionToken = newToken();
       const expiresAt = new Date(Math.min(new Date(row.expires_at).getTime(), Date.now() + 7 * 24 * 60 * 60 * 1000)).toISOString();
@@ -98,5 +89,6 @@ module.exports = function installGuestAccess(app, { db, requireRole, audit, COOK
 
   const requireAnyUser = requireRole('admin','editor','viewer');
   require('./maintenance-incidents')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
+  require('./incident-files')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
   require('./fleet-environment')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
 };
