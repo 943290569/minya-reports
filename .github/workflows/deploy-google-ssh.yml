@@ -28,12 +28,8 @@ jobs:
           DEPLOY_PM2_NAME: ${{ secrets.DEPLOY_PM2_NAME }}
         run: |
           set -euo pipefail
-
           for name in DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_SSH_KEY_B64 DEPLOY_PM2_NAME; do
-            if [ -z "${!name:-}" ]; then
-              echo "Missing required GitHub secret: $name"
-              exit 1
-            fi
+            if [ -z "${!name:-}" ]; then echo "Missing required GitHub secret: $name"; exit 1; fi
           done
 
       - name: Configure SSH
@@ -43,15 +39,11 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
           set -euo pipefail
-
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-
           printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-
           ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
-
           PORT="${DEPLOY_PORT:-22}"
           ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
@@ -65,34 +57,22 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
           set -euo pipefail
-
           PORT="${DEPLOY_PORT:-22}"
-
           ssh -i ~/.ssh/deploy_key -p "$PORT" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_PM2_NAME='$DEPLOY_PM2_NAME' bash -s" <<'REMOTE'
           set -euo pipefail
-
           cd "$DEPLOY_PATH"
-
           echo "Current commit: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-
           git fetch origin main
           git checkout main
           git reset --hard origin/main
-
-          if [ -f package-lock.json ]; then
-            npm ci --omit=dev
-          else
-            npm install --omit=dev
-          fi
-
+          if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
           node scripts/install-guest-access.js
           node scripts/install-ops-suite.js
           npm run build:app
-
           if ! pm2 restart "$DEPLOY_PM2_NAME" --update-env; then
             echo "Normal PM2 restart failed; rebuilding PM2 daemon from saved process list."
             pm2 kill || true
@@ -100,20 +80,25 @@ jobs:
             pm2 resurrect
             sleep 3
           fi
-
-          pm2 describe "$DEPLOY_PM2_NAME" >/dev/null
+          sleep 4
+          pm2 describe "$DEPLOY_PM2_NAME" || true
+          echo "---- PM2 logs ----"
+          pm2 logs "$DEPLOY_PM2_NAME" --lines 120 --nostream || true
+          echo "---- local HTTP ----"
+          if ! curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5001/ >/dev/null; then
+            echo "Local application check failed on 127.0.0.1:5001"
+            pm2 logs "$DEPLOY_PM2_NAME" --lines 200 --nostream || true
+            exit 1
+          fi
           pm2 save
-
           echo "Deployed commit: $(git rev-parse --short HEAD)"
           REMOTE
 
       - name: Verify production site
         run: |
           set -euo pipefail
-
           curl --fail --silent --show-error --location \
             --retry 8 --retry-delay 3 \
             --max-time 20 \
             https://alminya-landfill.duckdns.org/ >/dev/null
-
           echo "Production site is reachable."
