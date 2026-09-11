@@ -93,8 +93,17 @@ jobs:
           node scripts/install-ops-suite.js
           npm run build:app
 
-          pm2 restart "$DEPLOY_PM2_NAME" --update-env
+          if ! pm2 restart "$DEPLOY_PM2_NAME" --update-env; then
+            echo "Normal PM2 restart failed; rebuilding PM2 daemon from saved process list."
+            pm2 kill || true
+            sleep 2
+            pm2 resurrect
+            sleep 2
+            pm2 restart "$DEPLOY_PM2_NAME" --update-env
+          fi
+
           pm2 save
+          pm2 describe "$DEPLOY_PM2_NAME" >/dev/null
 
           echo "Deployed commit: $(git rev-parse --short HEAD)"
           REMOTE
@@ -104,7 +113,7 @@ jobs:
           set -euo pipefail
 
           curl --fail --silent --show-error --location \
-            --retry 5 --retry-delay 3 \
+            --retry 8 --retry-delay 3 \
             --max-time 20 \
             https://alminya-landfill.duckdns.org/ >/dev/null
 
