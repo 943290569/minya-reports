@@ -95,4 +95,8 @@ module.exports = function installGuestAccess(app, { db, requireRole, audit, COOK
       res.status(500).send('تعذر فتح رابط الدخول');
     }
   });
+
+  const requireAnyUser = requireRole('admin','editor','viewer');
+  require('./maintenance-incidents')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
+  require('./fleet-environment')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
 };
