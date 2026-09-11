@@ -59,6 +59,7 @@
         <div><span>المرفقات</span><strong id="restoreAttachmentsCount">0</strong></div>
         <div><span>حجم المرفقات داخل النسخة</span><strong id="restoreAttachmentsSize">0 MB</strong></div>
         <div><span>سجل الصيانة</span><strong id="restoreMaintenanceCount">0</strong></div>
+        <div><span>بيانات التشغيل الإضافية</span><strong id="restoreOperationsCount">0</strong></div>
         <div><span>الفترة</span><strong id="restoreDateRange">-</strong></div>
         <div><span>تاريخ إنشاء النسخة</span><strong id="restoreExportedAt">-</strong></div>
       </div>
@@ -68,7 +69,7 @@
         <input id="restoreConfirmText" type="text" autocomplete="off" placeholder="اكتب كلمة استعادة" disabled>
       </div>
       <button id="restoreBackupBtn" type="button" class="restore-action-btn" disabled>استعادة النسخة بعد الفحص</button>
-      <small class="restore-warning">الاستعادة تستبدل التقارير وسجل الصيانة والمرفقات الحالية بمحتوى النسخة المختارة. ينشئ النظام نسخة تلقائية من الوضع الحالي قبل التنفيذ.</small>
+      <small class="restore-warning">الاستعادة تستبدل التقارير وسجل الصيانة والمرفقات وبيانات المركبات والسائقين والحوادث والعصارة والغطاء بمحتوى النسخة المختارة. ينشئ النظام نسخة تلقائية من الوضع الحالي قبل التنفيذ.</small>
     `;
     backupsPanel.before(section);
   }
@@ -91,9 +92,9 @@
     }
 
     document.getElementById("restoreFileName").textContent = `${file.name} · ${formatBytes(file.size)}`;
-    if (file.size > 60 * 1024 * 1024) {
+    if (file.size > 90 * 1024 * 1024) {
       setStatus("danger", "الملف كبير جدًا");
-      if (errors) { errors.classList.remove("hidden"); errors.textContent = "الحد الآمن لملف الاستعادة من الواجهة هو 60MB."; }
+      if (errors) { errors.classList.remove("hidden"); errors.textContent = "الحد الآمن لملف الاستعادة من الواجهة هو 90MB."; }
       return;
     }
 
@@ -112,10 +113,13 @@
       selectedBackup = backup;
       validationResult = data;
       const s = data.summary || {};
+      const ops = backup.operations_data || {};
+      const opsCount = [ops.movement_vehicles, ops.driver_licenses, ops.incident_logs, ops.incident_files, ops.environmental_logs].reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
       document.getElementById("restoreReportsCount").textContent = formatNumber(s.reports_count);
       document.getElementById("restoreAttachmentsCount").textContent = formatNumber(s.attachments_count);
       document.getElementById("restoreAttachmentsSize").textContent = formatBytes(s.attachments_bytes);
       document.getElementById("restoreMaintenanceCount").textContent = formatNumber(s.maintenance_count);
+      document.getElementById("restoreOperationsCount").textContent = formatNumber(opsCount);
       document.getElementById("restoreDateRange").textContent = s.from_date && s.to_date ? `${s.from_date} — ${s.to_date}` : "-";
       document.getElementById("restoreExportedAt").textContent = formatDateTime(s.exported_at);
       if (preview) preview.classList.remove("hidden");
@@ -163,8 +167,22 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.message || "فشل استعادة النسخة");
+
+      let opsSummary = null;
+      if (selectedBackup.operations_data) {
+        const opsResponse = await fetch("/api/ops/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ operations_data: selectedBackup.operations_data }),
+        });
+        const opsData = await opsResponse.json().catch(() => ({}));
+        if (!opsResponse.ok || !opsData.ok) throw new Error(opsData.message || "تمت استعادة التقارير لكن فشلت استعادة بيانات التشغيل الإضافية");
+        opsSummary = opsData.summary || null;
+      }
+
       setStatus("ok", "تمت الاستعادة بنجاح");
-      alert(`تمت استعادة ${data.count || 0} تقرير بنجاح.`);
+      const extra = opsSummary ? ` وتمت استعادة ${Number(opsSummary.vehicles||0)} مركبة و${Number(opsSummary.incidents||0)} سجل حادث/صيانة و${Number(opsSummary.environment||0)} سجل عصارة وغطاء.` : "";
+      alert(`تمت استعادة ${data.count || 0} تقرير بنجاح.${extra}`);
       window.location.reload();
     } catch (error) {
       console.error("Backup restore failed", error);
