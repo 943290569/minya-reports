@@ -33,6 +33,7 @@ if(backupPattern.test(server)){
 }`);
 }
 fs.writeFileSync(serverPath,server,'utf8');
+require('./install-monthly-close');
 let app=fs.readFileSync(appPath,'utf8');
 app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260911-ops-suite4";');
 fs.writeFileSync(appPath,app,'utf8');
