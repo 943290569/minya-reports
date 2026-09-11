@@ -1,0 +1,15 @@
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const serverPath=path.join(root,'server.js');
+const appPath=path.join(root,'public','app.js');
+let server=fs.readFileSync(serverPath,'utf8');
+const oldPages='const appPages=["/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin"];';
+const newPages='const appPages=["/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin","/ops-dashboard","/fleet","/maintenance-incidents","/environment","/global-search"];';
+if(server.includes(oldPages))server=server.replace(oldPages,newPages);
+else if(!server.includes('"/ops-dashboard"'))throw new Error('appPages mount point not found');
+fs.writeFileSync(serverPath,server,'utf8');
+let app=fs.readFileSync(appPath,'utf8');
+app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260911-ops-suite1";');
+fs.writeFileSync(appPath,app,'utf8');
+console.log('Operations suite routes and asset version installed.');
