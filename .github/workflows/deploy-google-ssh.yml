@@ -50,7 +50,6 @@ jobs:
           printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Validate the decoded private key before attempting SSH.
           ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
 
           PORT="${DEPLOY_PORT:-22}"
@@ -90,6 +89,7 @@ jobs:
             npm install --omit=dev
           fi
 
+          node scripts/install-guest-access.js
           npm run build:app
 
           pm2 restart "$DEPLOY_PM2_NAME" --update-env
