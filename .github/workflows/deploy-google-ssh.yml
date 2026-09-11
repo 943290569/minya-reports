@@ -90,6 +90,7 @@ jobs:
           fi
 
           node scripts/install-guest-access.js
+          node scripts/install-ops-suite.js
           npm run build:app
 
           pm2 restart "$DEPLOY_PM2_NAME" --update-env
