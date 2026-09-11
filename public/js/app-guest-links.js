@@ -24,7 +24,7 @@
       </div>
       <div id="guestLinkResult" style="display:none;margin:0 0 14px;padding:12px;border:1px solid #176b4f;border-radius:10px;background:#eef8f3">
         <div style="font-weight:800;margin-bottom:6px">الرابط الجاهز للإرسال</div>
-        <input id="guestLinkUrl" type="text" readonly dir="ltr" style="width:100%">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="guestLinkUrl" type="text" readonly dir="ltr" style="flex:1;min-width:230px"><button id="copyGuestLink" type="button">نسخ الرابط</button></div>
       </div>
       <div id="guestLinksMsg" style="min-height:20px;margin-bottom:8px"></div>
       <div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>الاسم</th><th>ينتهي</th><th>الاستخدام</th><th>الحالة</th><th>آخر استخدام</th><th>إجراء</th></tr></thead><tbody id="guestLinksBody"><tr><td colspan="6">جاري التحميل...</td></tr></tbody></table></div>`;
@@ -35,6 +35,11 @@
     document.head.appendChild(media);
     document.getElementById('createGuestLink').onclick=createLink;
     document.getElementById('guestLinksRefresh').onclick=load;
+    document.getElementById('copyGuestLink').onclick=async()=>{
+      const input=document.getElementById('guestLinkUrl');
+      try{await navigator.clipboard.writeText(input.value);document.getElementById('guestLinksMsg').textContent='تم نسخ الرابط';}
+      catch{input.select();document.execCommand('copy');document.getElementById('guestLinksMsg').textContent='تم نسخ الرابط';}
+    };
   }
 
   async function load(){
