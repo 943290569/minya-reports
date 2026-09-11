@@ -3,57 +3,27 @@
 ========================================================= */
 (function(){
   const path=(location.pathname.replace(/\/+$/,'')||'/');
-  const pageMap={
-    '/':'home','/report':'report','/archive':'archive','/monthly':'monthly','/annual':'annual',
-    '/equipment':'equipment','/weekly':'weekly','/search':'search','/managerial':'managerial','/admin':'admin','/reviews':'reviews'
-  };
-  const page=pageMap[path];
-  if(page) document.body.classList.add(`page-${page}`);
+  const pageMap={'/':'home','/report':'report','/archive':'archive','/monthly':'monthly','/annual':'annual','/equipment':'equipment','/weekly':'weekly','/search':'search','/managerial':'managerial','/admin':'admin','/reviews':'reviews','/fleet':'fleet','/maintenance-incidents':'incidents','/environment':'environment','/global-search':'global-search','/ops-dashboard':'ops-dashboard'};
+  const page=pageMap[path];if(page)document.body.classList.add(`page-${page}`);
+  function displayDate(value){const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:String(value||'');}
+  function replaceIsoText(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const parent=node.parentElement;if(!parent||['INPUT','TEXTAREA','OPTION','SCRIPT','STYLE'].includes(parent.tagName))return;const text=node.nodeValue||'';const next=text.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,(_,y,m,d)=>`${d}/${m}/${y}`);if(next!==text)node.nodeValue=next;});}
+  function polishDynamicText(){if(['/weekly','/equipment','/search'].includes(path))replaceIsoText(document.getElementById('v3Content'));if(path==='/managerial')replaceIsoText(document.getElementById('managerialReport'));if(path==='/admin'){document.querySelectorAll('.v3-panel h3').forEach(h=>{if(h.textContent.trim()==='سجل التعديلات Audit Log'&&!h.querySelector('small'))h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';});}}
+  document.addEventListener('DOMContentLoaded',()=>{polishDynamicText();const root=document.getElementById('v3Content')||document.body;if(typeof MutationObserver!=='undefined'){let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;polishDynamicText();});}).observe(root,{childList:true,subtree:true,characterData:true});}});
+})();
 
-  function displayDate(value){
-    const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    return m?`${m[3]}/${m[2]}/${m[1]}`:String(value||'');
+/* Fleet and drivers */
+(function(){
+  const route=location.pathname.replace(/\/+$/,'')||'/';if(route!=='/fleet')return;
+  const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const api=async(url,opt)=>{const r=await fetch(url,opt),d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error(d.message||'فشل الطلب');return d;};
+  function exp(days){if(days===null||days===undefined)return'غير محدد';return days<0?`منتهية منذ ${Math.abs(days)} يوم`:`متبقي ${days} يوم`;}
+  async function render(){
+    const main=document.querySelector('main.container');if(!main)return;const auth=await api('/api/auth/status').catch(()=>({}));const editable=['admin','editor'].includes(auth.user?.role);
+    main.innerHTML=`<section class="v3-page"><div class="v3-hero"><div><span>FLEET</span><h2>المركبات والسائقون</h2><p>مركبات حركة المكب ورخص السائقين ورخص المركبات والتأمين.</p></div></div><div><div id="fleetEditor" class="v3-panel"><h3>إضافة أو تعديل مركبة</h3><div class="v3-form-grid"><label>رقم المركبة<input id="fp"></label><label>اسم المركبة<input id="fn"></label><label>النوع<input id="ft"></label><label>السائق<input id="fd"></label><label>رقم رخصة السائق<input id="fdn"></label><label>انتهاء رخصة السائق<input id="fde" type="date"></label><label>انتهاء رخصة المركبة<input id="fve" type="date"></label><label>انتهاء التأمين<input id="fie" type="date"></label></div><label>ملاحظات<textarea id="fnotes" rows="2"></textarea></label><div><button id="fsave" class="v3-primary">حفظ</button> <button id="fcancel" type="button">إلغاء التعديل</button> <span id="fmsg"></span></div></div><div class="v3-panel"><div class="v3-filter"><input id="fq" placeholder="بحث بالمركبة أو السائق"><button id="fload">تحديث</button><a href="/drivers-licenses.html" class="v3-link-btn">ملف رخص السائقين</a></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>المركبة</th><th>الرقم</th><th>السائق</th><th>رخصة السائق</th><th>رخصة المركبة</th><th>التأمين</th><th>إجراء</th></tr></thead><tbody id="fbody"></tbody></table></div></div></div></section>`;
+    if(!editable)document.getElementById('fleetEditor').classList.add('hidden');const el=id=>document.getElementById(id);let editing=0;
+    const clear=()=>{['fp','fn','ft','fd','fdn','fde','fve','fie','fnotes'].forEach(id=>el(id).value='');editing=0;el('fsave').textContent='حفظ';};
+    async function load(){const d=await api(`/api/ops/fleet?q=${encodeURIComponent(el('fq').value)}`);el('fbody').innerHTML=d.vehicles.length?d.vehicles.map(x=>`<tr><td>${esc(x.vehicle_name)}<small>${esc(x.vehicle_type||'')}</small></td><td>${esc(x.plate_no)}</td><td>${esc(x.driver_name||'-')}</td><td>${esc(x.driver_license_no||'-')}<small>${exp(x.driver_license_days)}</small></td><td>${esc(x.vehicle_license_expiry||'-')}<small>${exp(x.vehicle_license_days)}</small></td><td>${esc(x.insurance_expiry||'-')}<small>${exp(x.insurance_days)}</small></td><td>${editable?`<button type="button" data-edit="${x.id}">تعديل</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="7">لا توجد مركبات</td></tr>';document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const x=d.vehicles.find(z=>String(z.id)===b.dataset.edit);editing=x.id;el('fp').value=x.plate_no||'';el('fn').value=x.vehicle_name||'';el('ft').value=x.vehicle_type||'';el('fd').value=x.driver_name||'';el('fdn').value=x.driver_license_no||'';el('fde').value=x.driver_license_expiry||'';el('fve').value=x.vehicle_license_expiry||'';el('fie').value=x.insurance_expiry||'';el('fnotes').value=x.notes||'';el('fsave').textContent='حفظ التعديل';});}
+    el('fsave').onclick=async()=>{try{const body={plate_no:el('fp').value,vehicle_name:el('fn').value,vehicle_type:el('ft').value,driver_name:el('fd').value,driver_license_no:el('fdn').value,driver_license_expiry:el('fde').value,vehicle_license_expiry:el('fve').value,insurance_expiry:el('fie').value,notes:el('fnotes').value};await api(editing?`/api/ops/fleet/${editing}`:'/api/ops/fleet',{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});el('fmsg').textContent='تم الحفظ';clear();load();}catch(e){el('fmsg').textContent=e.message;}};el('fcancel').onclick=clear;el('fload').onclick=load;el('fq').oninput=()=>{clearTimeout(window.__fleetSearch);window.__fleetSearch=setTimeout(load,250)};load();
   }
-
-  function replaceIsoText(root){
-    if(!root) return;
-    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-    const nodes=[];
-    while(walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(node=>{
-      const parent=node.parentElement;
-      if(!parent || ['INPUT','TEXTAREA','OPTION','SCRIPT','STYLE'].includes(parent.tagName)) return;
-      const text=node.nodeValue||'';
-      const next=text.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,(_,y,m,d)=>`${d}/${m}/${y}`);
-      if(next!==text) node.nodeValue=next;
-    });
-  }
-
-  function polishDynamicText(){
-    if(path==='/weekly') replaceIsoText(document.getElementById('v3Content'));
-    if(path==='/equipment') replaceIsoText(document.getElementById('v3Content'));
-    if(path==='/search') replaceIsoText(document.getElementById('v3Content'));
-    if(path==='/managerial') replaceIsoText(document.getElementById('managerialReport'));
-
-    if(path==='/admin'){
-      document.querySelectorAll('.v3-panel h3').forEach(h=>{
-        if(h.textContent.trim()==='سجل التعديلات Audit Log' && !h.querySelector('small')) {
-          h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';
-        }
-      });
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded',()=>{
-    polishDynamicText();
-    const root=document.getElementById('v3Content')||document.body;
-    if(typeof MutationObserver!=='undefined'){
-      let queued=false;
-      new MutationObserver(()=>{
-        if(queued)return;
-        queued=true;
-        requestAnimationFrame(()=>{queued=false;polishDynamicText();});
-      }).observe(root,{childList:true,subtree:true,characterData:true});
-    }
-  });
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
 })();
