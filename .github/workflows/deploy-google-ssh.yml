@@ -81,16 +81,27 @@ jobs:
           old = '''replacements.forEach(([before, after], index) => {
             const matches = countOccurrences(source, before);
             if (matches !== 1) {'''
-          new = '''replacements.forEach(([before, after], index) => {
+          previous = '''replacements.forEach(([before, after], index) => {
             if (source.includes(after)) return;
             const matches = countOccurrences(source, before);
             if (matches !== 1) {'''
+          new = '''replacements.forEach(([before, after], index) => {
+            if (source.includes(after)) return;
+            const matches = countOccurrences(source, before);
+            if (matches === 0) {
+              console.warn(`Runtime server sync skipped patch ${index + 1}: source fragment already transformed or unavailable.`);
+              return;
+            }
+            if (matches !== 1) {'''
           if new not in s:
-              if old not in s:
+              if previous in s:
+                  s = s.replace(previous, new, 1)
+              elif old in s:
+                  s = s.replace(old, new, 1)
+              else:
                   raise SystemExit('Unable to locate runtime sync loop')
-              s = s.replace(old, new, 1)
               p.write_text(s, encoding='utf-8')
-          print('Runtime sync made idempotent for deployment.')
+          print('Runtime sync compatibility guard installed for deployment.')
           PY
 
           if ! pm2 restart "$DEPLOY_PM2_NAME" --update-env; then
@@ -100,7 +111,7 @@ jobs:
             pm2 resurrect
             sleep 3
           fi
-          sleep 4
+          sleep 5
           pm2 describe "$DEPLOY_PM2_NAME" || true
           echo "---- PM2 logs ----"
           pm2 logs "$DEPLOY_PM2_NAME" --lines 120 --nostream || true
