@@ -19,6 +19,13 @@
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(number);
   }
 
+  function monthLabel(monthValue) {
+    const names = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+    const [year, month] = String(monthValue || "").split("-");
+    const index = Number(month) - 1;
+    return year && index >= 0 && index < 12 ? `${names[index]} ${year}` : String(monthValue || "-");
+  }
+
   function getLocalDateParts() {
     const now = new Date();
     const year = now.getFullYear();
@@ -29,6 +36,54 @@
       month: `${year}-${month}`,
       year: String(year),
     };
+  }
+
+  function setMetricCard(id, label, value, unit) {
+    const strong = document.getElementById(id);
+    if (!strong) return;
+    const card = strong.closest(".dashboard-metric-card");
+    const labelEl = card?.querySelector("span");
+    const unitEl = card?.querySelector("small");
+    if (labelEl) labelEl.textContent = label;
+    strong.textContent = value;
+    if (unitEl) unitEl.textContent = unit || "";
+  }
+
+  async function resolveLastAvailableMonth(dates) {
+    try {
+      const [closeResponse, reportsResponse] = await Promise.all([
+        fetch(`/api/monthly-close?year=${encodeURIComponent(dates.year)}`, { cache: "no-store" }),
+        fetch("/api/reports", { cache: "no-store" })
+      ]);
+      const closeData = await closeResponse.json().catch(() => ({}));
+      const reportsData = await reportsResponse.json().catch(() => ({}));
+      const reports = Array.isArray(reportsData.reports) ? reportsData.reports : [];
+      const eligible = Array.isArray(closeData.months)
+        ? closeData.months.filter(item => item.month_key < dates.month && Number(item.reports_count || 0) > 0)
+        : [];
+      eligible.sort((a, b) => String(b.month_key).localeCompare(String(a.month_key)));
+      const preferred = eligible.find(item => ["approved", "completed"].includes(String(item.status || ""))) || eligible[0];
+      let monthKey = preferred?.month_key || "";
+      if (!monthKey) {
+        const keys = [...new Set(reports.map(r => String(r.report_date || "").slice(0, 7)).filter(k => /^\d{4}-\d{2}$/.test(k) && k < dates.month))].sort().reverse();
+        monthKey = keys[0] || "";
+      }
+      if (!monthKey) return null;
+      const monthReports = reports.filter(r => String(r.report_date || "").startsWith(`${monthKey}-`));
+      if (!monthReports.length) return null;
+      const sum = key => monthReports.reduce((total, report) => total + Number(report[key] || 0), 0);
+      return {
+        month: monthKey,
+        waste: sum("total_waste_tons"),
+        trucks: sum("total_trucks"),
+        days: monthReports.length,
+        status: preferred?.status || "data",
+        statusLabel: preferred?.status_label || "آخر شهر متوفر"
+      };
+    } catch (error) {
+      console.error("تعذر تحديد آخر شهر متوفر", error);
+      return null;
+    }
   }
 
   function buildNavigation() {
@@ -108,9 +163,6 @@
         todayWaste: todayReport ? Number(todayReport.total_waste_tons || 0) : 0,
         todayTrucks: todayReport ? Number(todayReport.total_trucks || 0) : 0,
         todayDiesel: todayReport ? Number(todayReport.total_diesel || 0) : 0,
-        monthWaste: Number(month.waste || 0),
-        monthTrucks: Number(month.trucks || 0),
-        monthDays: Number(month.days || 0),
         yearWaste: Number(year.waste || 0),
         yearReports: Number(year.reports || 0),
       };
@@ -119,6 +171,26 @@
         const element = document.getElementById(`dash-${key}`);
         if (element) element.textContent = formatDashboardNumber(value);
       });
+
+      const currentMonthDays = Number(month.days || 0);
+      if (currentMonthDays > 0) {
+        setMetricCard("dash-monthWaste", "نفايات الشهر", formatDashboardNumber(month.waste), "طن");
+        setMetricCard("dash-monthTrucks", "شاحنات الشهر", formatDashboardNumber(month.trucks), "شاحنة");
+        setMetricCard("dash-monthDays", "أيام الشهر المسجلة", formatDashboardNumber(currentMonthDays), "يوم");
+      } else {
+        const lastMonth = await resolveLastAvailableMonth(dates);
+        if (lastMonth) {
+          const label = monthLabel(lastMonth.month);
+          setMetricCard("dash-monthWaste", `نفايات آخر شهر مكتمل`, formatDashboardNumber(lastMonth.waste), `طن · ${label}`);
+          setMetricCard("dash-monthTrucks", `شاحنات آخر شهر مكتمل`, formatDashboardNumber(lastMonth.trucks), `شاحنة · ${label}`);
+          setMetricCard("dash-monthDays", "حالة الشهر الحالي", "بانتظار البيانات", monthLabel(dates.month));
+          if (status) status.textContent = `${monthLabel(dates.month)}: بانتظار بيانات الشهر · آخر شهر متوفر ${label}`;
+        } else {
+          setMetricCard("dash-monthWaste", "نفايات الشهر", "بانتظار البيانات", monthLabel(dates.month));
+          setMetricCard("dash-monthTrucks", "شاحنات الشهر", "بانتظار البيانات", monthLabel(dates.month));
+          setMetricCard("dash-monthDays", "حالة الشهر الحالي", "بانتظار البيانات", monthLabel(dates.month));
+        }
+      }
 
       const todayState = document.getElementById("dashboardTodayState");
       if (todayState) {
@@ -145,7 +217,7 @@
           : '<tr><td colspan="5">لا توجد تقارير محفوظة حتى الآن.</td></tr>';
       }
 
-      if (status) {
+      if (status && currentMonthDays > 0) {
         status.textContent =
           `آخر تحديث: ${new Date().toLocaleTimeString("en-US", {
             hour: "2-digit",
