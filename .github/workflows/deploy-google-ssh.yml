@@ -98,12 +98,11 @@ jobs:
             pm2 kill || true
             sleep 2
             pm2 resurrect
-            sleep 2
-            pm2 restart "$DEPLOY_PM2_NAME" --update-env
+            sleep 3
           fi
 
-          pm2 save
           pm2 describe "$DEPLOY_PM2_NAME" >/dev/null
+          pm2 save
 
           echo "Deployed commit: $(git rev-parse --short HEAD)"
           REMOTE
