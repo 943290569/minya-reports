@@ -8,8 +8,10 @@ const oldPages='const appPages=["/report","/archive","/monthly","/annual","/equi
 const newPages='const appPages=["/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin","/ops-dashboard","/fleet","/maintenance-incidents","/environment","/global-search"];';
 if(server.includes(oldPages))server=server.replace(oldPages,newPages);
 else if(!server.includes('"/ops-dashboard"'))throw new Error('appPages mount point not found');
+server=server.replace('const AUDIT_LOG_RETENTION_COUNT = 5;','const AUDIT_LOG_RETENTION_COUNT = 1000;');
+server=server.replace('const AUTO_BACKUP_RETENTION_COUNT = 5;','const AUTO_BACKUP_RETENTION_COUNT = 10;');
 fs.writeFileSync(serverPath,server,'utf8');
 let app=fs.readFileSync(appPath,'utf8');
-app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260911-ops-suite1";');
+app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260911-ops-suite2";');
 fs.writeFileSync(appPath,app,'utf8');
-console.log('Operations suite routes and asset version installed.');
+console.log('Operations suite routes, activity retention and asset version installed.');
