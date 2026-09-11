@@ -42,7 +42,38 @@ module.exports=function installFleetEnvironment(app,{db,requireAuth,requireRole,
   app.put('/api/ops/fleet/:id',featureGuard('fleet',true),(req,res)=>{try{const id=Number(req.params.id),old=db.prepare('SELECT * FROM movement_vehicles WHERE id=?').get(id);if(!old)return res.status(404).json({ok:false,message:'المركبة غير موجودة'});const b=req.body||{},plate=clean(b.plate_number??b.plate_no??old.plate_number,30),type=clean(b.vehicle_type??b.vehicle_name??old.vehicle_type,80),model=clean(b.model??old.model,80),driverId=(b.driver_id===null||b.driver_id===''||b.driver_id===undefined)?old.driver_id:Number(b.driver_id),status=clean(b.status??old.status,30)||'تعمل',notes=clean(b.notes??old.notes,500),vehicleExp=clean(b.vehicle_license_expiry??old.vehicle_license_expiry,10),insurance=clean(b.insurance_expiry??old.insurance_expiry,10);if(driverId&&!db.prepare('SELECT id FROM driver_licenses WHERE id=?').get(driverId))return res.status(400).json({ok:false,message:'السائق المحدد غير موجود'});const dup=db.prepare('SELECT id FROM movement_vehicles WHERE plate_number=? AND id<>?').get(plate,id);if(dup)return res.status(409).json({ok:false,message:'رقم اللوحة مسجل لمركبة أخرى'});db.prepare(`UPDATE movement_vehicles SET plate_number=?,vehicle_type=?,model=?,driver_id=?,vehicle_license_expiry=?,insurance_expiry=?,status=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(plate,type,model,driverId,vehicleExp,insurance,status,notes,id);audit(req.user,'UPDATE_MOVEMENT_VEHICLE','movement_vehicle',id,plate);res.json({ok:true})}catch(e){res.status(500).json({ok:false,message:'تعذر تحديث المركبة'})}});
   app.delete('/api/ops/fleet/:id',requireRole('admin'),(req,res)=>{const id=Number(req.params.id),old=db.prepare('SELECT plate_number FROM movement_vehicles WHERE id=?').get(id);if(!old)return res.status(404).json({ok:false,message:'المركبة غير موجودة'});db.prepare('DELETE FROM movement_vehicles WHERE id=?').run(id);audit(req.user,'DELETE_MOVEMENT_VEHICLE','movement_vehicle',id,old.plate_number);res.json({ok:true})});
 
-  app.get('/api/ops/environment',featureGuard('environment'),(req,res)=>{const from=clean(req.query.from,10),to=clean(req.query.to,10);let sql='SELECT * FROM environmental_logs WHERE 1=1',p=[];if(from&&dateOk(from)){sql+=' AND log_date>=?';p.push(from)}if(to&&dateOk(to)){sql+=' AND log_date<=?';p.push(to)}sql+=' ORDER BY log_date DESC';const rows=db.prepare(sql).all(...p);const totals=rows.reduce((a,r)=>({days:a.days+1,leachate_m3:a.leachate_m3+Number(r.leachate_m3||0),tanker_trips:a.tanker_trips+Number(r.tanker_trips||0),cover_trips:a.cover_trips+Number(r.cover_trips||0),cover_quantity:a.cover_quantity+Number(r.cover_quantity||0)}),{days:0,leachate_m3:0,tanker_trips:0,cover_trips:0,cover_quantity:0});res.json({ok:true,rows,totals,permission:permission(req.user,'environment')})});
+  function readLegacyEnvironment(from,to){
+    let where=' WHERE 1=1',p=[];
+    if(from&&dateOk(from)){where+=' AND r.report_date>=?';p.push(from)}
+    if(to&&dateOk(to)){where+=' AND r.report_date<=?';p.push(to)}
+    const ops=db.prepare(`
+      SELECT r.report_date AS log_date,
+        SUM(CASE WHEN (o.operation_name LIKE '%عصار%' OR lower(o.operation_name) LIKE '%leach%') THEN COALESCE(o.quantity,0) ELSE 0 END) AS leachate_m3,
+        SUM(CASE WHEN (o.operation_name LIKE '%عصار%' OR lower(o.operation_name) LIKE '%leach%') THEN COALESCE(o.vehicle_count,0) ELSE 0 END) AS tanker_trips,
+        SUM(CASE WHEN (o.operation_name LIKE '%غطاء%' OR o.operation_name LIKE '%تغطية%' OR lower(o.operation_name) LIKE '%cover%') THEN COALESCE(o.vehicle_count,0) ELSE 0 END) AS cover_trips,
+        SUM(CASE WHEN (o.operation_name LIKE '%غطاء%' OR o.operation_name LIKE '%تغطية%' OR lower(o.operation_name) LIKE '%cover%') THEN COALESCE(o.quantity,0) ELSE 0 END) AS cover_quantity
+      FROM daily_reports r
+      JOIN operations o ON o.report_id=r.id
+      ${where}
+      GROUP BY r.report_date
+      HAVING ABS(leachate_m3)>0 OR ABS(tanker_trips)>0 OR ABS(cover_trips)>0 OR ABS(cover_quantity)>0
+      ORDER BY r.report_date DESC
+    `).all(...p);
+    return ops.map(x=>({
+      id:null,
+      log_date:x.log_date,
+      leachate_m3:Number(x.leachate_m3||0),
+      tanker_trips:Number(x.tanker_trips||0),
+      cover_trips:Number(x.cover_trips||0),
+      cover_quantity:Number(x.cover_quantity||0),
+      cover_unit:'',
+      notes:'بيانات محفوظة سابقًا ضمن التقرير اليومي',
+      source:'daily_report',
+      legacy:1
+    }));
+  }
+
+  app.get('/api/ops/environment',featureGuard('environment'),(req,res)=>{const from=clean(req.query.from,10),to=clean(req.query.to,10);let sql='SELECT *,\'environmental_log\' AS source,0 AS legacy FROM environmental_logs WHERE 1=1',p=[];if(from&&dateOk(from)){sql+=' AND log_date>=?';p.push(from)}if(to&&dateOk(to)){sql+=' AND log_date<=?';p.push(to)}sql+=' ORDER BY log_date DESC';const current=db.prepare(sql).all(...p);const existingDates=new Set(current.map(r=>r.log_date));const legacy=readLegacyEnvironment(from,to).filter(r=>!existingDates.has(r.log_date));const rows=[...current,...legacy].sort((a,b)=>String(b.log_date).localeCompare(String(a.log_date)));const totals=rows.reduce((a,r)=>({days:a.days+1,leachate_m3:a.leachate_m3+Number(r.leachate_m3||0),tanker_trips:a.tanker_trips+Number(r.tanker_trips||0),cover_trips:a.cover_trips+Number(r.cover_trips||0),cover_quantity:a.cover_quantity+Number(r.cover_quantity||0)}),{days:0,leachate_m3:0,tanker_trips:0,cover_trips:0,cover_quantity:0});res.json({ok:true,rows,totals,legacy_count:legacy.length,permission:permission(req.user,'environment')})});
   app.post('/api/ops/environment',featureGuard('environment',true),(req,res)=>{const b=req.body||{};if(!b.log_date||!dateOk(b.log_date))return res.status(400).json({ok:false,message:'التاريخ مطلوب'});db.prepare(`INSERT INTO environmental_logs(log_date,leachate_m3,tanker_trips,cover_trips,cover_quantity,cover_unit,notes,created_by,updated_at) VALUES(?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(log_date) DO UPDATE SET leachate_m3=excluded.leachate_m3,tanker_trips=excluded.tanker_trips,cover_trips=excluded.cover_trips,cover_quantity=excluded.cover_quantity,cover_unit=excluded.cover_unit,notes=excluded.notes,created_by=excluded.created_by,updated_at=CURRENT_TIMESTAMP`).run(clean(b.log_date,10),Number(b.leachate_m3||0),Number(b.tanker_trips||0),Number(b.cover_trips||0),Number(b.cover_quantity||0),clean(b.cover_unit,30)||'نقلة',clean(b.notes,1500),req.user.id);audit(req.user,'UPSERT_ENVIRONMENT_LOG','environment',b.log_date);res.json({ok:true})});
   app.delete('/api/ops/environment/:date',requireRole('admin'),(req,res)=>{const d=clean(req.params.date,10),r=db.prepare('DELETE FROM environmental_logs WHERE log_date=?').run(d);if(!r.changes)return res.status(404).json({ok:false,message:'السجل غير موجود'});audit(req.user,'DELETE_ENVIRONMENT_LOG','environment',d);res.json({ok:true})});
 };
