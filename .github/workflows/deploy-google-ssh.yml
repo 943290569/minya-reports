@@ -73,6 +73,26 @@ jobs:
           node scripts/install-guest-access.js
           node scripts/install-ops-suite.js
           npm run build:app
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/start-server.js')
+          s = p.read_text(encoding='utf-8')
+          old = '''replacements.forEach(([before, after], index) => {
+            const matches = countOccurrences(source, before);
+            if (matches !== 1) {'''
+          new = '''replacements.forEach(([before, after], index) => {
+            if (source.includes(after)) return;
+            const matches = countOccurrences(source, before);
+            if (matches !== 1) {'''
+          if new not in s:
+              if old not in s:
+                  raise SystemExit('Unable to locate runtime sync loop')
+              s = s.replace(old, new, 1)
+              p.write_text(s, encoding='utf-8')
+          print('Runtime sync made idempotent for deployment.')
+          PY
+
           if ! pm2 restart "$DEPLOY_PM2_NAME" --update-env; then
             echo "Normal PM2 restart failed; rebuilding PM2 daemon from saved process list."
             pm2 kill || true
@@ -85,8 +105,16 @@ jobs:
           echo "---- PM2 logs ----"
           pm2 logs "$DEPLOY_PM2_NAME" --lines 120 --nostream || true
           echo "---- local HTTP ----"
-          if ! curl --fail --silent --show-error --max-time 10 http://127.0.0.1:5001/ >/dev/null; then
-            echo "Local application check failed on 127.0.0.1:5001"
+          LOCAL_OK=0
+          for P in 6000 5001; do
+            if curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:${P}/" >/dev/null; then
+              echo "Local application reachable on port ${P}."
+              LOCAL_OK=1
+              break
+            fi
+          done
+          if [ "$LOCAL_OK" -ne 1 ]; then
+            echo "Local application check failed on ports 6000 and 5001"
             pm2 logs "$DEPLOY_PM2_NAME" --lines 200 --nostream || true
             exit 1
           fi
