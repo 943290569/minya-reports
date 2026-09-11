@@ -1,5 +1,5 @@
 /* =========================================================
-   رابط إدارة النظام في جميع الصفحات
+   روابط الإدارة والتشغيل في جميع الصفحات
 ========================================================= */
 
 (function () {
@@ -11,16 +11,25 @@
     document.querySelectorAll('a[href="/system.html"]').forEach(link => link.remove());
   }
 
-  function addSystemNavigation() {
-    if (!isAdmin()) { removeSystemAccess(); return; }
-    const nav = document.querySelector(".top-header nav");
-    if (!nav || nav.querySelector('a[href="/system.html"]')) return;
-
+  function addLink(nav, href, label) {
+    if (!nav || nav.querySelector(`a[href="${href}"]`)) return;
     const link = document.createElement("a");
     link.className = "app-nav-link";
-    link.href = "/system.html";
-    link.textContent = "إدارة النظام";
+    link.href = href;
+    link.textContent = label;
     nav.appendChild(link);
+  }
+
+  function addSystemNavigation() {
+    const nav = document.querySelector(".top-header nav");
+    if (!nav) return;
+    addLink(nav, "/ops-dashboard", "لوحة التشغيل");
+    addLink(nav, "/fleet", "المركبات والسائقون");
+    addLink(nav, "/maintenance-incidents", "الصيانة والحوادث");
+    addLink(nav, "/environment", "العصارة والغطاء");
+    addLink(nav, "/global-search", "بحث شامل");
+    if (!isAdmin()) { removeSystemAccess(); return; }
+    addLink(nav, "/system.html", "إدارة النظام");
   }
 
   function addDashboardSystemCard() {
