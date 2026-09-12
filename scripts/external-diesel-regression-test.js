@@ -42,6 +42,8 @@ assert(!client.includes(" · الشركة ${source}"), "company name is duplicat
 assert(styles.includes(".external-diesel-page>.panel{min-width:0"), "external diesel panels can force horizontal page overflow");
 assert(styles.includes(".ed-quick-table thead{display:none}"), "quick entry table does not switch to mobile cards");
 assert(styles.includes("content:attr(data-label)"), "quick entry mobile labels are not rendered");
+assert(styles.includes(".ed-quick-table{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important}"), "global mobile table width still overrides the quick-entry cards");
+assert(page.includes("external-diesel-mobile-v2"), "external diesel mobile cache version was not advanced");
 assert(client.includes('src="/assets/header.png"'), "official print header is missing");
 assert(client.includes('src="/assets/footer.png"'), "official print footer is missing");
 assert(client.includes('class="print-page"'), "print report does not use explicit A4 pages");
