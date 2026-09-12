@@ -150,7 +150,7 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
         daily_totals: [...daily].map(([entry_date, quantity_liters]) => ({ entry_date, quantity_liters: Number(quantity_liters.toFixed(2)) }))
       });
     } catch (error) {
-      res.status(500).json({ ok: false, message: "تعذر تحميل كشف السولار الخارجي", error: error.message });
+      res.status(500).json({ ok: false, message: "تعذر تحميل كشف سولار الشركات", error: error.message });
     }
   });
 
@@ -165,9 +165,9 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       `).run(entry.source_name, entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number, entry.notes, req.user.id);
       audit(req.user, "CREATE_EXTERNAL_DIESEL", "external_diesel", result.lastInsertRowid, `${entry.source_name} | ${entry.entry_date} | ${entry.quantity_liters} لتر`);
       writeAutomaticBackup("external-diesel-create");
-      res.json({ ok: true, id: result.lastInsertRowid, message: "تم حفظ تعبئة السولار الخارجي" });
+      res.json({ ok: true, id: result.lastInsertRowid, message: "تم حفظ تعبئة سولار الشركة" });
     } catch (error) {
-      res.status(500).json({ ok: false, message: "فشل حفظ تعبئة السولار الخارجي", error: error.message });
+      res.status(500).json({ ok: false, message: "فشل حفظ تعبئة سولار الشركة", error: error.message });
     }
   });
 
@@ -201,7 +201,7 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       }
       res.json({ ok: true, created, skipped, invalid: errors.length, errors: errors.slice(0, 20), message: `تم استيراد ${created} سجل` });
     } catch (error) {
-      res.status(500).json({ ok: false, message: "فشل استيراد كشف السولار الخارجي", error: error.message });
+      res.status(500).json({ ok: false, message: "فشل استيراد كشف سولار الشركات", error: error.message });
     }
   });
 
@@ -242,9 +242,9 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       `).run(entry.source_name, entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number, entry.notes, id);
       audit(req.user, "UPDATE_EXTERNAL_DIESEL", "external_diesel", id, `${entry.source_name} | ${entry.entry_date}`);
       writeAutomaticBackup("external-diesel-update");
-      res.json({ ok: true, message: "تم تعديل سجل السولار الخارجي" });
+      res.json({ ok: true, message: "تم تعديل سجل تعبئة سولار الشركة" });
     } catch (error) {
-      res.status(500).json({ ok: false, message: "فشل تعديل سجل السولار الخارجي", error: error.message });
+      res.status(500).json({ ok: false, message: "فشل تعديل سجل تعبئة سولار الشركة", error: error.message });
     }
   });
 
@@ -256,9 +256,9 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       writeAutomaticBackup("pre-external-diesel-delete", true);
       db.prepare(`DELETE FROM external_diesel_entries WHERE id=?`).run(id);
       audit(req.user, "DELETE_EXTERNAL_DIESEL", "external_diesel", id, `${current.source_name} | ${current.entry_date}`);
-      res.json({ ok: true, message: "تم حذف سجل السولار الخارجي" });
+      res.json({ ok: true, message: "تم حذف سجل تعبئة سولار الشركة" });
     } catch (error) {
-      res.status(500).json({ ok: false, message: "فشل حذف سجل السولار الخارجي", error: error.message });
+      res.status(500).json({ ok: false, message: "فشل حذف سجل تعبئة سولار الشركة", error: error.message });
     }
   });
 }

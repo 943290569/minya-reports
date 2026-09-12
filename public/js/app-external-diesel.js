@@ -280,7 +280,7 @@
       dailyRows.push(["المجموع الشهري", Number(state.summary.total_liters || 0)]);
       const summarySheet = XLSX.utils.aoa_to_sheet(dailyRows); summarySheet["!cols"] = [{ wch: 18 }, { wch: 22 }]; XLSX.utils.book_append_sheet(workbook, summarySheet, "الملخص اليومي");
     }
-    XLSX.writeFile(workbook, `${includeData ? "كشف" : "نموذج"}-السولار-الخارجي-${month}.xlsx`);
+    XLSX.writeFile(workbook, `${includeData ? "كشف" : "نموذج"}-سولار-الشركات-${month}.xlsx`);
   }
   function printRows() {
     const blocks = [];
