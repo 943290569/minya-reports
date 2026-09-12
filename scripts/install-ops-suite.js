@@ -38,3 +38,4 @@ let app=fs.readFileSync(appPath,'utf8');
 app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260912-external-diesel-v1";');
 fs.writeFileSync(appPath,app,'utf8');
 console.log('Operations suite routes, permissions, complete backup/restore limits and asset version installed.');
+// Deployment marker: external diesel localized Excel picker v2.
