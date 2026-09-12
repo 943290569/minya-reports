@@ -203,7 +203,7 @@
     return btoa(binary);
   }
   async function parseWordDocument(file) {
-    if (file.size > 8 * 1024 * 1024) throw new Error("حجم ملف Word يجب ألا يتجاوز 8 ميجابايت");
+    if (file.size > 8 * 1024 * 1024) throw new Error("حجم ملف وورد يجب ألا يتجاوز 8 ميجابايت");
     const data = await api("/api/external-diesel/parse-word", {
       method: "POST",
       body: JSON.stringify({ filename: file.name, data_base64: bufferToBase64(await file.arrayBuffer()) })
@@ -213,7 +213,7 @@
     syncPeriod();
     const source = selectedSource();
     const month = selectedMonth();
-    if (!source || !month) throw new Error("تعذر تحديد المصدر أو الشهر من كشف Word. حددهما ثم أعد المعاينة");
+    if (!source || !month) throw new Error("تعذر تحديد المصدر أو الشهر من كشف وورد. حددهما ثم أعد المعاينة");
     return (data.entries || []).map((row, index) => {
       const entry = { ...row, source_name: source };
       const errors = [];
@@ -234,13 +234,13 @@
   }
   async function previewImportFile() {
     const file = $("edExcelFile").files[0];
-    if (!file) { message("edImportMessage", "اختر كشف Excel أو Word أولاً", "error"); return; }
+    if (!file) { message("edImportMessage", "اختر كشف إكسل أو وورد أولاً", "error"); return; }
     const extension = file.name.toLowerCase().split(".").pop();
     if (!["xls", "xlsx", "doc", "docx"].includes(extension)) { message("edImportMessage", "الصيغ المقبولة هي DOC وDOCX وXLS وXLSX", "error"); return; }
     const isWord = extension === "doc" || extension === "docx";
-    message("edImportMessage", `جاري قراءة كشف ${isWord ? "Word" : "Excel"}`);
+    message("edImportMessage", `جاري قراءة كشف ${isWord ? "وورد" : "إكسل"}`);
     try {
-      state.previewFormat = isWord ? "كشف Word" : "كشف Excel";
+      state.previewFormat = isWord ? "كشف وورد" : "كشف إكسل";
       state.preview = isWord ? await parseWordDocument(file) : await parseWorkbook(file);
       renderPreview();
     }

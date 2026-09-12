@@ -209,22 +209,22 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     try {
       const filename = cleanText(req.body?.filename, 180);
       const extension = path.extname(filename).toLowerCase();
-      if (![".doc", ".docx"].includes(extension)) return res.status(400).json({ ok: false, message: "اختر ملف Word بصيغة DOC أو DOCX" });
+      if (![".doc", ".docx"].includes(extension)) return res.status(400).json({ ok: false, message: "اختر ملف وورد بصيغة DOC أو DOCX" });
       const encoded = String(req.body?.data_base64 || "").replace(/^data:[^,]+,/, "");
-      if (!encoded || !/^[A-Za-z0-9+/=\s]+$/.test(encoded)) return res.status(400).json({ ok: false, message: "ملف Word غير صالح" });
+      if (!encoded || !/^[A-Za-z0-9+/=\s]+$/.test(encoded)) return res.status(400).json({ ok: false, message: "ملف وورد غير صالح" });
       const buffer = Buffer.from(encoded, "base64");
-      if (!buffer.length || buffer.length > 8 * 1024 * 1024) return res.status(413).json({ ok: false, message: "حجم ملف Word يجب ألا يتجاوز 8 ميجابايت" });
+      if (!buffer.length || buffer.length > 8 * 1024 * 1024) return res.status(413).json({ ok: false, message: "حجم ملف وورد يجب ألا يتجاوز 8 ميجابايت" });
       const isDoc = buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
       const isDocx = buffer.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
       if ((extension === ".doc" && !isDoc) || (extension === ".docx" && !isDocx)) return res.status(400).json({ ok: false, message: "امتداد ملف Word لا يطابق محتواه" });
       const document = await wordExtractor.extract(buffer);
       const body = String(document.getBody() || "");
-      if (!body.trim() || body.length > 1_000_000) return res.status(400).json({ ok: false, message: "تعذر قراءة محتوى كشف Word" });
+      if (!body.trim() || body.length > 1_000_000) return res.status(400).json({ ok: false, message: "تعذر قراءة محتوى كشف وورد" });
       const parsed = parseWordRegister(body);
-      if (!parsed.entries.length) return res.status(400).json({ ok: false, message: "لم أجد صفوف تعبئة صالحة في كشف Word" });
+      if (!parsed.entries.length) return res.status(400).json({ ok: false, message: "لم أجد صفوف تعبئة صالحة في كشف وورد" });
       res.json({ ok: true, ...parsed, rows_count: parsed.entries.length });
     } catch (error) {
-      res.status(400).json({ ok: false, message: "تعذر قراءة كشف Word. تأكد أن الملف غير محمي وأنه بصيغة DOC أو DOCX", error: error.message });
+      res.status(400).json({ ok: false, message: "تعذر قراءة كشف وورد. تأكد أن الملف غير محمي وأنه بصيغة DOC أو DOCX", error: error.message });
     }
   });
 
