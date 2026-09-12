@@ -32,6 +32,8 @@ assert(client.includes('src="/assets/header.png"'), "official print header is mi
 assert(client.includes('src="/assets/footer.png"'), "official print footer is missing");
 assert(client.includes('class="print-page"'), "print report does not use explicit A4 pages");
 assert(client.includes("paginatedPrintRows"), "print report does not paginate rows");
+assert(client.includes("firstPageUnits = 30, nextPageUnits = 34"), "print pagination is not compacted");
+assert(client.includes('const summary = index === 0 ?'), "print summary is not limited to the first page");
 assert(!client.includes(".official-header{position:fixed"), "print header still uses unstable fixed positioning");
 assert(page.includes("السولار الذي عبّأه طاقم المكب للشركات الخارجية"), "external diesel page does not identify the landfill team as the filling party");
 assert(page.includes("الشركة"), "company label is missing");
