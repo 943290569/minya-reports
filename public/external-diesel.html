@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css?v=external-diesel-v1">
   <link rel="stylesheet" href="app-bundle.css?v=3.5.0-20260912-external-diesel-v3-wa8">
   <link rel="stylesheet" href="mobile-vertical-menu.css?v=external-diesel-v1">
-  <link rel="stylesheet" href="external-diesel.css?v=external-diesel-v2">
+  <link rel="stylesheet" href="external-diesel.css?v=external-diesel-word-v1">
 </head>
 <body data-page="external-diesel">
   <header class="top-header">
@@ -57,14 +57,14 @@
     </section>
 
     <section class="panel" id="edImportPanel">
-      <div class="ed-section-head"><div><h2>استيراد كشف Excel</h2><p>يقرأ النظام نفس أعمدة نموذج شهر 8 ويعرض معاينة قبل الحفظ.</p></div><button id="edTemplateBtn" type="button">تنزيل نموذج Excel</button></div>
+      <div class="ed-section-head"><div><h2>استيراد كشف Excel أو Word</h2><p>يقرأ النظام كشف DOC أو DOCX أو Excel ويستبعد أسطر المجاميع والتواقيع.</p></div><button id="edTemplateBtn" type="button">تنزيل نموذج Excel</button></div>
       <div class="ed-import-row">
         <label class="ed-file-picker" for="edExcelFile">
-          <span class="ed-file-button">اختيار ملف Excel</span>
+          <span class="ed-file-button">اختيار كشف Excel أو Word</span>
           <span id="edFileName" class="ed-file-name">لم يتم اختيار ملف</span>
         </label>
-        <input id="edExcelFile" class="ed-native-file" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
-        <button id="edPreviewBtn" type="button">معاينة الملف</button>
+        <input id="edExcelFile" class="ed-native-file" type="file" accept=".xlsx,.xls,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+        <button id="edPreviewBtn" type="button">معاينة الكشف</button>
         <button id="edImportBtn" type="button" class="v3-primary hidden">اعتماد الاستيراد</button>
       </div>
       <p id="edImportMessage" class="ed-message" aria-live="polite"></p>
@@ -88,6 +88,6 @@
   <script src="js/app-header-menu.js?v=external-diesel-v1"></script>
   <script src="js/app-appearance-settings.js?v=external-diesel-v1"></script>
   <script src="js/app-date-display.js?v=external-diesel-v1"></script>
-  <script src="js/app-external-diesel.js?v=external-diesel-v2"></script>
+  <script src="js/app-external-diesel.js?v=external-diesel-word-v1"></script>
 </body>
 </html>

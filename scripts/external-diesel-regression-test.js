@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { parseWordRegister } = require("../external-diesel");
 
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -12,16 +13,20 @@ const client = read("public/js/app-external-diesel.js");
 const menu = read("public/js/app-header-menu.js");
 const desktopMenu = read("public/js/app-system-link.js");
 const installer = read("scripts/install-ops-suite.js");
+const packageJson = JSON.parse(read("package.json"));
 
 assert(server.includes('require("./external-diesel")'), "external diesel routes are not mounted");
 assert(api.includes("CREATE TABLE IF NOT EXISTS external_diesel_entries"), "external diesel table is missing");
 assert(api.includes('app.get("/api/external-diesel"'), "external diesel listing route is missing");
 assert(api.includes('app.post("/api/external-diesel/import"'), "external diesel import route is missing");
+assert(api.includes('app.post("/api/external-diesel/parse-word"'), "external diesel Word preview route is missing");
 assert(api.includes('requireRole("admin", "editor")'), "external diesel edits are not permission protected");
 assert(api.includes('requireRole("admin")'), "external diesel deletion is not admin-only");
 assert(page.includes('id="edFilterSource"'), "external source selector is missing");
 assert(page.includes('id="edReportMonth" type="month"'), "external diesel month and year selector is missing");
 assert(page.includes('id="edExcelFile"'), "external diesel Excel importer is missing");
+assert(page.includes(".doc,.docx"), "external diesel Word file selection is missing");
+assert(packageJson.dependencies["word-extractor"], "word-extractor dependency is missing");
 assert(client.includes("لم أجد صف العناوين المعتمد"), "Excel header validation is missing");
 assert(client.includes('src="/assets/header.png"'), "official print header is missing");
 assert(client.includes('src="/assets/footer.png"'), "official print footer is missing");
@@ -33,4 +38,17 @@ assert(menu.includes('href:"/external-diesel"'), "external diesel navigation lin
 assert(desktopMenu.includes('addLink(nav, "/external-diesel", "السولار الخارجي")'), "external diesel desktop navigation link is missing");
 assert(server.includes("external_diesel, appearance_settings"), "external diesel is missing from base backups");
 assert(installer.includes("external_diesel: rows('external_diesel_entries')"), "external diesel is missing from deployed backups");
-console.log("External diesel regression checks passed: source and period filters, Excel preview/import, daily and monthly totals, protected edits, official print header and footer.");
+const wordSample = [
+  "كشف تعبئة السولار لشركة رائد أبو القاطم شهر 8/2026",
+  "التاريخ\tاسم السائق\tرقم المركبة\tالكمية (لتر)\tرقم الوصل\tملاحظات",
+  "01/08/2026\tخليل الهذالين\t10774\t200\t19099\t",
+  "01/08/2026\tمصطفى أبو عواد\t0248\t150\t19100\t",
+  "\t350\t",
+  "توقيع مسؤول تعبئة السولار"
+].join("\n");
+const parsedWord = parseWordRegister(wordSample);
+assert(parsedWord.source_name === "شركة رائد أبو القاطم", "Word source detection is incorrect");
+assert(parsedWord.month === "2026-08", "Word month detection is incorrect");
+assert(parsedWord.entries.length === 2, "Word daily totals or signatures were imported as entries");
+assert(parsedWord.entries[1].vehicle_number === "0248", "Word vehicle leading zero was not preserved");
+console.log("External diesel regression checks passed: source and period filters, Excel and Word preview/import, daily and monthly totals, protected edits, official print header and footer.");

@@ -1,6 +1,56 @@
 const path = require("path");
+const WordExtractor = require("word-extractor");
 
-module.exports = function installExternalDiesel(app, { db, requireAuth, requireRole, audit, writeAutomaticBackup }) {
+const wordExtractor = new WordExtractor();
+
+function normalizeDigits(value) {
+  return String(value ?? "")
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
+}
+
+function parseWordDate(value) {
+  const text = normalizeDigits(value).trim().replace(/[.\\-]/g, "/");
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(text);
+  if (!match) return "";
+  const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+  const month = String(Number(match[2])).padStart(2, "0");
+  const day = String(Number(match[1])).padStart(2, "0");
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (date.getUTCFullYear() !== Number(year) || date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return "";
+  return `${year}-${month}-${day}`;
+}
+
+function parseWordRegister(text) {
+  const normalizedText = normalizeDigits(text).replace(/\r/g, "");
+  const title = normalizedText.match(/كشف\s+تعبئة\s+السولار\s+لشركة\s+(.+?)\s+شهر\s*(\d{1,2})\s*\/\s*(\d{4})/);
+  const sourceName = title ? `شركة ${String(title[1]).replace(/\s+/g, " ").trim()}` : "";
+  const detectedMonth = title ? `${title[3]}-${String(Number(title[2])).padStart(2, "0")}` : "";
+  const entries = [];
+  const seen = new Set();
+
+  normalizedText.split("\n").forEach((line, index) => {
+    const cells = line.split("\t").map((cell) => cell.trim());
+    const entryDate = parseWordDate(cells[0]);
+    if (!entryDate) return;
+    const quantity = Number(String(cells[3] || "").replace(/,/g, ""));
+    const entry = {
+      entry_date: entryDate,
+      driver_name: String(cells[1] || "").slice(0, 120),
+      vehicle_number: String(cells[2] || "").slice(0, 40),
+      quantity_liters: Number.isFinite(quantity) ? Number(quantity.toFixed(2)) : 0,
+      receipt_number: String(cells[4] || "").slice(0, 50),
+      notes: cells.slice(5).filter(Boolean).join(" ").slice(0, 500),
+      row_number: index + 1
+    };
+    const key = [entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number].join("|");
+    if (!seen.has(key)) { seen.add(key); entries.push(entry); }
+  });
+
+  return { source_name: sourceName, month: detectedMonth, entries: entries.slice(0, 1000) };
+}
+
+function installExternalDiesel(app, { db, requireAuth, requireRole, audit, writeAutomaticBackup }) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS external_diesel_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,6 +205,29 @@ module.exports = function installExternalDiesel(app, { db, requireAuth, requireR
     }
   });
 
+  app.post("/api/external-diesel/parse-word", requireRole("admin", "editor"), async (req, res) => {
+    try {
+      const filename = cleanText(req.body?.filename, 180);
+      const extension = path.extname(filename).toLowerCase();
+      if (![".doc", ".docx"].includes(extension)) return res.status(400).json({ ok: false, message: "اختر ملف Word بصيغة DOC أو DOCX" });
+      const encoded = String(req.body?.data_base64 || "").replace(/^data:[^,]+,/, "");
+      if (!encoded || !/^[A-Za-z0-9+/=\s]+$/.test(encoded)) return res.status(400).json({ ok: false, message: "ملف Word غير صالح" });
+      const buffer = Buffer.from(encoded, "base64");
+      if (!buffer.length || buffer.length > 8 * 1024 * 1024) return res.status(413).json({ ok: false, message: "حجم ملف Word يجب ألا يتجاوز 8 ميجابايت" });
+      const isDoc = buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+      const isDocx = buffer.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      if ((extension === ".doc" && !isDoc) || (extension === ".docx" && !isDocx)) return res.status(400).json({ ok: false, message: "امتداد ملف Word لا يطابق محتواه" });
+      const document = await wordExtractor.extract(buffer);
+      const body = String(document.getBody() || "");
+      if (!body.trim() || body.length > 1_000_000) return res.status(400).json({ ok: false, message: "تعذر قراءة محتوى كشف Word" });
+      const parsed = parseWordRegister(body);
+      if (!parsed.entries.length) return res.status(400).json({ ok: false, message: "لم أجد صفوف تعبئة صالحة في كشف Word" });
+      res.json({ ok: true, ...parsed, rows_count: parsed.entries.length });
+    } catch (error) {
+      res.status(400).json({ ok: false, message: "تعذر قراءة كشف Word. تأكد أن الملف غير محمي وأنه بصيغة DOC أو DOCX", error: error.message });
+    }
+  });
+
   app.put("/api/external-diesel/:id", requireRole("admin", "editor"), (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -188,4 +261,7 @@ module.exports = function installExternalDiesel(app, { db, requireAuth, requireR
       res.status(500).json({ ok: false, message: "فشل حذف سجل السولار الخارجي", error: error.message });
     }
   });
-};
+}
+
+module.exports = installExternalDiesel;
+module.exports.parseWordRegister = parseWordRegister;

@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+const AdmZip = require('adm-zip');
 const pkg = require('../package.json');
 
 const port = 5100;
@@ -53,6 +54,20 @@ function reportPayload(overrides={}){
     ...overrides
   };
 }
+function wordPreviewPayload(){
+  const zip=new AdmZip();
+  zip.addFile('[Content_Types].xml',Buffer.from(`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`));
+  const lines=[
+    'كشف تعبئة السولار لشركة اختبار Word شهر 8/2099',
+    'التاريخ\tاسم السائق\tرقم المركبة\tالكمية (لتر)\tرقم الوصل\tملاحظات',
+    '01/08/2099\tسائق تجريبي\t0248\t200\tW-1\t',
+    '\t200\t',
+    'توقيع مسؤول تعبئة السولار'
+  ];
+  const paragraphs=lines.map(line=>`<w:p><w:r>${line.split('\t').map((part,index)=>`${index?'<w:tab/>':''}<w:t xml:space="preserve">${part}</w:t>`).join('')}</w:r></w:p>`).join('');
+  zip.addFile('word/document.xml',Buffer.from(`<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs}</w:body></w:document>`));
+  return {filename:'runtime-word-register.docx',data_base64:zip.toBuffer().toString('base64')};
+}
 
 (async () => {
   const child = spawn(process.execPath, ['scripts/start-server.js'], {
@@ -97,6 +112,11 @@ function reportPayload(overrides={}){
 
     x=await json('/api/external-diesel?source=Runtime%20Supplier&month=2099-08',auth(viewerCookie));
     expectStatus(x,200,'viewer could not read external diesel');
+    x=await json('/api/external-diesel/parse-word',auth(viewerCookie,'POST',wordPreviewPayload()));
+    expectStatus(x,403,'viewer was allowed to parse an external diesel Word register');
+    x=await json('/api/external-diesel/parse-word',auth(editorCookie,'POST',wordPreviewPayload()));
+    expectStatus(x,200,'editor could not preview an external diesel Word register');
+    if(x.data?.source_name!=='شركة اختبار Word'||x.data?.month!=='2099-08'||Number(x.data?.rows_count)!==1||x.data?.entries?.[0]?.vehicle_number!=='0248') throw new Error('external diesel Word preview parsing is incorrect');
     x=await json('/api/external-diesel',auth(viewerCookie,'POST',{source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Viewer Driver',vehicle_number:'0001',quantity_liters:100,receipt_number:'R-0'}));
     expectStatus(x,403,'viewer was allowed to create external diesel');
     x=await json('/api/external-diesel',auth(editorCookie,'POST',{source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Driver One',vehicle_number:'0248',quantity_liters:200,receipt_number:'R-1',notes:'runtime external diesel'}));

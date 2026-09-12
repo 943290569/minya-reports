@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { entries: [], summary: {}, sources: [], editingId: null, preview: [], canEdit: false, isAdmin: false };
+  const state = { entries: [], summary: {}, sources: [], editingId: null, preview: [], previewFormat: "", canEdit: false, isAdmin: false };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const clean = (value) => String(value ?? "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").trim();
   const formatNumber = (value) => Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -196,19 +196,54 @@
       }).filter((item) => Object.values(item.entry).some((value) => value !== "" && value !== 0));
     });
   }
+  function bufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let index = 0; index < bytes.length; index += 32768) binary += String.fromCharCode(...bytes.subarray(index, index + 32768));
+    return btoa(binary);
+  }
+  async function parseWordDocument(file) {
+    if (file.size > 8 * 1024 * 1024) throw new Error("حجم ملف Word يجب ألا يتجاوز 8 ميجابايت");
+    const data = await api("/api/external-diesel/parse-word", {
+      method: "POST",
+      body: JSON.stringify({ filename: file.name, data_base64: bufferToBase64(await file.arrayBuffer()) })
+    });
+    if (data.source_name) { $("edFilterSource").value = data.source_name; $("edSource").value = data.source_name; }
+    if (data.month) $("edReportMonth").value = data.month;
+    syncPeriod();
+    const source = selectedSource();
+    const month = selectedMonth();
+    if (!source || !month) throw new Error("تعذر تحديد المصدر أو الشهر من كشف Word. حددهما ثم أعد المعاينة");
+    return (data.entries || []).map((row, index) => {
+      const entry = { ...row, source_name: source };
+      const errors = [];
+      if (!entry.entry_date) errors.push("تاريخ غير صالح"); else if (!entry.entry_date.startsWith(month)) errors.push("خارج الشهر المحدد");
+      if (!entry.driver_name) errors.push("اسم السائق مفقود");
+      if (!entry.vehicle_number) errors.push("رقم المركبة مفقود");
+      if (!(Number(entry.quantity_liters) > 0)) errors.push("الكمية غير صالحة");
+      return { entry, rowNumber: row.row_number || index + 1, errors };
+    });
+  }
   function renderPreview() {
     $("edPreviewWrap").classList.remove("hidden");
     $("edPreviewBody").innerHTML = state.preview.slice(0, 60).map((item) => `<tr><td>${esc(formatDate(item.entry.entry_date))}</td><td>${esc(item.entry.driver_name)}</td><td>${esc(item.entry.vehicle_number)}</td><td>${formatNumber(item.entry.quantity_liters)}</td><td>${esc(item.entry.receipt_number || "-")}</td><td class="${item.errors.length ? "ed-preview-error" : "ed-preview-ok"}">${item.errors.length ? esc(item.errors.join("، ")) : "جاهز"}</td></tr>`).join("");
     const valid = state.preview.filter((item) => !item.errors.length).length;
     const invalid = state.preview.length - valid;
     $("edImportBtn").classList.toggle("hidden", valid === 0);
-    message("edImportMessage", `جاهز للحفظ ${valid} صف · يحتاج مراجعة ${invalid} صف`, invalid ? "error" : "success");
+    message("edImportMessage", `${state.previewFormat ? `${state.previewFormat} · ` : ""}جاهز للحفظ ${valid} صف · يحتاج مراجعة ${invalid} صف`, invalid ? "error" : "success");
   }
-  async function previewExcel() {
+  async function previewImportFile() {
     const file = $("edExcelFile").files[0];
-    if (!file) { message("edImportMessage", "اختر ملف Excel أولاً", "error"); return; }
-    message("edImportMessage", "جاري قراءة الملف");
-    try { state.preview = await parseWorkbook(file); renderPreview(); }
+    if (!file) { message("edImportMessage", "اختر كشف Excel أو Word أولاً", "error"); return; }
+    const extension = file.name.toLowerCase().split(".").pop();
+    if (!["xls", "xlsx", "doc", "docx"].includes(extension)) { message("edImportMessage", "الصيغ المقبولة هي DOC وDOCX وXLS وXLSX", "error"); return; }
+    const isWord = extension === "doc" || extension === "docx";
+    message("edImportMessage", `جاري قراءة كشف ${isWord ? "Word" : "Excel"}`);
+    try {
+      state.previewFormat = isWord ? "كشف Word" : "كشف Excel";
+      state.preview = isWord ? await parseWordDocument(file) : await parseWorkbook(file);
+      renderPreview();
+    }
     catch (error) { message("edImportMessage", error.message, "error"); }
   }
   async function importPreview() {
@@ -279,7 +314,7 @@
   $("edLoadBtn").addEventListener("click", loadEntries); $("edFilterSource").addEventListener("change", loadEntries); $("edReportMonth").addEventListener("change", loadEntries);
   $("edSaveBtn").addEventListener("click", saveEntry); $("edCancelEditBtn").addEventListener("click", resetForm);
   $("edExcelFile").addEventListener("change", (event) => { $("edFileName").textContent = event.target.files[0]?.name || "لم يتم اختيار ملف"; });
-  $("edPreviewBtn").addEventListener("click", previewExcel); $("edImportBtn").addEventListener("click", importPreview);
+  $("edPreviewBtn").addEventListener("click", previewImportFile); $("edImportBtn").addEventListener("click", importPreview);
   $("edTemplateBtn").addEventListener("click", () => writeWorkbook(false)); $("edExportBtn").addEventListener("click", () => writeWorkbook(true)); $("edPrintBtn").addEventListener("click", printReport);
   init();
 })();
