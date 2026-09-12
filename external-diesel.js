@@ -95,7 +95,7 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       notes: cleanText(input.notes, 500)
     };
     const errors = [];
-    if (!entry.source_name) errors.push("المصدر الخارجي مطلوب");
+    if (!entry.source_name) errors.push("الشركة المستفيدة مطلوبة");
     if (!validDate(entry.entry_date)) errors.push("تاريخ التعبئة غير صالح");
     if (!entry.driver_name) errors.push("اسم السائق مطلوب");
     if (!entry.vehicle_number) errors.push("رقم المركبة مطلوب");
@@ -158,7 +158,7 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     try {
       const { entry, errors } = normalizeEntry(req.body);
       if (errors.length) return res.status(400).json({ ok: false, message: errors[0], errors });
-      if (duplicateReceipt(entry)) return res.status(409).json({ ok: false, message: "رقم الوصل مسجل مسبقاً لهذا المصدر" });
+      if (duplicateReceipt(entry)) return res.status(409).json({ ok: false, message: "رقم الوصل مسجل مسبقاً لهذه الشركة" });
       const result = db.prepare(`
         INSERT INTO external_diesel_entries (source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_by)
         VALUES (?,?,?,?,?,?,?,?)
@@ -235,7 +235,7 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       if (!current) return res.status(404).json({ ok: false, message: "سجل السولار غير موجود" });
       const { entry, errors } = normalizeEntry(req.body);
       if (errors.length) return res.status(400).json({ ok: false, message: errors[0], errors });
-      if (duplicateReceipt(entry, id)) return res.status(409).json({ ok: false, message: "رقم الوصل مسجل مسبقاً لهذا المصدر" });
+      if (duplicateReceipt(entry, id)) return res.status(409).json({ ok: false, message: "رقم الوصل مسجل مسبقاً لهذه الشركة" });
       db.prepare(`
         UPDATE external_diesel_entries SET source_name=?,entry_date=?,driver_name=?,vehicle_number=?,quantity_liters=?,receipt_number=?,notes=?,updated_at=CURRENT_TIMESTAMP
         WHERE id=?

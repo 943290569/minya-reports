@@ -11,19 +11,19 @@
 </head>
 <body data-page="external-diesel">
   <header class="top-header">
-    <div><h1>نظام إدارة مكب المنيا</h1><p>كشوف السولار المعبأ من المصادر الخارجية</p></div>
+    <div><h1>نظام إدارة مكب المنيا</h1><p>كشوف السولار الذي عبّأه طاقم المكب للشركات الخارجية</p></div>
     <nav><a class="app-nav-link" href="/">الرئيسية</a><a class="app-nav-link active" href="/external-diesel">السولار الخارجي</a></nav>
   </header>
 
   <main class="container external-diesel-page">
     <section class="panel ed-hero">
-      <div><small>السولار الخارجي</small><h2>إدارة كشوف التعبئة الشهرية</h2><p>حدد المصدر والشهر والسنة لعرض الكشف أو إضافة السجلات واستيراد كشف إكسل أو وورد.</p></div>
+      <div><small>السولار الخارجي</small><h2>إدارة كشوف التعبئة للشركات</h2><p>حدد الشركة المستفيدة والشهر والسنة لعرض الكشف أو إضافة السجلات واستيراد كشف إكسل أو وورد.</p></div>
       <div class="ed-period-badge" id="edPeriodBadge">الشهر الحالي</div>
     </section>
 
     <section class="panel ed-filter-panel">
       <div class="ed-filter-grid">
-        <label>المصدر الخارجي<input id="edFilterSource" list="edSources" placeholder="مثال شركة رائد أبو القاطم" autocomplete="off"></label>
+        <label>الشركة المستفيدة<input id="edFilterSource" list="edSources" placeholder="مثال شركة رائد أبو القاطم" autocomplete="off"></label>
         <label>الشهر والسنة<input id="edReportMonth" type="month"></label>
         <div class="ed-filter-actions">
           <button id="edLoadBtn" type="button" class="v3-primary">عرض الكشف</button>
@@ -42,9 +42,9 @@
     </section>
 
     <section class="panel" id="edEntryPanel">
-      <div class="ed-section-head"><div><h2 id="edFormTitle">إضافة تعبئة سولار</h2><p>أدخل بيانات الوصل كما تظهر في كشف المصدر.</p></div><button id="edCancelEditBtn" type="button" class="hidden">إلغاء التعديل</button></div>
+      <div class="ed-section-head"><div><h2 id="edFormTitle">إضافة تعبئة سولار للشركة</h2><p>أدخل بيانات التعبئة كما تظهر في كشف الشركة.</p></div><button id="edCancelEditBtn" type="button" class="hidden">إلغاء التعديل</button></div>
       <div class="ed-entry-grid">
-        <label>المصدر الخارجي<input id="edSource" list="edSources" placeholder="اسم الشركة أو المورد"></label>
+        <label>الشركة المستفيدة<input id="edSource" list="edSources" placeholder="اسم الشركة"></label>
         <label>التاريخ<input id="edDate" type="date"></label>
         <label>اسم السائق<input id="edDriver" placeholder="الاسم الكامل"></label>
         <label>رقم المركبة<input id="edVehicle" inputmode="numeric" placeholder="مثال 0248"></label>
@@ -88,6 +88,6 @@
   <script src="js/app-header-menu.js?v=external-diesel-v1"></script>
   <script src="js/app-appearance-settings.js?v=external-diesel-v1"></script>
   <script src="js/app-date-display.js?v=external-diesel-v1"></script>
-  <script src="js/app-external-diesel.js?v=external-diesel-word-v3"></script>
+  <script src="js/app-external-diesel.js?v=external-diesel-word-v5"></script>
 </body>
 </html>

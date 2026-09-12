@@ -3,6 +3,7 @@
   const state = { entries: [], summary: {}, sources: [], editingId: null, preview: [], previewFormat: "", canEdit: false, isAdmin: false };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const clean = (value) => String(value ?? "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").trim();
+  const companyName = (value) => clean(value).replace(/^شركة\s+/i, "");
   const formatNumber = (value) => Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
   const formatDate = (value) => { const parts = String(value || "").split("-"); return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value || "-"); };
   const monthLabel = (value) => { const [year, month] = String(value || "").split("-"); return month && year ? `شهر ${Number(month)}/${year}` : "الفترة غير محددة"; };
@@ -24,8 +25,8 @@
     const source = selectedSource();
     const month = selectedMonth();
     $("edPeriodBadge").textContent = monthLabel(month);
-    $("edListTitle").textContent = source ? `كشف تعبئة السولار من ${source}` : "كشف السولار الخارجي";
-    $("edListSubtitle").textContent = `${monthLabel(month)}${source ? ` · المصدر ${source}` : " · حدد المصدر الخارجي"}`;
+    $("edListTitle").textContent = source ? `كشف تعبئة السولار لشركة ${companyName(source)}` : "كشف السولار المعبأ للشركات";
+    $("edListSubtitle").textContent = `${monthLabel(month)}${source ? ` · الشركة ${source}` : " · حدد الشركة المستفيدة"}`;
     if (!state.editingId && source) $("edSource").value = source;
     if (!state.editingId && month && !String($("edDate").value || "").startsWith(month)) $("edDate").value = `${month}-01`;
   }
@@ -99,7 +100,7 @@
   }
   function resetForm() {
     state.editingId = null;
-    $("edFormTitle").textContent = "إضافة تعبئة سولار";
+    $("edFormTitle").textContent = "إضافة تعبئة سولار للشركة";
     $("edSaveBtn").textContent = "حفظ التعبئة";
     $("edCancelEditBtn").classList.add("hidden");
     ["edDriver", "edVehicle", "edQuantity", "edReceipt", "edNotes"].forEach((id) => { $(id).value = ""; });
@@ -179,7 +180,7 @@
       });
       const source = selectedSource();
       const month = selectedMonth();
-      if (!source || !month) throw new Error("حدد المصدر الخارجي والشهر قبل معاينة الملف");
+      if (!source || !month) throw new Error("حدد الشركة المستفيدة والشهر قبل معاينة الملف");
       return selected.rows.slice(selected.headerIndex + 1).map((row, index) => {
         const entry = {
           source_name: source, entry_date: columns.entry_date >= 0 ? parseDate(row[columns.entry_date]) : "",
@@ -259,10 +260,10 @@
     } catch (error) { message("edImportMessage", error.message, "error"); }
   }
   function workbookRows(includeData) {
-    const source = selectedSource() || "اسم المصدر الخارجي";
+    const source = selectedSource() || "اسم الشركة المستفيدة";
     const month = selectedMonth() || currentMonth();
     const [year, monthNumber] = month.split("-");
-    const rows = [[`كشف تعبئة السولار لشركة ${source} شهر ${Number(monthNumber)}/${year}`], [], ["التاريخ", "اسم السائق", "رقم المركبة", "الكمية (لتر)", "رقم الوصل", "ملاحظات"]];
+    const rows = [[`كشف تعبئة السولار لشركة ${companyName(source)} شهر ${Number(monthNumber)}/${year}`], [], ["التاريخ", "اسم السائق", "رقم المركبة", "الكمية (لتر)", "رقم الوصل", "ملاحظات"]];
     if (includeData) state.entries.forEach((entry) => rows.push([formatDate(entry.entry_date), entry.driver_name, entry.vehicle_number, Number(entry.quantity_liters), entry.receipt_number, entry.notes]));
     return rows;
   }
@@ -292,13 +293,13 @@
   }
   function printReport() {
     const source = selectedSource(); const month = selectedMonth();
-    if (!source || !month) { message("edFilterMessage", "حدد المصدر الخارجي والشهر والسنة قبل الطباعة", "error"); return; }
+    if (!source || !month) { message("edFilterMessage", "حدد الشركة المستفيدة والشهر والسنة قبل الطباعة", "error"); return; }
     if (!state.entries.length) { message("edFilterMessage", "لا توجد بيانات لطباعتها", "error"); return; }
     const [year, monthNumber] = month.split("-");
     const popup = window.open("", "_blank");
     if (!popup) { message("edFilterMessage", "المتصفح منع نافذة الطباعة", "error"); return; }
     popup.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف السولار ${esc(source)} ${month}</title><style>
-      @page{size:A4 portrait;margin:34mm 8mm 25mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Tahoma,sans-serif;direction:rtl}.official-header{position:fixed;top:-34mm;right:-8mm;width:210mm;height:30mm}.official-header img{width:210mm;height:30mm;object-fit:fill}.official-footer{position:fixed;bottom:-25mm;right:-8mm;width:210mm;height:22mm}.official-footer img{width:210mm;height:22mm;object-fit:fill}.title{text-align:center;border-top:1px solid #444;border-bottom:1px solid #444;padding:2.2mm 1mm;margin:0 0 2mm}.title h1{font-size:17px;margin:0}.title p{font-size:12px;font-weight:700;margin:1mm 0 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm;margin-bottom:2mm}.summary div{border:1px solid #777;text-align:center;padding:1.5mm}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{border:1px solid #555;padding:1.35mm .9mm;text-align:center;vertical-align:middle;font-size:10.5px;line-height:1.25;overflow-wrap:anywhere}th{background:#e9efec;font-weight:800}.day-group{break-inside:avoid}.day-total td{background:#f0f5f2;font-weight:800}.grand-total td{background:#173f31;color:#fff;font-weight:800}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30mm;margin-top:10mm;text-align:center;font-size:12px;font-weight:800;break-inside:avoid}.signatures div{padding-top:10mm;border-top:1px solid #555}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div class="official-header"><img src="/assets/header.png"></div><div class="official-footer"><img src="/assets/footer.png"></div><main><section class="title"><h1>كشف تعبئة السولار لشركة ${esc(source)} شهر ${Number(monthNumber)}/${year}</h1><p>سولار معبأ من مصدر خارجي</p></section><section class="summary"><div><span>المصدر الخارجي</span><strong>${esc(source)}</strong></div><div><span>الفترة</span><strong>${Number(monthNumber)}/${year}</strong></div><div><span>عدد التعبئات</span><strong>${formatNumber(state.summary.entries_count)}</strong></div><div><span>إجمالي السولار</span><strong>${formatNumber(state.summary.total_liters)} لتر</strong></div></section><table><colgroup><col style="width:14%"><col style="width:22%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:22%"></colgroup><thead><tr><th>التاريخ</th><th>اسم السائق</th><th>رقم المركبة</th><th>الكمية (لتر)</th><th>رقم الوصل</th><th>ملاحظات</th></tr></thead>${printRows()}<tfoot><tr class="grand-total"><td colspan="3">المجموع الشهري</td><td>${formatNumber(state.summary.total_liters)}</td><td colspan="2">${formatNumber(state.summary.entries_count)} تعبئة</td></tr></tfoot></table><section class="signatures"><div>توقيع مسؤول تعبئة السولار</div><div>توقيع قسم المكب</div></section></main><script>window.onload=()=>Promise.all(Array.from(document.images).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve}))).then(()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);
+      @page{size:A4 portrait;margin:34mm 8mm 25mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Tahoma,sans-serif;direction:rtl}.official-header{position:fixed;top:-34mm;right:-8mm;width:210mm;height:30mm}.official-header img{width:210mm;height:30mm;object-fit:fill}.official-footer{position:fixed;bottom:-25mm;right:-8mm;width:210mm;height:22mm}.official-footer img{width:210mm;height:22mm;object-fit:fill}.title{text-align:center;border-top:1px solid #444;border-bottom:1px solid #444;padding:2.2mm 1mm;margin:0 0 2mm}.title h1{font-size:17px;margin:0}.title p{font-size:12px;font-weight:700;margin:1mm 0 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm;margin-bottom:2mm}.summary div{border:1px solid #777;text-align:center;padding:1.5mm}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}th,td{border:1px solid #555;padding:1.35mm .9mm;text-align:center;vertical-align:middle;font-size:10.5px;line-height:1.25;overflow-wrap:anywhere}th{background:#e9efec;font-weight:800}.day-group{break-inside:avoid}.day-total td{background:#f0f5f2;font-weight:800}.grand-total td{background:#173f31;color:#fff;font-weight:800}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30mm;margin-top:10mm;text-align:center;font-size:12px;font-weight:800;break-inside:avoid}.signatures div{padding-top:10mm;border-top:1px solid #555}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div class="official-header"><img src="/assets/header.png"></div><div class="official-footer"><img src="/assets/footer.png"></div><main><section class="title"><h1>كشف تعبئة السولار لشركة ${esc(companyName(source))} شهر ${Number(monthNumber)}/${year}</h1><p>تمت تعبئة السولار للشركة بواسطة طاقم المكب بسبب نقص السولار لديها</p></section><section class="summary"><div><span>الشركة المستفيدة</span><strong>${esc(source)}</strong></div><div><span>الفترة</span><strong>${Number(monthNumber)}/${year}</strong></div><div><span>عدد التعبئات</span><strong>${formatNumber(state.summary.entries_count)}</strong></div><div><span>إجمالي السولار</span><strong>${formatNumber(state.summary.total_liters)} لتر</strong></div></section><table><colgroup><col style="width:14%"><col style="width:22%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:22%"></colgroup><thead><tr><th>التاريخ</th><th>اسم السائق</th><th>رقم المركبة</th><th>الكمية (لتر)</th><th>رقم الوصل</th><th>ملاحظات</th></tr></thead>${printRows()}<tfoot><tr class="grand-total"><td colspan="3">المجموع الشهري</td><td>${formatNumber(state.summary.total_liters)}</td><td colspan="2">${formatNumber(state.summary.entries_count)} تعبئة</td></tr></tfoot></table><section class="signatures"><div>توقيع مسؤول تعبئة السولار</div><div>توقيع قسم المكب</div></section></main><script>window.onload=()=>Promise.all(Array.from(document.images).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve}))).then(()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);
     popup.document.close();
   }
   async function init() {
