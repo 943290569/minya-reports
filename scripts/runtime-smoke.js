@@ -134,6 +134,9 @@ function wordPreviewPayload(){
     x=await json('/api/external-diesel?source=Runtime%20Supplier&month=2099-08',auth(viewerCookie));
     expectStatus(x,200,'external diesel filtered listing failed');
     if(Number(x.data?.summary?.entries_count)!==2||Number(x.data?.summary?.days_count)!==2||Number(x.data?.summary?.total_liters)!==350) throw new Error('external diesel summary is incorrect');
+    x=await json('/api/external-diesel/suggestions',auth(viewerCookie));
+    expectStatus(x,200,'viewer could not read external diesel suggestions');
+    if(!x.data?.pairs?.some((pair)=>pair.source_name==='Runtime Supplier'&&pair.driver_name==='Driver One'&&pair.vehicle_number==='0248')) throw new Error('external diesel driver and vehicle suggestions are incorrect');
     x=await json(`/api/external-diesel/${externalDieselId}`,auth(editorCookie,'PUT',{source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Driver One',vehicle_number:'0248',quantity_liters:220,receipt_number:'R-1'}));
     expectStatus(x,200,'editor could not update external diesel');
     x=await json(`/api/external-diesel/${externalDieselId}`,auth(editorCookie,'DELETE'));

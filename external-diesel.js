@@ -67,6 +67,8 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     );
     CREATE INDEX IF NOT EXISTS idx_external_diesel_source_date ON external_diesel_entries(source_name, entry_date);
     CREATE INDEX IF NOT EXISTS idx_external_diesel_date ON external_diesel_entries(entry_date);
+    CREATE INDEX IF NOT EXISTS idx_external_diesel_driver_date ON external_diesel_entries(driver_name, entry_date);
+    CREATE INDEX IF NOT EXISTS idx_external_diesel_vehicle_date ON external_diesel_entries(vehicle_number, entry_date);
   `);
 
   const cleanText = (value, maximum) => String(value ?? "").trim().slice(0, maximum);
@@ -122,6 +124,23 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       ORDER BY MAX(entry_date) DESC, source_name
     `).all();
     res.json({ ok: true, sources });
+  });
+
+  app.get("/api/external-diesel/suggestions", requireAuth, (req, res) => {
+    try {
+      const pairs = db.prepare(`
+        SELECT source_name, driver_name, vehicle_number, COUNT(*) AS usage_count,
+               MAX(entry_date) AS latest_date, MAX(id) AS latest_id
+        FROM external_diesel_entries
+        WHERE TRIM(driver_name)<>'' AND TRIM(vehicle_number)<>''
+        GROUP BY source_name, driver_name, vehicle_number
+        ORDER BY latest_date DESC, latest_id DESC, usage_count DESC
+        LIMIT 1000
+      `).all();
+      res.json({ ok: true, pairs });
+    } catch (error) {
+      res.status(500).json({ ok: false, message: "تعذر تحميل اقتراحات السائقين والمركبات", error: error.message });
+    }
   });
 
   app.get("/api/external-diesel", requireAuth, (req, res) => {

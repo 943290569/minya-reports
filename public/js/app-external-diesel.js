@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { entries: [], summary: {}, sources: [], editingId: null, preview: [], previewFormat: "", canEdit: false, isAdmin: false };
+  const state = { entries: [], summary: {}, sources: [], associations: [], editingId: null, preview: [], previewFormat: "", canEdit: false, isAdmin: false };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const clean = (value) => String(value ?? "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").trim();
   const companyName = (value) => clean(value).replace(/^شركة\s+/i, "");
@@ -29,9 +29,136 @@
     $("edListSubtitle").textContent = `${monthLabel(month)}${source ? ` · الشركة ${source}` : " · حدد الشركة"}`;
     if (!state.editingId && source) $("edSource").value = source;
     if (!state.editingId && month && !String($("edDate").value || "").startsWith(month)) $("edDate").value = `${month}-01`;
+    if ($("edQuickCompany")) $("edQuickCompany").textContent = source || "حدد الشركة";
+    if ($("edQuickMonth")) $("edQuickMonth").textContent = monthLabel(month);
+    if (state.associations.length) renderSuggestions();
   }
   function renderSources() {
     $("edSources").innerHTML = state.sources.map((item) => `<option value="${esc(item.source_name)}">${formatNumber(item.total_liters)} لتر</option>`).join("");
+  }
+  const lookupKey = (value) => clean(value).toLowerCase().replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/\s+/g, " ");
+  function rankedAssociations() {
+    const sourceKey = lookupKey(selectedSource());
+    return [...state.associations].sort((left, right) => Number(lookupKey(right.source_name) === sourceKey) - Number(lookupKey(left.source_name) === sourceKey));
+  }
+  function renderSuggestions() {
+    const drivers = new Map();
+    const vehicles = new Map();
+    rankedAssociations().forEach((pair) => {
+      if (!drivers.has(pair.driver_name)) drivers.set(pair.driver_name, pair.vehicle_number);
+      if (!vehicles.has(pair.vehicle_number)) vehicles.set(pair.vehicle_number, pair.driver_name);
+    });
+    $("edDrivers").innerHTML = [...drivers].map(([driver, vehicle]) => `<option value="${esc(driver)}">آخر مركبة ${esc(vehicle)}</option>`).join("");
+    $("edVehicles").innerHTML = [...vehicles].map(([vehicle, driver]) => `<option value="${esc(vehicle)}">آخر سائق ${esc(driver)}</option>`).join("");
+  }
+  async function loadSuggestions() {
+    const data = await api("/api/external-diesel/suggestions");
+    state.associations = data.pairs || [];
+    renderSuggestions();
+  }
+  function pairForDriver(value) {
+    const key = lookupKey(value);
+    return key ? rankedAssociations().find((pair) => lookupKey(pair.driver_name) === key) : null;
+  }
+  function pairForVehicle(value) {
+    const key = lookupKey(value);
+    return key ? rankedAssociations().find((pair) => lookupKey(pair.vehicle_number) === key) : null;
+  }
+  function applyDriverSuggestion(driverInput, vehicleInput) {
+    const pair = pairForDriver(driverInput.value);
+    if (pair && (!clean(vehicleInput.value) || vehicleInput.dataset.suggested === "true")) {
+      vehicleInput.value = pair.vehicle_number;
+      vehicleInput.dataset.suggested = "true";
+    }
+  }
+  function applyVehicleSuggestion(vehicleInput, driverInput) {
+    const pair = pairForVehicle(vehicleInput.value);
+    if (pair && (!clean(driverInput.value) || driverInput.dataset.suggested === "true")) {
+      driverInput.value = pair.driver_name;
+      driverInput.dataset.suggested = "true";
+    }
+  }
+  function incrementReceipt(value) {
+    const text = clean(value);
+    if (!/^\d+$/.test(text)) return "";
+    try { return String(BigInt(text) + 1n).padStart(text.length, "0"); }
+    catch (_) { return ""; }
+  }
+  function lastQuickDefaults() {
+    const rows = [...$("edQuickBody").querySelectorAll("tr")];
+    const previous = rows[rows.length - 1];
+    if (previous) return {
+      entry_date: previous.querySelector('[data-field="entry_date"]').value,
+      receipt_number: incrementReceipt(previous.querySelector('[data-field="receipt_number"]').value)
+    };
+    const previousEntry = state.entries[state.entries.length - 1];
+    const month = selectedMonth();
+    return {
+      entry_date: previousEntry?.entry_date?.startsWith(month) ? previousEntry.entry_date : (month ? `${month}-01` : ""),
+      receipt_number: incrementReceipt(previousEntry?.receipt_number || "")
+    };
+  }
+  function updateQuickTotal() {
+    const rows = [...$("edQuickBody").querySelectorAll("tr")];
+    const active = rows.filter((row) => ["driver_name", "vehicle_number", "quantity_liters", "receipt_number", "notes"].some((field) => clean(row.querySelector(`[data-field="${field}"]`).value)));
+    const liters = active.reduce((sum, row) => sum + Number(row.querySelector('[data-field="quantity_liters"]').value || 0), 0);
+    $("edQuickRowsCount").textContent = formatNumber(active.length);
+    $("edQuickLiters").textContent = formatNumber(liters);
+  }
+  function bindQuickRow(row) {
+    const fields = [...row.querySelectorAll("input[data-field]")];
+    const driver = row.querySelector('[data-field="driver_name"]');
+    const vehicle = row.querySelector('[data-field="vehicle_number"]');
+    driver.addEventListener("input", () => { driver.dataset.suggested = ""; applyDriverSuggestion(driver, vehicle); updateQuickTotal(); });
+    vehicle.addEventListener("input", () => { vehicle.dataset.suggested = ""; applyVehicleSuggestion(vehicle, driver); updateQuickTotal(); });
+    fields.forEach((input, index) => {
+      input.addEventListener("input", updateQuickTotal);
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        if (fields[index + 1]) fields[index + 1].focus();
+        else { const next = addQuickRow(); next.querySelector('[data-field="driver_name"]').focus(); }
+      });
+    });
+    row.querySelector("[data-remove-row]").addEventListener("click", () => {
+      row.remove();
+      if (!$("edQuickBody").children.length) addQuickRow();
+      updateQuickTotal();
+    });
+  }
+  function addQuickRow(values = {}) {
+    const defaults = lastQuickDefaults();
+    const row = document.createElement("tr");
+    row.innerHTML = `<td><input data-field="entry_date" type="date" value="${esc(values.entry_date || defaults.entry_date)}"></td><td><input data-field="driver_name" list="edDrivers" autocomplete="off" placeholder="اكتب أول حرف" value="${esc(values.driver_name || "")}"></td><td><input data-field="vehicle_number" list="edVehicles" autocomplete="off" inputmode="numeric" placeholder="اكتب أول رقم" value="${esc(values.vehicle_number || "")}"></td><td><input data-field="quantity_liters" type="number" min="0.01" max="50000" step="0.01" value="${esc(values.quantity_liters || "")}"></td><td><input data-field="receipt_number" inputmode="numeric" value="${esc(values.receipt_number || defaults.receipt_number)}"></td><td><input data-field="notes" value="${esc(values.notes || "")}"></td><td><button type="button" class="ed-quick-remove" data-remove-row>حذف</button></td>`;
+    $("edQuickBody").appendChild(row);
+    bindQuickRow(row);
+    updateQuickTotal();
+    return row;
+  }
+  function quickRowPayload(row) {
+    const get = (field) => row.querySelector(`[data-field="${field}"]`).value;
+    return { source_name: selectedSource(), entry_date: get("entry_date"), driver_name: clean(get("driver_name")), vehicle_number: clean(get("vehicle_number")), quantity_liters: Number(get("quantity_liters")), receipt_number: clean(get("receipt_number")), notes: clean(get("notes")) };
+  }
+  async function saveQuickRows() {
+    const source = selectedSource();
+    const month = selectedMonth();
+    if (!source || !month) { message("edQuickMessage", "حدد الشركة والشهر والسنة أولاً", "error"); return; }
+    const rows = [...$("edQuickBody").querySelectorAll("tr")];
+    const entries = rows.map(quickRowPayload).filter((entry) => entry.driver_name || entry.vehicle_number || entry.quantity_liters > 0 || entry.receipt_number || entry.notes);
+    if (!entries.length) { message("edQuickMessage", "أدخل تعبئة واحدة على الأقل", "error"); return; }
+    const invalidIndex = entries.findIndex((entry) => !entry.entry_date || !entry.entry_date.startsWith(month) || !entry.driver_name || !entry.vehicle_number || !(entry.quantity_liters > 0));
+    if (invalidIndex >= 0) { message("edQuickMessage", `أكمل بيانات الصف ${invalidIndex + 1} وتأكد أن تاريخه ضمن الشهر المحدد`, "error"); return; }
+    $("edQuickSaveBtn").disabled = true;
+    message("edQuickMessage", `جاري حفظ ${entries.length} صف`);
+    try {
+      const data = await api("/api/external-diesel/import", { method: "POST", body: JSON.stringify({ entries }) });
+      const lastEntry = entries[entries.length - 1];
+      $("edQuickBody").innerHTML = "";
+      await Promise.all([loadSources(), loadEntries(), loadSuggestions()]);
+      addQuickRow({ entry_date: lastEntry.entry_date, receipt_number: incrementReceipt(lastEntry.receipt_number) });
+      message("edQuickMessage", `تم حفظ ${data.created} صف${data.skipped ? ` · تم تجاوز ${data.skipped} وصل مكرر` : ""}`, data.created ? "success" : "error");
+    } catch (error) { message("edQuickMessage", error.message, "error"); }
+    finally { $("edQuickSaveBtn").disabled = false; }
   }
   function renderSummary() {
     $("edTotalLiters").textContent = formatNumber(state.summary.total_liters);
@@ -100,9 +227,9 @@
   }
   function resetForm() {
     state.editingId = null;
-    $("edFormTitle").textContent = "إضافة تعبئة سولار للشركة";
-    $("edSaveBtn").textContent = "حفظ التعبئة";
-    $("edCancelEditBtn").classList.add("hidden");
+    $("edFormTitle").textContent = "تعديل تعبئة السولار";
+    $("edSaveBtn").textContent = "حفظ التعديل";
+    $("edEntryPanel").classList.add("hidden");
     ["edDriver", "edVehicle", "edQuantity", "edReceipt", "edNotes"].forEach((id) => { $(id).value = ""; });
     $("edSource").value = selectedSource();
     $("edDate").value = `${selectedMonth()}-01`;
@@ -114,7 +241,7 @@
     state.editingId = entry.id;
     $("edFormTitle").textContent = "تعديل تعبئة السولار";
     $("edSaveBtn").textContent = "حفظ التعديل";
-    $("edCancelEditBtn").classList.remove("hidden");
+    $("edEntryPanel").classList.remove("hidden");
     $("edSource").value = entry.source_name; $("edDate").value = entry.entry_date; $("edDriver").value = entry.driver_name;
     $("edVehicle").value = entry.vehicle_number; $("edQuantity").value = entry.quantity_liters; $("edReceipt").value = entry.receipt_number || ""; $("edNotes").value = entry.notes || "";
     $("edEntryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -122,7 +249,7 @@
   async function saveEntry() {
     const payload = formPayload();
     if (!payload.source_name || !payload.entry_date || !payload.driver_name || !payload.vehicle_number || !(payload.quantity_liters > 0)) {
-      message("edFormMessage", "أكمل المصدر والتاريخ والسائق والمركبة والكمية", "error"); return;
+      message("edFormMessage", "أكمل الشركة والتاريخ والسائق والمركبة والكمية", "error"); return;
     }
     message("edFormMessage", "جاري الحفظ");
     try {
@@ -130,14 +257,14 @@
       $("edFilterSource").value = payload.source_name;
       $("edReportMonth").value = payload.entry_date.slice(0, 7);
       resetForm();
-      await Promise.all([loadSources(), loadEntries()]);
+      await Promise.all([loadSources(), loadEntries(), loadSuggestions()]);
       message("edFormMessage", "تم حفظ السجل", "success");
     } catch (error) { message("edFormMessage", error.message, "error"); }
   }
   async function deleteEntry(id) {
     const entry = state.entries.find((item) => Number(item.id) === Number(id));
     if (!entry || !confirm(`حذف وصل رقم ${entry.receipt_number || "بدون رقم"}؟`)) return;
-    try { await api(`/api/external-diesel/${id}`, { method: "DELETE" }); await Promise.all([loadSources(), loadEntries()]); }
+    try { await api(`/api/external-diesel/${id}`, { method: "DELETE" }); await Promise.all([loadSources(), loadEntries(), loadSuggestions()]); }
     catch (error) { message("edFilterMessage", error.message, "error"); }
   }
   const normalizedHeader = (value) => clean(value).toLowerCase().replace(/[أإآ]/g, "ا").replace(/[ة]/g, "ه").replace(/[^\u0600-\u06ffa-z0-9]/g, "");
@@ -255,7 +382,7 @@
     try {
       const data = await api("/api/external-diesel/import", { method: "POST", body: JSON.stringify({ entries }) });
       state.preview = []; $("edPreviewWrap").classList.add("hidden"); $("edImportBtn").classList.add("hidden"); $("edExcelFile").value = ""; $("edFileName").textContent = "لم يتم اختيار ملف";
-      await Promise.all([loadSources(), loadEntries()]);
+      await Promise.all([loadSources(), loadEntries(), loadSuggestions()]);
       message("edImportMessage", `تم حفظ ${data.created} سجل · تم تجاوز ${data.skipped} وصل مكرر`, "success");
     } catch (error) { message("edImportMessage", error.message, "error"); }
   }
@@ -330,14 +457,19 @@
     try {
       const auth = await api("/api/auth/status");
       state.canEdit = ["admin", "editor"].includes(auth.user?.role); state.isAdmin = auth.user?.role === "admin";
-      if (!state.canEdit) { $("edEntryPanel").classList.add("hidden"); $("edImportPanel").classList.add("hidden"); }
-      await loadSources();
+      if (!state.canEdit) { $("edQuickPanel").classList.add("hidden"); $("edEntryPanel").classList.add("hidden"); $("edImportPanel").classList.add("hidden"); }
+      await Promise.all([loadSources(), loadSuggestions()]);
       if (!selectedSource() && state.sources[0]) { $("edFilterSource").value = state.sources[0].source_name; $("edSource").value = state.sources[0].source_name; }
       await loadEntries();
+      if (state.canEdit && !$("edQuickBody").children.length) addQuickRow();
     } catch (error) { message("edFilterMessage", error.message, "error"); }
   }
   $("edLoadBtn").addEventListener("click", loadEntries); $("edFilterSource").addEventListener("change", loadEntries); $("edReportMonth").addEventListener("change", loadEntries);
   $("edSaveBtn").addEventListener("click", saveEntry); $("edCancelEditBtn").addEventListener("click", resetForm);
+  $("edQuickAddBtn").addEventListener("click", () => { const row = addQuickRow(); row.querySelector('[data-field="driver_name"]').focus(); });
+  $("edQuickSaveBtn").addEventListener("click", saveQuickRows);
+  $("edDriver").addEventListener("input", () => { $("edDriver").dataset.suggested = ""; applyDriverSuggestion($("edDriver"), $("edVehicle")); });
+  $("edVehicle").addEventListener("input", () => { $("edVehicle").dataset.suggested = ""; applyVehicleSuggestion($("edVehicle"), $("edDriver")); });
   $("edExcelFile").addEventListener("change", (event) => { $("edFileName").textContent = event.target.files[0]?.name || "لم يتم اختيار ملف"; });
   $("edPreviewBtn").addEventListener("click", previewImportFile); $("edImportBtn").addEventListener("click", importPreview);
   $("edTemplateBtn").addEventListener("click", () => writeWorkbook(false)); $("edExportBtn").addEventListener("click", () => writeWorkbook(true)); $("edPrintBtn").addEventListener("click", printReport);

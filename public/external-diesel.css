@@ -16,6 +16,28 @@
 .ed-entry-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .ed-entry-grid .ed-wide{grid-column:span 3}
 .ed-actions{margin-top:14px}
+.ed-quick-panel{border-color:#cfe2d8}
+.ed-quick-context{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ed-quick-context span{padding:8px 11px;border:1px solid #d8e6df;border-radius:9px;background:#f5faf7;color:#61736c;font-size:12px;font-weight:700}
+.ed-quick-context strong{display:block;margin-top:3px;color:#173f31;font-size:14px}
+.ed-quick-wrap{border:1px solid #d8e5df;border-radius:11px}
+.ed-quick-table{min-width:980px;margin:0}
+.ed-quick-table th{white-space:nowrap}
+.ed-quick-table td{padding:6px}
+.ed-quick-table input{width:100%;min-width:0;padding:9px 8px;border:1px solid #cfdcd5;border-radius:7px;background:#fff;color:#17382d;font:inherit}
+.ed-quick-table input:focus{outline:3px solid rgba(23,107,79,.14);border-color:#176b4f}
+.ed-quick-table [data-field="entry_date"]{min-width:138px}
+.ed-quick-table [data-field="driver_name"]{min-width:170px}
+.ed-quick-table [data-field="vehicle_number"]{min-width:115px}
+.ed-quick-table [data-field="quantity_liters"]{min-width:105px}
+.ed-quick-table [data-field="receipt_number"]{min-width:110px}
+.ed-quick-table [data-field="notes"]{min-width:150px}
+.ed-quick-remove{padding:7px 10px;min-height:36px;background:#fff1f1;color:#a51d1d;border-color:#efc8c8}
+.ed-quick-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.ed-quick-footer .ed-actions{margin-top:0}
+.ed-quick-total{display:flex;gap:8px;flex-wrap:wrap}
+.ed-quick-total span{padding:8px 12px;border-radius:9px;background:#eef6f2;color:#315d4c;font-weight:700}
+.ed-quick-total strong{color:#173f31}
 .ed-message{min-height:20px;margin:10px 0 0;color:#315d4c;font-weight:700}
 .ed-message.error{color:#b42318}
 .ed-message.success{color:#087443}
@@ -36,5 +58,5 @@
 .ed-row-actions .ed-delete{background:#fff1f1;color:#a51d1d;border-color:#efc8c8}
 .hidden{display:none!important}
 @media(max-width:900px){.ed-filter-grid{grid-template-columns:1fr 1fr}.ed-filter-actions{grid-column:span 2}.ed-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-entry-grid .ed-wide{grid-column:span 2}.ed-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.external-diesel-page{width:calc(100% - 14px)!important}.ed-hero,.ed-section-head{align-items:stretch;flex-direction:column}.ed-period-badge{min-width:0}.ed-filter-grid,.ed-entry-grid{grid-template-columns:1fr}.ed-filter-actions,.ed-entry-grid .ed-wide{grid-column:auto}.ed-kpis{gap:8px}.ed-kpis>div{padding:13px}.ed-import-row>*{width:100%}.ed-file-picker{min-width:0}.ed-action-column{min-width:120px}}
+@media(max-width:600px){.external-diesel-page{width:calc(100% - 14px)!important}.ed-hero,.ed-section-head{align-items:stretch;flex-direction:column}.ed-period-badge{min-width:0}.ed-filter-grid,.ed-entry-grid{grid-template-columns:1fr}.ed-filter-actions,.ed-entry-grid .ed-wide{grid-column:auto}.ed-kpis{gap:8px}.ed-kpis>div{padding:13px}.ed-import-row>*{width:100%}.ed-file-picker{min-width:0}.ed-action-column{min-width:120px}.ed-quick-context{justify-content:stretch}.ed-quick-context span{flex:1}.ed-quick-footer{align-items:stretch;flex-direction:column}.ed-quick-footer .ed-actions,.ed-quick-footer .ed-actions button{width:100%}.ed-quick-total{justify-content:space-between}.ed-quick-total span{flex:1;text-align:center}}
 @media print{body{display:none!important}}
