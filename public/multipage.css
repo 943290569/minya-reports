@@ -357,7 +357,7 @@ body[data-page="annual"] #annualSummarySection {
 }
 
 /* =========================================================
-   Annual summary table — larger and clearer on mobile
+   Annual summary tables — compact and scannable
 ========================================================= */
 
 #annualSummarySection > div[style*="overflow-x:auto"] {
@@ -375,14 +375,14 @@ body[data-page="annual"] #annualSummarySection {
 
 #annualSummarySection table th,
 #annualSummarySection table td {
-  padding: 16px 14px !important;
-  font-size: 15px !important;
-  line-height: 1.5;
+  padding: 9px 12px !important;
+  font-size: 14px !important;
+  line-height: 1.35;
   white-space: nowrap;
 }
 
 #annualSummarySection table th {
-  font-size: 15px !important;
+  font-size: 14px !important;
   font-weight: 900 !important;
 }
 
@@ -467,13 +467,13 @@ body[data-page="annual"] #annualSummarySection {
   }
 
   #annualSummarySection table {
-    min-width: 980px !important;
+    min-width: 900px !important;
   }
 
   #annualSummarySection table th,
   #annualSummarySection table td {
-    padding: 17px 15px !important;
-    font-size: 16px !important;
+    padding: 9px 10px !important;
+    font-size: 13px !important;
   }
 }
 
@@ -520,12 +520,12 @@ body[data-page="annual"] #annualSummarySection {
   }
 
   #annualSummarySection table {
-    min-width: 1020px !important;
+    min-width: 860px !important;
   }
 
   #annualSummarySection table th,
   #annualSummarySection table td {
-    padding: 18px 16px !important;
-    font-size: 16px !important;
+    padding: 8px 9px !important;
+    font-size: 13px !important;
   }
 }

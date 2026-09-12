@@ -107,7 +107,7 @@ assert(!monthlyExport.includes('diesel_liters'), 'Monthly CSV must not recalcula
 
 const appLoader = read('public/app.js');
 assert(appLoader.includes('js/app-monthly-chart-stable10.js'), 'Stored-total monthly chart override must be loaded');
-assert(appLoader.includes('3.5.0-20260912-dashboard-trend-v2'), 'Main asset version must force the dashboard trend update');
+assert(appLoader.includes('3.5.0-20260912-linked-tables-v2'), 'Main asset version must force the linked-table density update');
 const monthlyChart = read('public/js/app-monthly-chart-stable10.js');
 assert(monthlyChart.includes('Number(report.total_trucks || 0)'), 'Monthly trucks chart must use stored total_trucks values');
 assert(monthlyChart.includes('Number(report.total_diesel || 0)'), 'Monthly diesel chart must use stored total_diesel values');
@@ -154,5 +154,10 @@ assert(postGuard.includes('تم التحقق بعد الحفظ'), 'Post-import v
 const replaceBackup = read('public/js/app-drive-pre-replace-backup.js');
 assert(replaceBackup.includes('/api/backup/download'), 'Pre-replace backup must use the authenticated full-backup endpoint');
 assert(replaceBackup.includes('تم إيقاف الاستبدال ولم يتم تغيير أي تقرير'), 'Replacement must stop when backup creation fails');
+
+const linkedSummaryCss = read('public/period-linked-summary.css');
+assert(linkedSummaryCss.includes('.linked-summary-block + .linked-summary-block'), 'Linked summary tables must have visible section separation');
+assert(linkedSummaryCss.includes('padding: 8px 10px !important;'), 'Linked summary rows must remain compact on desktop');
+assert(linkedSummaryCss.includes('min-width: 680px !important;'), 'Linked summary tables must use the reduced mobile width');
 
 console.log('Stable 10 regression checks passed: port 6000, Jerusalem time, exact daily + matched weekly + elapsed monthly/annual/dashboard/print comparisons, completed-month annual indicators, recorded-day annual averages/high-low day export, stored truck/diesel export/chart/print totals, protected print layout, safe dashboard rendering, stable home layout, Drive guards, equipment route and Web Push.');
