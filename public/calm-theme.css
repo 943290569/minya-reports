@@ -246,8 +246,8 @@ button,
 .executive-year-grid { margin-top: 10px !important; }
 .executive-trend-panel { margin-top: 11px !important; padding: 13px !important; }
 .executive-trend-head { margin-bottom: 9px !important; }
-.executive-trend-bars { height: 112px !important; gap: 6px !important; }
-.executive-trend-column { height: 88px !important; border-radius: 7px !important; }
+.executive-trend-bars { height: 204px !important; gap: 12px !important; }
+.executive-trend-column { height: 130px !important; border-radius: 10px !important; }
 
 .monthly-chart-bar { background: linear-gradient(180deg, #5d947b, #347258) !important; box-shadow: none !important; }
 .message:not(:empty) { background: #eef5f2 !important; border-color: #d8e6df !important; color: #355747 !important; box-shadow: none !important; }
@@ -335,7 +335,7 @@ body[data-page="report"] #saveBtn {
   .executive-dashboard { padding: 14px !important; }
   .executive-year-grid { grid-template-columns: 1fr !important; }
   .executive-comparison-grid { grid-template-columns: 1fr 1fr !important; }
-  .executive-trend-bars { height: 100px !important; }
+  .executive-trend-bars { height: 194px !important; }
   body[data-page="report"] .panel { padding: 14px !important; }
   body[data-page="report"] table input,
   body[data-page="report"] table select { min-height: 38px !important; }

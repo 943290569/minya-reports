@@ -106,8 +106,9 @@
 
 .executive-trend-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 16px;
   margin-bottom: 14px;
 }
 
@@ -120,45 +121,98 @@
   color: #7b8794;
 }
 
+.executive-trend-head p {
+  margin: 4px 0 0;
+  color: #667382;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .executive-trend-bars {
-  height: 150px;
+  height: 204px;
   display: grid;
-  grid-template-columns: repeat(12,minmax(18px,1fr));
-  gap: 8px;
-  align-items: end;
+  gap: 12px;
+  align-items: stretch;
 }
 
 .executive-trend-item {
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-rows: 28px 130px 38px;
+  justify-items: center;
   align-items: center;
+  min-width: 0;
 }
 
 .executive-trend-column {
-  width: 100%;
-  height: 120px;
+  width: min(100%, 118px);
+  height: 130px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  border-radius: 8px;
-  background: #eef3f6;
+  border-radius: 10px;
+  background: linear-gradient(180deg,#f4f7f8,#eaf0f2);
+  box-shadow: inset 0 -1px 0 #d9e2e6;
   overflow: hidden;
 }
 
 .executive-trend-column span {
-  width: 72%;
-  min-height: 3px;
+  width: 76%;
+  min-height: 10px;
   display: block;
-  border-radius: 6px 6px 0 0;
+  border-radius: 8px 8px 0 0;
   background: linear-gradient(180deg,#3b9c79,#176b4f);
 }
 
-.executive-trend-item small {
+.executive-trend-value {
+  color: #1f3c32;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.executive-trend-value small {
+  color: #76848e;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.executive-trend-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   margin-top: 5px;
+  text-align: center;
+}
+
+.executive-trend-label strong {
+  color: #34424d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.executive-trend-label small {
   color: #8b96a5;
   font-size: 10px;
+  white-space: nowrap;
+}
+
+.executive-trend-item.is-current .executive-trend-column {
+  outline: 2px dashed #8db8a6;
+  outline-offset: 2px;
+}
+
+.executive-trend-empty {
+  min-width: 0 !important;
+  height: auto;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b8794;
+  font-size: 13px;
+  text-align: center;
 }
 
 .executive-error::after {
@@ -182,5 +236,5 @@
   .executive-card strong,
   .executive-highlight strong { font-size: 19px; }
   .executive-trend-panel { overflow-x: auto; }
-  .executive-trend-bars { min-width: 620px; }
+  .executive-trend-bars { height: 194px; }
 }

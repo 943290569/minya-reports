@@ -98,7 +98,10 @@
 
       <div class="executive-trend-panel">
         <div class="executive-trend-head">
-          <strong>اتجاه النفايات خلال السنة</strong>
+          <div>
+            <strong>اتجاه النفايات خلال السنة</strong>
+            <p id="execTrendSummary">-</p>
+          </div>
           <small id="execTrendYear">-</small>
         </div>
         <div id="execYearTrend" class="executive-trend-bars"></div>
@@ -206,15 +209,36 @@
 
       const trend = document.getElementById("execYearTrend");
       const trendYear = document.getElementById("execTrendYear");
-      if (trendYear) trendYear.textContent = `${year} · الشهر الحالي جزئي حتى اليوم ${elapsedDay}`;
+      const trendSummary = document.getElementById("execTrendSummary");
+      const recordedMonths = months.filter((item) => item.days > 0);
+      const yearTotal = recordedMonths.reduce((total, item) => total + item.waste, 0);
+      const currentRecorded = recordedMonths.find((item) => item.isCurrent);
+      if (trendYear) trendYear.textContent = year;
+      if (trendSummary) {
+        const currentNote = currentRecorded ? ` · ${monthLabel(currentRecorded.monthValue)} جزئي حتى اليوم ${elapsedDay}` : "";
+        trendSummary.textContent = `عدد الأشهر المسجلة ${recordedMonths.length} · الإجمالي ${fmt(yearTotal)} طن${currentNote}`;
+      }
       if (trend) {
-        const max = Math.max(...months.map((item) => item.waste), 1);
-        trend.innerHTML = months.map((item, index) => {
-          const height = item.waste ? Math.max(8, Math.round((item.waste / max) * 100)) : 3;
+        if (!recordedMonths.length) {
+          trend.classList.add("executive-trend-empty");
+          trend.removeAttribute("style");
+          trend.innerHTML = "لا توجد بيانات شهرية مسجلة لهذه السنة.";
+          return;
+        }
+        trend.classList.remove("executive-trend-empty");
+        const max = Math.max(...recordedMonths.map((item) => item.waste), 1);
+        trend.style.gridTemplateColumns = `repeat(${recordedMonths.length}, minmax(104px, 1fr))`;
+        trend.style.minWidth = `${Math.max(0, recordedMonths.length * 112)}px`;
+        trend.innerHTML = recordedMonths.map((item) => {
+          const height = Math.max(10, Math.round((item.waste / max) * 100));
           const partial = item.isCurrent ? ` · جزئي حتى اليوم ${elapsedDay}` : "";
-          return `<div class="executive-trend-item" title="${monthLabel(item.monthValue)} — ${fmt(item.waste)} طن${partial}">
+          return `<div class="executive-trend-item${item.isCurrent ? " is-current" : ""}" title="${monthLabel(item.monthValue)} — ${fmt(item.waste)} طن${partial}">
+            <strong class="executive-trend-value">${fmt(item.waste)} <small>طن</small></strong>
             <div class="executive-trend-column"><span style="height:${height}%"></span></div>
-            <small>${index + 1}${item.isCurrent ? "*" : ""}</small>
+            <div class="executive-trend-label">
+              <strong>${monthLabel(item.monthValue).replace(` ${year}`, "")}${item.isCurrent ? "*" : ""}</strong>
+              <small>${fmt(item.days)} يوم مسجل</small>
+            </div>
           </div>`;
         }).join("");
       }

@@ -62,8 +62,11 @@ assert(executiveDashboard.includes('Number(date.slice(8, 10)) <= elapsedDay'), '
 assert(executiveDashboard.includes('days: currentReports.length'), 'Executive operating days must equal the number of recorded reports');
 assert(executiveDashboard.includes('item.monthNumber < currentPeriod.monthNumber'), 'Executive annual best/low/average indicators must use completed months only');
 assert(executiveDashboard.includes('متوسط النفايات للشهور المكتملة'), 'Executive annual average label must disclose completed-month basis');
-assert(executiveDashboard.includes('الشهر الحالي جزئي حتى اليوم ${elapsedDay}'), 'Executive annual trend must disclose that the current month is partial');
+assert(executiveDashboard.includes('${monthLabel(currentRecorded.monthValue)} جزئي حتى اليوم ${elapsedDay}'), 'Executive annual trend must disclose the recorded current month as partial');
 assert(executiveDashboard.includes('item.isCurrent ? "*" : ""'), 'Executive annual trend must visually mark the current partial month');
+assert(executiveDashboard.includes('const recordedMonths = months.filter((item) => item.days > 0);'), 'Executive annual trend must omit months without reports');
+assert(executiveDashboard.includes('class="executive-trend-value"'), 'Executive annual trend must display each monthly waste value');
+assert(executiveDashboard.includes('${fmt(item.days)} يوم مسجل'), 'Executive annual trend must display recorded-day count for every month');
 
 const annualComparison = read('public/js/app-annual-comparison.js');
 assert(annualComparison.includes('timeZone: "Asia/Jerusalem"'), 'Annual comparison must resolve the current date in Asia/Jerusalem');
@@ -104,7 +107,7 @@ assert(!monthlyExport.includes('diesel_liters'), 'Monthly CSV must not recalcula
 
 const appLoader = read('public/app.js');
 assert(appLoader.includes('js/app-monthly-chart-stable10.js'), 'Stored-total monthly chart override must be loaded');
-assert(appLoader.includes('3.5.0-20260911-typography-v2'), 'Main asset version must force the typography update');
+assert(appLoader.includes('3.5.0-20260912-dashboard-trend-v2'), 'Main asset version must force the dashboard trend update');
 const monthlyChart = read('public/js/app-monthly-chart-stable10.js');
 assert(monthlyChart.includes('Number(report.total_trucks || 0)'), 'Monthly trucks chart must use stored total_trucks values');
 assert(monthlyChart.includes('Number(report.total_diesel || 0)'), 'Monthly diesel chart must use stored total_diesel values');
