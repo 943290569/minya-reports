@@ -34,6 +34,8 @@ assert(client.includes('class="print-page"'), "print report does not use explici
 assert(client.includes("paginatedPrintRows"), "print report does not paginate rows");
 assert(client.includes("firstPageUnits = 30, nextPageUnits = 34"), "print pagination is not compacted");
 assert(client.includes('const summary = index === 0 ?'), "print summary is not limited to the first page");
+assert(client.includes('class="page-number">(${index + 1})'), "print page number is not shown at the bottom in parentheses");
+assert(!client.includes("صفحة ${index + 1} من ${pages.length}"), "print page number is still shown in the report title");
 assert(!client.includes(".official-header{position:fixed"), "print header still uses unstable fixed positioning");
 assert(page.includes("السولار الذي عبّأه طاقم المكب للشركات الخارجية"), "external diesel page does not identify the landfill team as the filling party");
 assert(page.includes("الشركة"), "company label is missing");
