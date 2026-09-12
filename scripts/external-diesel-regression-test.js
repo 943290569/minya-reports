@@ -34,7 +34,9 @@ assert(client.includes('class="print-page"'), "print report does not use explici
 assert(client.includes("paginatedPrintRows"), "print report does not paginate rows");
 assert(!client.includes(".official-header{position:fixed"), "print header still uses unstable fixed positioning");
 assert(page.includes("السولار الذي عبّأه طاقم المكب للشركات الخارجية"), "external diesel page does not identify the landfill team as the filling party");
-assert(page.includes("الشركة المستفيدة"), "beneficiary company label is missing");
+assert(page.includes("الشركة"), "company label is missing");
+assert(!page.includes("المستفيدة"), "obsolete beneficiary wording is still visible");
+assert(!client.includes("المستفيدة"), "obsolete beneficiary wording is still used in client messages or print");
 assert(client.includes("تمت تعبئة السولار للشركة بواسطة طاقم المكب"), "print report does not identify who filled the diesel");
 assert(!client.includes("بسبب نقص السولار لديها"), "print report still displays the diesel-shortage reason");
 assert(client.includes("توقيع مسؤول تعبئة السولار"), "fuel officer signature is missing from print");

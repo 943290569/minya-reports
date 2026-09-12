@@ -95,7 +95,7 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       notes: cleanText(input.notes, 500)
     };
     const errors = [];
-    if (!entry.source_name) errors.push("الشركة المستفيدة مطلوبة");
+    if (!entry.source_name) errors.push("الشركة مطلوبة");
     if (!validDate(entry.entry_date)) errors.push("تاريخ التعبئة غير صالح");
     if (!entry.driver_name) errors.push("اسم السائق مطلوب");
     if (!entry.vehicle_number) errors.push("رقم المركبة مطلوب");
