@@ -11,19 +11,13 @@ function formatAnnualChange(current, previous) {
   return `${percent > 0 ? "زيادة" : "انخفاض"} ${formatNumber(Math.abs(percent))}%`;
 }
 
-function annualJerusalemToday() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jerusalem",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function annualPeriodCutoff(year) {
-  const today = annualJerusalemToday();
-  const currentYear = Number(today.slice(0, 4));
-  return Number(year) === currentYear ? today.slice(5) : null;
+function annualPeriodCutoff(reports, year) {
+  const prefix = `${year}-`;
+  const dates = (Array.isArray(reports) ? reports : [])
+    .map((report) => String(report.report_date || ""))
+    .filter((date) => date.startsWith(prefix) && /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort();
+  return dates.length ? dates.at(-1).slice(5) : null;
 }
 
 function filterAnnualPeriod(reports, year, cutoff = null) {
@@ -62,8 +56,10 @@ async function getAnnualReportsForYear(year) {
   }
 }
 
-async function calculateAnnualTotals(year, cutoff = null) {
-  const allReports = await getAnnualReportsForYear(year);
+async function calculateAnnualTotals(year, cutoff = null, providedReports = null) {
+  const allReports = Array.isArray(providedReports)
+    ? providedReports
+    : await getAnnualReportsForYear(year);
   const reports = filterAnnualPeriod(allReports, year, cutoff);
   if (!reports.length) return null;
 
@@ -120,15 +116,16 @@ async function renderAnnualComparison() {
   }
 
   const previousYear = year - 1;
-  const cutoff = annualPeriodCutoff(year);
-  const periodLabel = cutoff ? ` حتى ${cutoff.slice(3, 5)}/${cutoff.slice(0, 2)}` : "";
+  const currentReports = await getAnnualReportsForYear(String(year));
+  const cutoff = annualPeriodCutoff(currentReports, String(year));
+  const periodLabel = cutoff ? ` حتى ${cutoff.slice(3, 5)}/${cutoff.slice(0, 2)} في السنتين` : "";
   title.textContent = `مقارنة مع السنة السابقة - ${previousYear}${periodLabel}`;
   grid.style.display = "none";
   empty.style.display = "block";
   empty.textContent = "جاري تحميل المقارنة...";
 
   const [current, previous] = await Promise.all([
-    calculateAnnualTotals(String(year), cutoff),
+    calculateAnnualTotals(String(year), cutoff, currentReports),
     calculateAnnualTotals(String(previousYear), cutoff),
   ]);
 
@@ -141,9 +138,9 @@ async function renderAnnualComparison() {
 
   const cardStyle = "background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:12px 8px;text-align:center;";
   grid.innerHTML = `
-    <div style="${cardStyle}"><span style="display:block;color:#6b7280;">النفايات</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.waste, previous.waste)}</strong><small style="display:block;color:#6b7280;">${formatNumber(previous.waste)} ← ${formatNumber(current.waste)} طن</small></div>
-    <div style="${cardStyle}"><span style="display:block;color:#6b7280;">الشاحنات</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.trucks, previous.trucks)}</strong><small style="display:block;color:#6b7280;">${formatNumber(previous.trucks)} ← ${formatNumber(current.trucks)}</small></div>
-    <div style="${cardStyle}"><span style="display:block;color:#6b7280;">السولار</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.diesel, previous.diesel)}</strong><small style="display:block;color:#6b7280;">${formatNumber(previous.diesel)} ← ${formatNumber(current.diesel)} لتر</small></div>
+    <div style="${cardStyle}"><span style="display:block;color:#6b7280;">النفايات</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.waste, previous.waste)}</strong><small style="display:block;color:#6b7280;">${year}: ${formatNumber(current.waste)} طن · ${previousYear}: ${formatNumber(previous.waste)} طن</small></div>
+    <div style="${cardStyle}"><span style="display:block;color:#6b7280;">الشاحنات</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.trucks, previous.trucks)}</strong><small style="display:block;color:#6b7280;">${year}: ${formatNumber(current.trucks)} · ${previousYear}: ${formatNumber(previous.trucks)}</small></div>
+    <div style="${cardStyle}"><span style="display:block;color:#6b7280;">السولار</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.diesel, previous.diesel)}</strong><small style="display:block;color:#6b7280;">${year}: ${formatNumber(current.diesel)} لتر · ${previousYear}: ${formatNumber(previous.diesel)} لتر</small></div>
   `;
 
   empty.style.display = "none";

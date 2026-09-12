@@ -69,10 +69,11 @@ assert(executiveDashboard.includes('class="executive-trend-value"'), 'Executive 
 assert(executiveDashboard.includes('${fmt(item.days)} يوم مسجل'), 'Executive annual trend must display recorded-day count for every month');
 
 const annualComparison = read('public/js/app-annual-comparison.js');
-assert(annualComparison.includes('timeZone: "Asia/Jerusalem"'), 'Annual comparison must resolve the current date in Asia/Jerusalem');
-assert(annualComparison.includes('return Number(year) === currentYear ? today.slice(5) : null;'), 'Annual comparison must limit only the current year to the elapsed period');
+assert(annualComparison.includes('function annualPeriodCutoff(reports, year)'), 'Annual comparison must derive its cutoff from the selected year data');
+assert(annualComparison.includes('dates.at(-1).slice(5)'), 'Annual comparison must use the latest recorded date as its cutoff');
 assert(annualComparison.includes('return !cutoff || date.slice(5) <= cutoff;'), 'Annual comparison must stop both compared years at the same month/day cutoff');
 assert(annualComparison.includes('calculateAnnualTotals(String(previousYear), cutoff)'), 'Annual previous-year totals must use the same elapsed-period cutoff');
+assert(annualComparison.includes('في السنتين'), 'Annual comparison title must disclose that both years use the same period');
 
 const annualInsights = read('public/js/app-annual-insights.js');
 assert(annualInsights.includes('timeZone: "Asia/Jerusalem"'), 'Annual report insights must resolve the current month in Asia/Jerusalem');
@@ -107,7 +108,7 @@ assert(!monthlyExport.includes('diesel_liters'), 'Monthly CSV must not recalcula
 
 const appLoader = read('public/app.js');
 assert(appLoader.includes('js/app-monthly-chart-stable10.js'), 'Stored-total monthly chart override must be loaded');
-assert(appLoader.includes('3.5.0-20260912-linked-tables-v2'), 'Main asset version must force the linked-table density update');
+assert(appLoader.includes('3.5.0-20260912-annual-comparison-v2'), 'Main asset version must force the annual comparison update');
 const monthlyChart = read('public/js/app-monthly-chart-stable10.js');
 assert(monthlyChart.includes('Number(report.total_trucks || 0)'), 'Monthly trucks chart must use stored total_trucks values');
 assert(monthlyChart.includes('Number(report.total_diesel || 0)'), 'Monthly diesel chart must use stored total_diesel values');
