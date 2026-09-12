@@ -344,11 +344,26 @@ function audit(user, action, entityType = "", entityId = "", details = "") {
 }
 
 pruneAuditLogs();
+const TYPOGRAPHY_PRESETS = {
+  compact: { siteFontSize: 13, navFontSize: 12, headingFontSize: 18, metricFontSize: 21, smallFontSize: 11, lineHeight: 1.45 },
+  balanced: { siteFontSize: 14, navFontSize: 13, headingFontSize: 20, metricFontSize: 24, smallFontSize: 12, lineHeight: 1.6 },
+  large: { siteFontSize: 16, navFontSize: 15, headingFontSize: 22, metricFontSize: 27, smallFontSize: 13, lineHeight: 1.7 },
+  accessible: { siteFontSize: 18, navFontSize: 17, headingFontSize: 25, metricFontSize: 31, smallFontSize: 15, lineHeight: 1.8 }
+};
 const APPEARANCE_DEFAULTS = {
   loadingSeconds: 3,
   remembranceFontSize: 72,
   remembranceFontRevision: 2,
-  siteFontSize: 16,
+  typographyRevision: 2,
+  typographyPreset: "balanced",
+  siteFontSize: 14,
+  navFontSize: 13,
+  headingFontSize: 20,
+  metricFontSize: 24,
+  smallFontSize: 12,
+  lineHeight: 1.6,
+  fontFamily: "system",
+  fontWeight: "medium",
   theme: "day",
   color: "green",
   fontSize: "normal",
@@ -363,16 +378,45 @@ function normalizeAppearanceSettings(input = {}) {
   if ([1,2,3,4,5].includes(loadingSeconds)) settings.loadingSeconds = loadingSeconds;
   const remembranceFontSize = Math.round(Number(input.remembranceFontSize));
   if (Number.isFinite(remembranceFontSize)) settings.remembranceFontSize = Math.min(72, Math.max(11, remembranceFontSize));
-  const siteFontSize = Math.round(Number(input.siteFontSize));
-  if (Number.isFinite(siteFontSize)) settings.siteFontSize = Math.min(30, Math.max(11, siteFontSize));
   const choices = {
     theme: ["day","night","auto"], color: ["green","blue"],
     fontSize: ["small","normal","large","xlarge"], navPosition: ["top","right","left"],
-    density: ["comfortable","compact"], contrast: ["normal","high"], motion: ["full","reduced"]
+    density: ["comfortable","compact"], contrast: ["normal","high"], motion: ["full","reduced"],
+    typographyPreset: ["compact","balanced","large","accessible","custom"],
+    fontFamily: ["system","tahoma","segoe"], fontWeight: ["regular","medium","bold"]
   };
   Object.entries(choices).forEach(([key, allowed]) => {
     if (allowed.includes(input[key])) settings[key] = input[key];
   });
+  const hasModernTypography = Number(input.typographyRevision) === 2;
+  settings.typographyRevision = 2;
+  if (!hasModernTypography) {
+    const legacySize = Number(input.siteFontSize);
+    settings.typographyPreset = legacySize >= 19 || input.fontSize === "xlarge"
+      ? "accessible"
+      : legacySize >= 17 || input.fontSize === "large"
+        ? "large"
+        : "balanced";
+  }
+  const numericTypography = {
+    siteFontSize: [13, 20, 0],
+    navFontSize: [12, 18, 0],
+    headingFontSize: [18, 28, 0],
+    metricFontSize: [20, 34, 0],
+    smallFontSize: [11, 16, 0],
+    lineHeight: [1.35, 1.9, 2]
+  };
+  if (hasModernTypography) {
+    Object.entries(numericTypography).forEach(([key, [minimum, maximum, decimals]]) => {
+      const value = Number(input[key]);
+      if (!Number.isFinite(value)) return;
+      const bounded = Math.min(maximum, Math.max(minimum, value));
+      settings[key] = decimals ? Number(bounded.toFixed(decimals)) : Math.round(bounded);
+    });
+  }
+  if (settings.typographyPreset !== "custom") {
+    Object.assign(settings, TYPOGRAPHY_PRESETS[settings.typographyPreset] || TYPOGRAPHY_PRESETS.balanced);
+  }
   return settings;
 }
 function getSharedAppearanceSettings() {

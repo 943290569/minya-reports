@@ -1,14 +1,29 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260908-stable10-summary3";
+const MINYA_ASSET_VERSION = "3.5.0-20260911-typography-v2";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
+const MINYA_TYPOGRAPHY_PRESETS = {
+  compact: { siteFontSize: 13, navFontSize: 12, headingFontSize: 18, metricFontSize: 21, smallFontSize: 11, lineHeight: 1.45 },
+  balanced: { siteFontSize: 14, navFontSize: 13, headingFontSize: 20, metricFontSize: 24, smallFontSize: 12, lineHeight: 1.6 },
+  large: { siteFontSize: 16, navFontSize: 15, headingFontSize: 22, metricFontSize: 27, smallFontSize: 13, lineHeight: 1.7 },
+  accessible: { siteFontSize: 18, navFontSize: 17, headingFontSize: 25, metricFontSize: 31, smallFontSize: 15, lineHeight: 1.8 },
+};
 
 function readMinyaAppearanceSettings() {
   const defaults = {
     loadingSeconds: 3,
     remembranceFontSize: 72,
     remembranceFontRevision: 2,
-    siteFontSize: 16,
+    typographyRevision: 2,
+    typographyPreset: "balanced",
+    siteFontSize: 14,
+    navFontSize: 13,
+    headingFontSize: 20,
+    metricFontSize: 24,
+    smallFontSize: 12,
+    lineHeight: 1.6,
+    fontFamily: "system",
+    fontWeight: "medium",
     theme: "day",
     color: "green",
     fontSize: "normal",
@@ -20,7 +35,8 @@ function readMinyaAppearanceSettings() {
 
   try {
     const saved = JSON.parse(localStorage.getItem(MINYA_APPEARANCE_STORAGE_KEY) || "{}");
-    const settings = { ...defaults, ...(saved && typeof saved === "object" ? saved : {}) };
+    const savedSettings = saved && typeof saved === "object" ? saved : {};
+    const settings = { ...defaults, ...savedSettings };
     if (Number(saved?.remembranceFontRevision) !== 2) settings.remembranceFontSize = 72;
     settings.remembranceFontRevision = 2;
     const loadingSeconds = Number(settings.loadingSeconds);
@@ -29,10 +45,32 @@ function readMinyaAppearanceSettings() {
     settings.remembranceFontSize = Number.isFinite(remembranceFontSize)
       ? Math.min(72, Math.max(11, remembranceFontSize))
       : 72;
-    const siteFontSize = Math.round(Number(settings.siteFontSize));
-    settings.siteFontSize = Number.isFinite(siteFontSize)
-      ? Math.min(30, Math.max(11, siteFontSize))
-      : 16;
+    const hasModernTypography = Number(savedSettings.typographyRevision) === 2;
+    settings.typographyRevision = 2;
+    settings.typographyPreset = ["compact", "balanced", "large", "accessible", "custom"].includes(settings.typographyPreset)
+      ? settings.typographyPreset
+      : "balanced";
+    if (!hasModernTypography) {
+      const legacySize = Number(savedSettings.siteFontSize);
+      settings.typographyPreset = legacySize >= 19 || savedSettings.fontSize === "xlarge"
+        ? "accessible"
+        : legacySize >= 17 || savedSettings.fontSize === "large"
+          ? "large"
+          : "balanced";
+    }
+    const ranges = {
+      siteFontSize: [13, 20, 0], navFontSize: [12, 18, 0], headingFontSize: [18, 28, 0],
+      metricFontSize: [20, 34, 0], smallFontSize: [11, 16, 0], lineHeight: [1.35, 1.9, 2],
+    };
+    if (hasModernTypography) Object.entries(ranges).forEach(([key, [minimum, maximum, decimals]]) => {
+      const value = Number(savedSettings[key]);
+      if (!Number.isFinite(value)) return;
+      const bounded = Math.min(maximum, Math.max(minimum, value));
+      settings[key] = decimals ? Number(bounded.toFixed(decimals)) : Math.round(bounded);
+    });
+    if (settings.typographyPreset !== "custom") Object.assign(settings, MINYA_TYPOGRAPHY_PRESETS[settings.typographyPreset]);
+    settings.fontFamily = ["system", "tahoma", "segoe"].includes(settings.fontFamily) ? settings.fontFamily : "system";
+    settings.fontWeight = ["regular", "medium", "bold"].includes(settings.fontWeight) ? settings.fontWeight : "medium";
     settings.color = ["green", "blue"].includes(settings.color) ? settings.color : "green";
     localStorage.setItem(MINYA_APPEARANCE_STORAGE_KEY, JSON.stringify(settings));
     return settings;
@@ -54,6 +92,10 @@ const MINYA_LOADING_MIN_MS = Math.min(
   ["theme", MINYA_RESOLVED_THEME],
   ["color", window.MINYA_APPEARANCE_SETTINGS.color],
   ["fontSize", window.MINYA_APPEARANCE_SETTINGS.fontSize],
+  ["typographyRevision", window.MINYA_APPEARANCE_SETTINGS.typographyRevision],
+  ["typographyPreset", window.MINYA_APPEARANCE_SETTINGS.typographyPreset],
+  ["fontFamily", window.MINYA_APPEARANCE_SETTINGS.fontFamily],
+  ["fontWeight", window.MINYA_APPEARANCE_SETTINGS.fontWeight],
   ["navPosition", window.MINYA_APPEARANCE_SETTINGS.navPosition],
   ["density", window.MINYA_APPEARANCE_SETTINGS.density],
   ["contrast", window.MINYA_APPEARANCE_SETTINGS.contrast],
@@ -65,6 +107,11 @@ document.documentElement.style.setProperty(
   "--appearance-font-size",
   `${window.MINYA_APPEARANCE_SETTINGS.siteFontSize}px`
 );
+document.documentElement.style.setProperty("--appearance-nav-font-size", `${window.MINYA_APPEARANCE_SETTINGS.navFontSize}px`);
+document.documentElement.style.setProperty("--appearance-heading-font-size", `${window.MINYA_APPEARANCE_SETTINGS.headingFontSize}px`);
+document.documentElement.style.setProperty("--appearance-metric-font-size", `${window.MINYA_APPEARANCE_SETTINGS.metricFontSize}px`);
+document.documentElement.style.setProperty("--appearance-small-font-size", `${window.MINYA_APPEARANCE_SETTINGS.smallFontSize}px`);
+document.documentElement.style.setProperty("--appearance-line-height", String(window.MINYA_APPEARANCE_SETTINGS.lineHeight));
 
 (function mountMinyaLoadingScreen(){
   const messages = [

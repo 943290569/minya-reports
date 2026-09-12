@@ -52,9 +52,11 @@ function uploadFiles(){return fs.existsSync(uploadsDir)?fs.readdirSync(uploadsDi
 
   x=await json('/api/appearance-settings',auth(viewer));
   assert(x.r.status===200&&x.data.configured===false,'initial shared appearance state is incorrect');
-  const sharedAppearance={loadingSeconds:5,remembranceFontSize:64,siteFontSize:18,theme:'night',color:'blue',fontSize:'normal',navPosition:'right',density:'compact',contrast:'high',motion:'reduced'};
+  const sharedAppearance={loadingSeconds:5,remembranceFontSize:64,typographyRevision:2,typographyPreset:'custom',siteFontSize:18,navFontSize:16,headingFontSize:24,metricFontSize:30,smallFontSize:14,lineHeight:1.75,fontFamily:'tahoma',fontWeight:'bold',theme:'night',color:'blue',fontSize:'normal',navPosition:'right',density:'compact',contrast:'high',motion:'reduced'};
   x=await json('/api/appearance-settings',auth(viewer,'PUT',{settings:sharedAppearance}));
   assert(x.r.status===403,'viewer was allowed to update shared appearance settings');
+  x=await json('/api/appearance-settings',auth(admin,'PUT',{settings:{siteFontSize:11,fontSize:'normal'}}));
+  assert(x.r.status===200&&x.data.settings.typographyPreset==='balanced'&&x.data.settings.siteFontSize===14,'legacy 11px appearance setting was not migrated to balanced typography');
   x=await json('/api/appearance-settings',auth(admin,'PUT',{settings:sharedAppearance}));
   assert(x.r.status===200&&x.data.settings.remembranceFontSize===64,'admin shared appearance update failed');
   x=await json('/api/appearance-settings',auth(viewer));
