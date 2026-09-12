@@ -12,6 +12,7 @@
     {label:"مركبات حركة المكب والسائقون", href:"/fleet", icon:"▣"},
     {label:"الصيانة والحوادث", href:"/maintenance-incidents", icon:"⚒"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
+    {label:"السولار الخارجي", href:"/external-diesel", icon:"▦"},
     {label:"البحث الشامل", href:"/global-search", icon:"⌕"},
     {label:"التقرير الأسبوعي", href:"/weekly", icon:"≋"},
     {label:"البحث المتقدم", href:"/search", icon:"⌕"},

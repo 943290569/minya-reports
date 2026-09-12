@@ -306,6 +306,7 @@ app.use(express.static(path.join(__dirname, "public"), {
   }
 }));
 require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
+require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomaticBackup});
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
@@ -511,7 +512,8 @@ function getFullReport(reportId, includeAttachmentData = false) {
 function buildBackupObject() {
   const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id, true));
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
-  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, appearance_settings: getSharedAppearanceSettings().settings };
+  const external_diesel = db.prepare(`SELECT * FROM external_diesel_entries ORDER BY entry_date,id`).all();
+  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, external_diesel, appearance_settings: getSharedAppearanceSettings().settings };
 }
 let lastAutomaticBackupAt = 0;
 const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;

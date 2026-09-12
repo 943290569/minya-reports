@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>السولار الخارجي</title>
+  <link rel="stylesheet" href="style.css?v=external-diesel-v1">
+  <link rel="stylesheet" href="app-bundle.css?v=3.5.0-20260912-external-diesel-v1-wa8">
+  <link rel="stylesheet" href="mobile-vertical-menu.css?v=external-diesel-v1">
+  <link rel="stylesheet" href="external-diesel.css?v=external-diesel-v1">
+</head>
+<body data-page="external-diesel">
+  <header class="top-header">
+    <div><h1>نظام إدارة مكب المنيا</h1><p>كشوف السولار المعبأ من المصادر الخارجية</p></div>
+    <nav><a class="app-nav-link" href="/">الرئيسية</a><a class="app-nav-link active" href="/external-diesel">السولار الخارجي</a></nav>
+  </header>
+
+  <main class="container external-diesel-page">
+    <section class="panel ed-hero">
+      <div><small>السولار الخارجي</small><h2>إدارة كشوف التعبئة الشهرية</h2><p>حدد المصدر والشهر والسنة لعرض الكشف أو إضافة السجلات واستيراد ملف Excel.</p></div>
+      <div class="ed-period-badge" id="edPeriodBadge">الشهر الحالي</div>
+    </section>
+
+    <section class="panel ed-filter-panel">
+      <div class="ed-filter-grid">
+        <label>المصدر الخارجي<input id="edFilterSource" list="edSources" placeholder="مثال شركة رائد أبو القاطم" autocomplete="off"></label>
+        <label>الشهر والسنة<input id="edReportMonth" type="month"></label>
+        <div class="ed-filter-actions">
+          <button id="edLoadBtn" type="button" class="v3-primary">عرض الكشف</button>
+          <button id="edPrintBtn" type="button">طباعة التقرير</button>
+        </div>
+      </div>
+      <datalist id="edSources"></datalist>
+      <p id="edFilterMessage" class="ed-message" aria-live="polite"></p>
+    </section>
+
+    <section class="ed-kpis" id="edKpis" aria-label="ملخص كشف السولار">
+      <div><span>إجمالي السولار</span><strong id="edTotalLiters">0</strong><small>لتر</small></div>
+      <div><span>عدد التعبئات</span><strong id="edEntriesCount">0</strong></div>
+      <div><span>أيام التعبئة</span><strong id="edDaysCount">0</strong></div>
+      <div><span>المتوسط اليومي</span><strong id="edDailyAverage">0</strong><small>لتر</small></div>
+    </section>
+
+    <section class="panel" id="edEntryPanel">
+      <div class="ed-section-head"><div><h2 id="edFormTitle">إضافة تعبئة سولار</h2><p>أدخل بيانات الوصل كما تظهر في كشف المصدر.</p></div><button id="edCancelEditBtn" type="button" class="hidden">إلغاء التعديل</button></div>
+      <div class="ed-entry-grid">
+        <label>المصدر الخارجي<input id="edSource" list="edSources" placeholder="اسم الشركة أو المورد"></label>
+        <label>التاريخ<input id="edDate" type="date"></label>
+        <label>اسم السائق<input id="edDriver" placeholder="الاسم الكامل"></label>
+        <label>رقم المركبة<input id="edVehicle" inputmode="numeric" placeholder="مثال 0248"></label>
+        <label>الكمية باللتر<input id="edQuantity" type="number" min="0.01" max="50000" step="0.01"></label>
+        <label>رقم الوصل<input id="edReceipt" inputmode="numeric"></label>
+        <label class="ed-wide">ملاحظات<input id="edNotes"></label>
+      </div>
+      <div class="ed-actions"><button id="edSaveBtn" type="button" class="v3-primary">حفظ التعبئة</button></div>
+      <p id="edFormMessage" class="ed-message" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" id="edImportPanel">
+      <div class="ed-section-head"><div><h2>استيراد كشف Excel</h2><p>يقرأ النظام نفس أعمدة نموذج شهر 8 ويعرض معاينة قبل الحفظ.</p></div><button id="edTemplateBtn" type="button">تنزيل نموذج Excel</button></div>
+      <div class="ed-import-row">
+        <input id="edExcelFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+        <button id="edPreviewBtn" type="button">معاينة الملف</button>
+        <button id="edImportBtn" type="button" class="v3-primary hidden">اعتماد الاستيراد</button>
+      </div>
+      <p id="edImportMessage" class="ed-message" aria-live="polite"></p>
+      <div id="edPreviewWrap" class="ed-preview hidden"><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>النتيجة</th></tr></thead><tbody id="edPreviewBody"></tbody></table></div></div>
+    </section>
+
+    <section class="panel ed-list-panel">
+      <div class="ed-section-head"><div><h2 id="edListTitle">كشف السولار الخارجي</h2><p id="edListSubtitle">حدد المصدر والفترة لعرض البيانات.</p></div><button id="edExportBtn" type="button">تصدير Excel</button></div>
+      <div class="v3-table-wrap ed-table-wrap">
+        <table class="v3-table ed-table">
+          <thead><tr><th>التاريخ</th><th>اسم السائق</th><th>رقم المركبة</th><th>الكمية لتر</th><th>رقم الوصل</th><th>ملاحظات</th><th class="ed-action-column">إجراء</th></tr></thead>
+          <tbody id="edBody"><tr><td colspan="7">جاري تحميل الكشف</td></tr></tbody>
+          <tfoot id="edFoot"></tfoot>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="js/app-auth.js?v=external-diesel-v1"></script>
+  <script src="js/app-header-menu.js?v=external-diesel-v1"></script>
+  <script src="js/app-appearance-settings.js?v=external-diesel-v1"></script>
+  <script src="js/app-date-display.js?v=external-diesel-v1"></script>
+  <script src="js/app-external-diesel.js?v=external-diesel-v1"></script>
+</body>
+</html>

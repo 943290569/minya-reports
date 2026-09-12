@@ -95,6 +95,32 @@ function reportPayload(overrides={}){
     x=await json('/api/reports',auth(viewerCookie,'POST',reportPayload({report_date:'2099-12-29',notes:'viewer must not create',total_trucks:999})));
     expectStatus(x,403,'viewer was allowed to create a report');
 
+    x=await json('/api/external-diesel?source=Runtime%20Supplier&month=2099-08',auth(viewerCookie));
+    expectStatus(x,200,'viewer could not read external diesel');
+    x=await json('/api/external-diesel',auth(viewerCookie,'POST',{source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Viewer Driver',vehicle_number:'0001',quantity_liters:100,receipt_number:'R-0'}));
+    expectStatus(x,403,'viewer was allowed to create external diesel');
+    x=await json('/api/external-diesel',auth(editorCookie,'POST',{source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Driver One',vehicle_number:'0248',quantity_liters:200,receipt_number:'R-1',notes:'runtime external diesel'}));
+    expectStatus(x,200,'editor could not create external diesel');
+    const externalDieselId=Number(x.data?.id||0);
+    if(!externalDieselId) throw new Error('external diesel id missing');
+    x=await json('/api/external-diesel',auth(editorCookie,'POST',{source_name:'Runtime Supplier',entry_date:'2099-08-02',driver_name:'Driver Two',vehicle_number:'6034',quantity_liters:150,receipt_number:'R-1'}));
+    expectStatus(x,409,'duplicate external diesel receipt was accepted');
+    x=await json('/api/external-diesel/import',auth(adminCookie,'POST',{entries:[
+      {source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Driver One',vehicle_number:'0248',quantity_liters:200,receipt_number:'R-1'},
+      {source_name:'Runtime Supplier',entry_date:'2099-08-02',driver_name:'Driver Two',vehicle_number:'6034',quantity_liters:150,receipt_number:'R-2'}
+    ]}));
+    expectStatus(x,200,'external diesel batch import failed');
+    if(Number(x.data?.created)!==1||Number(x.data?.skipped)!==1) throw new Error('external diesel import duplicate handling is incorrect');
+    x=await json('/api/external-diesel?source=Runtime%20Supplier&month=2099-08',auth(viewerCookie));
+    expectStatus(x,200,'external diesel filtered listing failed');
+    if(Number(x.data?.summary?.entries_count)!==2||Number(x.data?.summary?.days_count)!==2||Number(x.data?.summary?.total_liters)!==350) throw new Error('external diesel summary is incorrect');
+    x=await json(`/api/external-diesel/${externalDieselId}`,auth(editorCookie,'PUT',{source_name:'Runtime Supplier',entry_date:'2099-08-01',driver_name:'Driver One',vehicle_number:'0248',quantity_liters:220,receipt_number:'R-1'}));
+    expectStatus(x,200,'editor could not update external diesel');
+    x=await json(`/api/external-diesel/${externalDieselId}`,auth(editorCookie,'DELETE'));
+    expectStatus(x,403,'editor was allowed to delete external diesel');
+    x=await json(`/api/external-diesel/${externalDieselId}`,auth(adminCookie,'DELETE'));
+    expectStatus(x,200,'admin could not delete external diesel');
+
     x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-02-31'})));
     expectStatus(x,400,'impossible report date was accepted');
     x=await json('/api/reports',auth(adminCookie,'POST',reportPayload({report_date:'2099-12-27',total_trucks:1.5})));
