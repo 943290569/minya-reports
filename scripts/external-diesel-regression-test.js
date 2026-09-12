@@ -30,6 +30,9 @@ assert(packageJson.dependencies["word-extractor"], "word-extractor dependency is
 assert(client.includes("لم أجد صف العناوين المعتمد"), "Excel header validation is missing");
 assert(client.includes('src="/assets/header.png"'), "official print header is missing");
 assert(client.includes('src="/assets/footer.png"'), "official print footer is missing");
+assert(client.includes('class="print-page"'), "print report does not use explicit A4 pages");
+assert(client.includes("paginatedPrintRows"), "print report does not paginate rows");
+assert(!client.includes(".official-header{position:fixed"), "print header still uses unstable fixed positioning");
 assert(page.includes("السولار الذي عبّأه طاقم المكب للشركات الخارجية"), "external diesel page does not identify the landfill team as the filling party");
 assert(page.includes("الشركة المستفيدة"), "beneficiary company label is missing");
 assert(client.includes("تمت تعبئة السولار للشركة بواسطة طاقم المكب"), "print report does not identify who filled the diesel");
