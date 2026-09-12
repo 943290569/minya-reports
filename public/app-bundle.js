@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260912-external-diesel-v2";
+const MINYA_ASSET_VERSION = "3.5.0-20260912-external-diesel-v3";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -5357,6 +5357,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     addLink(nav, "/fleet", "المركبات والسائقون");
     addLink(nav, "/maintenance-incidents", "الصيانة والحوادث");
     addLink(nav, "/environment", "العصارة والغطاء");
+    addLink(nav, "/external-diesel", "السولار الخارجي");
     addLink(nav, "/global-search", "بحث شامل");
     if (!isAdmin()) { removeSystemAccess(); return; }
     addLink(nav, "/system.html", "إدارة النظام");

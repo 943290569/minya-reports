@@ -27,6 +27,7 @@
     addLink(nav, "/fleet", "المركبات والسائقون");
     addLink(nav, "/maintenance-incidents", "الصيانة والحوادث");
     addLink(nav, "/environment", "العصارة والغطاء");
+    addLink(nav, "/external-diesel", "السولار الخارجي");
     addLink(nav, "/global-search", "بحث شامل");
     if (!isAdmin()) { removeSystemAccess(); return; }
     addLink(nav, "/system.html", "إدارة النظام");
