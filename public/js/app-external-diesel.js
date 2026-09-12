@@ -229,8 +229,9 @@
     $("edPreviewBody").innerHTML = state.preview.slice(0, 60).map((item) => `<tr><td>${esc(formatDate(item.entry.entry_date))}</td><td>${esc(item.entry.driver_name)}</td><td>${esc(item.entry.vehicle_number)}</td><td>${formatNumber(item.entry.quantity_liters)}</td><td>${esc(item.entry.receipt_number || "-")}</td><td class="${item.errors.length ? "ed-preview-error" : "ed-preview-ok"}">${item.errors.length ? esc(item.errors.join("، ")) : "جاهز"}</td></tr>`).join("");
     const valid = state.preview.filter((item) => !item.errors.length).length;
     const invalid = state.preview.length - valid;
+    const previewLiters = state.preview.filter((item) => !item.errors.length).reduce((sum, item) => sum + Number(item.entry.quantity_liters || 0), 0);
     $("edImportBtn").classList.toggle("hidden", valid === 0);
-    message("edImportMessage", `${state.previewFormat ? `${state.previewFormat} · ` : ""}جاهز للحفظ ${valid} صف · يحتاج مراجعة ${invalid} صف`, invalid ? "error" : "success");
+    message("edImportMessage", `${state.previewFormat ? `${state.previewFormat} · ` : ""}جاهز للحفظ ${valid} صف · الإجمالي ${formatNumber(previewLiters)} لتر · يحتاج مراجعة ${invalid} صف`, invalid ? "error" : "success");
   }
   async function previewImportFile() {
     const file = $("edExcelFile").files[0];

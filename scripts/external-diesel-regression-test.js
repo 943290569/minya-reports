@@ -34,6 +34,7 @@ assert(client.includes("توقيع مسؤول تعبئة السولار"), "fuel
 assert(client.includes("توقيع قسم المكب"), "landfill signature is missing from print");
 assert(client.includes("مجموع يوم"), "daily diesel totals are missing");
 assert(client.includes("المجموع الشهري"), "monthly diesel total is missing");
+assert(client.includes("previewLiters"), "import preview liters total is missing");
 assert(menu.includes('href:"/external-diesel"'), "external diesel navigation link is missing");
 assert(desktopMenu.includes('addLink(nav, "/external-diesel", "السولار الخارجي")'), "external diesel desktop navigation link is missing");
 assert(server.includes("external_diesel, appearance_settings"), "external diesel is missing from base backups");
