@@ -26,7 +26,7 @@
     const month = selectedMonth();
     $("edPeriodBadge").textContent = monthLabel(month);
     $("edListTitle").textContent = source ? `كشف تعبئة السولار لشركة ${companyName(source)}` : "كشف السولار المعبأ للشركات";
-    $("edListSubtitle").textContent = `${monthLabel(month)}${source ? ` · الشركة ${source}` : " · حدد الشركة"}`;
+    $("edListSubtitle").textContent = `${monthLabel(month)}${source ? ` · ${source}` : " · حدد الشركة"}`;
     if (!state.editingId && source) $("edSource").value = source;
     if (!state.editingId && month && !String($("edDate").value || "").startsWith(month)) $("edDate").value = `${month}-01`;
     if ($("edQuickCompany")) $("edQuickCompany").textContent = source || "حدد الشركة";
@@ -129,7 +129,7 @@
   function addQuickRow(values = {}) {
     const defaults = lastQuickDefaults();
     const row = document.createElement("tr");
-    row.innerHTML = `<td><input data-field="entry_date" type="date" value="${esc(values.entry_date || defaults.entry_date)}"></td><td><input data-field="driver_name" list="edDrivers" autocomplete="off" placeholder="اكتب أول حرف" value="${esc(values.driver_name || "")}"></td><td><input data-field="vehicle_number" list="edVehicles" autocomplete="off" inputmode="numeric" placeholder="اكتب أول رقم" value="${esc(values.vehicle_number || "")}"></td><td><input data-field="quantity_liters" type="number" min="0.01" max="50000" step="0.01" value="${esc(values.quantity_liters || "")}"></td><td><input data-field="receipt_number" inputmode="numeric" value="${esc(values.receipt_number || defaults.receipt_number)}"></td><td><input data-field="notes" value="${esc(values.notes || "")}"></td><td><button type="button" class="ed-quick-remove" data-remove-row>حذف</button></td>`;
+    row.innerHTML = `<td data-label="التاريخ"><input data-field="entry_date" type="date" value="${esc(values.entry_date || defaults.entry_date)}"></td><td data-label="اسم السائق"><input data-field="driver_name" list="edDrivers" autocomplete="off" placeholder="اكتب أول حرف" value="${esc(values.driver_name || "")}"></td><td data-label="رقم المركبة"><input data-field="vehicle_number" list="edVehicles" autocomplete="off" inputmode="numeric" placeholder="اكتب أول رقم" value="${esc(values.vehicle_number || "")}"></td><td data-label="الكمية لتر"><input data-field="quantity_liters" type="number" min="0.01" max="50000" step="0.01" value="${esc(values.quantity_liters || "")}"></td><td data-label="رقم الوصل"><input data-field="receipt_number" inputmode="numeric" value="${esc(values.receipt_number || defaults.receipt_number)}"></td><td data-label="ملاحظات"><input data-field="notes" value="${esc(values.notes || "")}"></td><td data-label="إجراء"><button type="button" class="ed-quick-remove" data-remove-row>حذف الصف</button></td>`;
     $("edQuickBody").appendChild(row);
     bindQuickRow(row);
     updateQuickTotal();
@@ -177,7 +177,7 @@
   function renderEntries() {
     const body = $("edBody");
     if (!state.entries.length) {
-      body.innerHTML = `<tr><td colspan="7">لا توجد تعبئات مسجلة للمصدر والفترة المحددين</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7">لا توجد تعبئات مسجلة للشركة والفترة المحددتين</td></tr>`;
       $("edFoot").innerHTML = "";
       return;
     }
