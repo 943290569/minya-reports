@@ -14,14 +14,15 @@
       "لا إله إلا الله"
     ];
 
-    let loadingSeconds=3;
+    let loadingSeconds=1;
     let remembranceFontSize=72;
     let theme="day";
     try{
       const saved=JSON.parse(localStorage.getItem("minya_appearance_settings_v1")||"{}");
       const seconds=Number(saved?.loadingSeconds);
       const fontSize=Math.round(Number(saved?.remembranceFontSize));
-      loadingSeconds=[1,2,3,4,5].includes(seconds)?seconds:3;
+      const hasFastLoading=Number(saved?.loadingDurationRevision)===2;
+      loadingSeconds=hasFastLoading&&[1,2,3,4,5].includes(seconds)?seconds:1;
       remembranceFontSize=Number.isFinite(fontSize)?Math.min(72,Math.max(11,fontSize)):72;
       theme=saved?.theme==="night"?"night":"day";
     }catch(_){}

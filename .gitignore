@@ -9,3 +9,7 @@ database.db-shm
 server.js.before-*
 backups/
 uploads/
+public/*-bundle.js.gz
+public/*-bundle.js.br
+public/*-bundle.css.gz
+public/*-bundle.css.br

@@ -63,6 +63,9 @@ assert(annualLoader.includes("...(Array.isArray(window.annualAvailableYears)"), 
 assert(annualComparison.includes("window.annualPreviousReports"), "annual comparison still requires a second request");
 assert(loader.includes("MINYA_APPEARANCE_STORAGE_KEY"), "appearance settings are not applied before the loading screen");
 assert(loader.includes("Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds"), "remembrance duration is not user-controlled");
+assert(loader.includes("loadingDurationRevision: 2"), "old loading duration is not migrated to the faster default");
+assert(server.includes('Content-Encoding'), "precompressed frontend bundles are not served");
+assert(server.includes('max-age=31536000, immutable'), "versioned frontend assets are not cached");
 assert(loader.includes('"js/app-appearance-settings.js"'), "appearance controls are missing from the frontend bundle");
 assert(loader.includes('"appearance-settings.css"'), "appearance styles are missing from the style bundle");
 assert(loader.includes('"appearance-night.css"'), "night theme overrides are missing from the style bundle");

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const zlib = require("zlib");
 
 const root = path.resolve(__dirname, "..");
 const loaderPath = path.join(root, "public", "app.js");
@@ -140,6 +141,23 @@ const bundleWithModules = `${loader.slice(0, start)}${modules}\n${loader.slice(e
 const bundle = bundleWithModules.replace(styleBlock, "");
 new vm.Script(bundle, { filename: "public/app-bundle.js" });
 
+function compressedVersions(source) {
+  const input = Buffer.from(source, "utf8");
+  return {
+    gzip: zlib.gzipSync(input, { level: 9 }),
+    br: zlib.brotliCompressSync(input, {
+      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 7 }
+    })
+  };
+}
+
+const compressedOutputs = [
+  [outputPath, compressedVersions(bundle)],
+  [styleOutputPath, compressedVersions(styles)],
+  [driveScriptOutputPath, compressedVersions(driveScripts)],
+  [driveStyleOutputPath, compressedVersions(driveStyles)]
+];
+
 function syncIndexAssetVersion(source) {
   return source
     .replace(/app-bundle\.css\?v=[^"']+/g, `app-bundle.css?v=${assetVersion}`)
@@ -158,7 +176,13 @@ if (process.argv.includes("--check")) {
   const currentStyles = fs.existsSync(styleOutputPath) ? fs.readFileSync(styleOutputPath, "utf8") : "";
   const currentDriveScripts = fs.existsSync(driveScriptOutputPath) ? fs.readFileSync(driveScriptOutputPath, "utf8") : "";
   const currentDriveStyles = fs.existsSync(driveStyleOutputPath) ? fs.readFileSync(driveStyleOutputPath, "utf8") : "";
-  const bundleOutdated = current !== bundle || currentStyles !== styles || currentDriveScripts !== driveScripts || currentDriveStyles !== driveStyles;
+  const compressedOutdated = compressedOutputs.some(([sourcePath, versions]) => {
+    const gzipPath = `${sourcePath}.gz`;
+    const brotliPath = `${sourcePath}.br`;
+    return !fs.existsSync(gzipPath) || !fs.readFileSync(gzipPath).equals(versions.gzip)
+      || !fs.existsSync(brotliPath) || !fs.readFileSync(brotliPath).equals(versions.br);
+  });
+  const bundleOutdated = current !== bundle || currentStyles !== styles || currentDriveScripts !== driveScripts || currentDriveStyles !== driveStyles || compressedOutdated;
   const indexOutdated = indexSource !== syncedIndexSource;
   const driveIndexOutdated = driveIndexSource !== syncedDriveIndexSource;
 
@@ -174,6 +198,10 @@ if (process.argv.includes("--check")) {
   fs.writeFileSync(styleOutputPath, styles);
   fs.writeFileSync(driveScriptOutputPath, driveScripts);
   fs.writeFileSync(driveStyleOutputPath, driveStyles);
+  compressedOutputs.forEach(([sourcePath, versions]) => {
+    fs.writeFileSync(`${sourcePath}.gz`, versions.gzip);
+    fs.writeFileSync(`${sourcePath}.br`, versions.br);
+  });
   if (indexSource !== syncedIndexSource) fs.writeFileSync(indexPath, syncedIndexSource, "utf8");
   if (driveIndexSource !== syncedDriveIndexSource) fs.writeFileSync(driveIndexPath, syncedDriveIndexSource, "utf8");
   console.log(`Built frontend bundles from ${modulePaths.length} modules and ${stylePaths.length} styles (version ${assetVersion}).`);

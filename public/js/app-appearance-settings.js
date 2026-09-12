@@ -11,7 +11,8 @@
     accessible: { siteFontSize: 18, navFontSize: 17, headingFontSize: 25, metricFontSize: 31, smallFontSize: 15, lineHeight: 1.8 },
   };
   const defaults = {
-    loadingSeconds: 3,
+    loadingSeconds: 1,
+    loadingDurationRevision: 2,
     remembranceFontSize: 72,
     remembranceFontRevision: 2,
     typographyRevision: 2,
@@ -35,6 +36,7 @@
 
   const allowed = {
     loadingSeconds: [1, 2, 3, 4, 5],
+    loadingDurationRevision: [2],
     remembranceFontRevision: [2],
     typographyRevision: [2],
     typographyPreset: ["compact", "balanced", "large", "accessible", "custom"],
@@ -63,6 +65,7 @@
 
   function normalize(input) {
     const output = { ...defaults };
+    const hasFastLoading = Number(input?.loadingDurationRevision) === 2;
     Object.keys(defaults).forEach((key) => {
       if (key === "remembranceFontSize") {
         const size = Math.round(Number(input?.[key]));
@@ -75,6 +78,8 @@
       const value = key === "loadingSeconds" ? Number(input?.[key]) : input?.[key];
       if (allowed[key].includes(value)) output[key] = value;
     });
+    if (!hasFastLoading) output.loadingSeconds = 1;
+    output.loadingDurationRevision = 2;
     const hasModernTypography = Number(input?.typographyRevision) === 2;
     output.typographyRevision = 2;
     if (!hasModernTypography) {

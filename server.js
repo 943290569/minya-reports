@@ -267,7 +267,44 @@ app.use((req,res,next) => {
   return regularJsonParser(req,res,next);
 });
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
-app.use(express.static(path.join(__dirname, "public")));
+const PRECOMPRESSED_ASSETS = new Map([
+  ["/app-bundle.js", "application/javascript; charset=utf-8"],
+  ["/app-bundle.css", "text/css; charset=utf-8"],
+  ["/drive-import-bundle.js", "application/javascript; charset=utf-8"],
+  ["/drive-import-bundle.css", "text/css; charset=utf-8"]
+]);
+function acceptsEncoding(header, target) {
+  return String(header || "").split(",").some((part) => {
+    const [name, ...parameters] = part.trim().toLowerCase().split(";");
+    if (name !== target && name !== "*") return false;
+    const quality = parameters.find((value) => value.trim().startsWith("q="));
+    return !quality || Number(quality.trim().slice(2)) > 0;
+  });
+}
+app.use((req, res, next) => {
+  if (!PRECOMPRESSED_ASSETS.has(req.path) || !["GET", "HEAD"].includes(req.method)) return next();
+  const accepted = req.headers["accept-encoding"];
+  const encoding = acceptsEncoding(accepted, "br") ? "br" : acceptsEncoding(accepted, "gzip") ? "gzip" : "";
+  if (!encoding) return next();
+  const sourceName = req.path.slice(1);
+  const encodedName = `${sourceName}.${encoding === "br" ? "br" : "gz"}`;
+  const encodedPath = path.join(__dirname, "public", encodedName);
+  if (!fs.existsSync(encodedPath)) return next();
+  const versioned = /(?:\?|&)v=/.test(req.originalUrl || "");
+  res.setHeader("Content-Type", PRECOMPRESSED_ASSETS.get(req.path));
+  res.setHeader("Content-Encoding", encoding);
+  res.setHeader("Vary", "Accept-Encoding");
+  res.setHeader("Cache-Control", versioned ? "public, max-age=31536000, immutable" : "public, max-age=0");
+  return res.sendFile(encodedPath);
+});
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders(res, filePath) {
+    const versioned = /(?:\?|&)v=/.test(res.req?.originalUrl || "");
+    if (versioned && /\.(?:css|js)$/i.test(filePath)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    }
+  }
+}));
 require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
 
 function hashPassword(password, salt) {
@@ -351,7 +388,8 @@ const TYPOGRAPHY_PRESETS = {
   accessible: { siteFontSize: 18, navFontSize: 17, headingFontSize: 25, metricFontSize: 31, smallFontSize: 15, lineHeight: 1.8 }
 };
 const APPEARANCE_DEFAULTS = {
-  loadingSeconds: 3,
+  loadingSeconds: 1,
+  loadingDurationRevision: 2,
   remembranceFontSize: 72,
   remembranceFontRevision: 2,
   typographyRevision: 2,
@@ -374,8 +412,10 @@ const APPEARANCE_DEFAULTS = {
 };
 function normalizeAppearanceSettings(input = {}) {
   const settings = { ...APPEARANCE_DEFAULTS };
+  const hasFastLoading = Number(input.loadingDurationRevision) === 2;
   const loadingSeconds = Math.round(Number(input.loadingSeconds));
-  if ([1,2,3,4,5].includes(loadingSeconds)) settings.loadingSeconds = loadingSeconds;
+  if (hasFastLoading && [1,2,3,4,5].includes(loadingSeconds)) settings.loadingSeconds = loadingSeconds;
+  settings.loadingDurationRevision = 2;
   const remembranceFontSize = Math.round(Number(input.remembranceFontSize));
   if (Number.isFinite(remembranceFontSize)) settings.remembranceFontSize = Math.min(72, Math.max(11, remembranceFontSize));
   const choices = {

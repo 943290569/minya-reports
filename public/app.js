@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260912-annual-comparison-v2";
+const MINYA_ASSET_VERSION = "3.5.0-20260912-startup-speed-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -11,7 +11,8 @@ const MINYA_TYPOGRAPHY_PRESETS = {
 
 function readMinyaAppearanceSettings() {
   const defaults = {
-    loadingSeconds: 3,
+    loadingSeconds: 1,
+    loadingDurationRevision: 2,
     remembranceFontSize: 72,
     remembranceFontRevision: 2,
     typographyRevision: 2,
@@ -39,8 +40,10 @@ function readMinyaAppearanceSettings() {
     const settings = { ...defaults, ...savedSettings };
     if (Number(saved?.remembranceFontRevision) !== 2) settings.remembranceFontSize = 72;
     settings.remembranceFontRevision = 2;
+    if (Number(saved?.loadingDurationRevision) !== 2) settings.loadingSeconds = 1;
+    settings.loadingDurationRevision = 2;
     const loadingSeconds = Number(settings.loadingSeconds);
-    settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 3;
+    settings.loadingSeconds = [1, 2, 3, 4, 5].includes(loadingSeconds) ? loadingSeconds : 1;
     const remembranceFontSize = Math.round(Number(settings.remembranceFontSize));
     settings.remembranceFontSize = Number.isFinite(remembranceFontSize)
       ? Math.min(72, Math.max(11, remembranceFontSize))
@@ -85,7 +88,7 @@ const MINYA_RESOLVED_THEME = window.MINYA_APPEARANCE_SETTINGS.theme === "auto"
   : window.MINYA_APPEARANCE_SETTINGS.theme;
 const MINYA_LOADING_MIN_MS = Math.min(
   5000,
-  Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 3) * 1000)
+  Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 1) * 1000)
 );
 
 [
