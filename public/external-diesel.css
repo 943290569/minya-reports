@@ -19,7 +19,11 @@
 .ed-message{min-height:20px;margin:10px 0 0;color:#315d4c;font-weight:700}
 .ed-message.error{color:#b42318}
 .ed-message.success{color:#087443}
-.ed-import-row input[type=file]{flex:1;min-width:240px;padding:10px;border:1px dashed #9cb9ac;border-radius:10px;background:#f8fbf9}
+.ed-native-file{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+.ed-file-picker{display:flex;align-items:center;gap:12px;flex:1;min-width:240px;padding:7px;border:1px dashed #9cb9ac;border-radius:10px;background:#f8fbf9;cursor:pointer}
+.ed-file-button{padding:8px 13px;border-radius:8px;background:#176b4f;color:#fff;font-weight:800;white-space:nowrap}
+.ed-file-name{min-width:0;color:#536861;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-file-picker:focus-within{outline:3px solid rgba(23,107,79,.18);border-color:#176b4f}
 .ed-preview{margin-top:14px}
 .ed-list-panel{min-width:0}
 .ed-table-wrap{border:1px solid #dde7e2;border-radius:12px}
@@ -32,5 +36,5 @@
 .ed-row-actions .ed-delete{background:#fff1f1;color:#a51d1d;border-color:#efc8c8}
 .hidden{display:none!important}
 @media(max-width:900px){.ed-filter-grid{grid-template-columns:1fr 1fr}.ed-filter-actions{grid-column:span 2}.ed-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ed-entry-grid .ed-wide{grid-column:span 2}.ed-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.external-diesel-page{width:calc(100% - 14px)!important}.ed-hero,.ed-section-head{align-items:stretch;flex-direction:column}.ed-period-badge{min-width:0}.ed-filter-grid,.ed-entry-grid{grid-template-columns:1fr}.ed-filter-actions,.ed-entry-grid .ed-wide{grid-column:auto}.ed-kpis{gap:8px}.ed-kpis>div{padding:13px}.ed-import-row>*{width:100%}.ed-import-row input[type=file]{min-width:0}.ed-action-column{min-width:120px}}
+@media(max-width:600px){.external-diesel-page{width:calc(100% - 14px)!important}.ed-hero,.ed-section-head{align-items:stretch;flex-direction:column}.ed-period-badge{min-width:0}.ed-filter-grid,.ed-entry-grid{grid-template-columns:1fr}.ed-filter-actions,.ed-entry-grid .ed-wide{grid-column:auto}.ed-kpis{gap:8px}.ed-kpis>div{padding:13px}.ed-import-row>*{width:100%}.ed-file-picker{min-width:0}.ed-action-column{min-width:120px}}
 @media print{body{display:none!important}}

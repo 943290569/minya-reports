@@ -217,7 +217,7 @@
     message("edImportMessage", "جاري حفظ الصفوف");
     try {
       const data = await api("/api/external-diesel/import", { method: "POST", body: JSON.stringify({ entries }) });
-      state.preview = []; $("edPreviewWrap").classList.add("hidden"); $("edImportBtn").classList.add("hidden"); $("edExcelFile").value = "";
+      state.preview = []; $("edPreviewWrap").classList.add("hidden"); $("edImportBtn").classList.add("hidden"); $("edExcelFile").value = ""; $("edFileName").textContent = "لم يتم اختيار ملف";
       await Promise.all([loadSources(), loadEntries()]);
       message("edImportMessage", `تم حفظ ${data.created} سجل · تم تجاوز ${data.skipped} وصل مكرر`, "success");
     } catch (error) { message("edImportMessage", error.message, "error"); }
@@ -278,6 +278,7 @@
   }
   $("edLoadBtn").addEventListener("click", loadEntries); $("edFilterSource").addEventListener("change", loadEntries); $("edReportMonth").addEventListener("change", loadEntries);
   $("edSaveBtn").addEventListener("click", saveEntry); $("edCancelEditBtn").addEventListener("click", resetForm);
+  $("edExcelFile").addEventListener("change", (event) => { $("edFileName").textContent = event.target.files[0]?.name || "لم يتم اختيار ملف"; });
   $("edPreviewBtn").addEventListener("click", previewExcel); $("edImportBtn").addEventListener("click", importPreview);
   $("edTemplateBtn").addEventListener("click", () => writeWorkbook(false)); $("edExportBtn").addEventListener("click", () => writeWorkbook(true)); $("edPrintBtn").addEventListener("click", printReport);
   init();
