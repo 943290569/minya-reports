@@ -29,12 +29,12 @@ if(backupPattern.test(server)){
     return { ...item, image_base64 };
   });
   const incidentFiles = rows('incident_files').map(item => ({ ...item, data_base64: Buffer.isBuffer(item.data) ? item.data.toString('base64') : '', data: undefined }));
-  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, appearance_settings: getSharedAppearanceSettings().settings, operations_data: { movement_vehicles: rows('movement_vehicles'), driver_licenses: driverLicenses, incident_logs: rows('incident_logs'), incident_files: incidentFiles, environmental_logs: rows('environmental_logs'), feature_permissions: rows('feature_permissions') } };
+  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, external_diesel: rows('external_diesel_entries'), appearance_settings: getSharedAppearanceSettings().settings, operations_data: { movement_vehicles: rows('movement_vehicles'), driver_licenses: driverLicenses, incident_logs: rows('incident_logs'), incident_files: incidentFiles, environmental_logs: rows('environmental_logs'), external_diesel: rows('external_diesel_entries'), feature_permissions: rows('feature_permissions') } };
 }`);
 }
 fs.writeFileSync(serverPath,server,'utf8');
 require('./install-monthly-close');
 let app=fs.readFileSync(appPath,'utf8');
-app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260912-startup-speed-v1";');
+app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.5.0-20260912-external-diesel-v1";');
 fs.writeFileSync(appPath,app,'utf8');
 console.log('Operations suite routes, permissions, complete backup/restore limits and asset version installed.');
