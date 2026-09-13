@@ -13,13 +13,17 @@ module.exports=function installOpsRestore(app,{db,requireRole,audit}){
     try{
       const data=req.body?.operations_data;
       if(!data||typeof data!=='object')return res.json({ok:true,skipped:true,message:'لا تحتوي النسخة بيانات تشغيل إضافية'});
-      const drivers=arr(data.driver_licenses),vehicles=arr(data.movement_vehicles),incidents=arr(data.incident_logs),files=arr(data.incident_files),environment=arr(data.environmental_logs),externalDiesel=arr(data.external_diesel),permissions=arr(data.feature_permissions);
+      const drivers=arr(data.driver_licenses),vehicles=arr(data.movement_vehicles),incidents=arr(data.incident_logs),files=arr(data.incident_files),environment=arr(data.environmental_logs),tasks=arr(data.operation_tasks),contracts=arr(data.contractor_contracts),cells=arr(data.landfill_cells),managementFiles=arr(data.management_files),externalDiesel=arr(data.external_diesel),permissions=arr(data.feature_permissions);
       const written=[];
       const tx=db.transaction(()=>{
         db.prepare('DELETE FROM movement_vehicles').run();
         try{db.prepare('DELETE FROM incident_files').run()}catch{}
         try{db.prepare('DELETE FROM incident_logs').run()}catch{}
         try{db.prepare('DELETE FROM environmental_logs').run()}catch{}
+        try{db.prepare('DELETE FROM operation_tasks').run()}catch{}
+        try{db.prepare('DELETE FROM contractor_contracts').run()}catch{}
+        try{db.prepare('DELETE FROM landfill_cells').run()}catch{}
+        try{db.prepare('DELETE FROM management_files').run()}catch{}
         try{db.prepare('DELETE FROM external_diesel_entries').run()}catch{}
         try{db.prepare('DELETE FROM feature_permissions').run()}catch{}
         try{db.prepare('DELETE FROM driver_license_events').run()}catch{}
@@ -39,6 +43,14 @@ module.exports=function installOpsRestore(app,{db,requireRole,audit}){
         for(const f of files){const buf=decode(f.data_base64);if(!buf)continue;fi.run(Number(f.id)||null,Number(f.incident_id),f.file_name||'مرفق',f.mime_type||'application/octet-stream',buf.length,buf,f.created_by||null,f.created_at||new Date().toISOString());}
         const ei=db.prepare(`INSERT INTO environmental_logs(id,log_date,leachate_m3,tanker_trips,cover_trips,cover_quantity,cover_unit,notes,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`);
         for(const e of environment)ei.run(Number(e.id)||null,e.log_date||'',Number(e.leachate_m3||0),Number(e.tanker_trips||0),Number(e.cover_trips||0),Number(e.cover_quantity||0),e.cover_unit||'نقلة',e.notes||'',e.created_by||null,e.created_at||new Date().toISOString(),e.updated_at||new Date().toISOString());
+        const ti=db.prepare(`INSERT INTO operation_tasks(id,title,category,location,assigned_to,priority,status,start_date,due_date,progress,description,close_notes,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for(const t of tasks)ti.run(Number(t.id)||null,t.title||'',t.category||'ملاحظة',t.location||'',t.assigned_to||'',t.priority||'متوسطة',t.status||'جديدة',t.start_date||'',t.due_date||'',Number(t.progress||0),t.description||'',t.close_notes||'',t.created_by||null,t.created_at||new Date().toISOString(),t.updated_at||new Date().toISOString());
+        const ci=db.prepare(`INSERT INTO contractor_contracts(id,contractor_name,contract_number,contract_title,start_date,end_date,contract_value,paid_value,progress,status,responsible_person,notes,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for(const c of contracts)ci.run(Number(c.id)||null,c.contractor_name||'',c.contract_number||'',c.contract_title||'',c.start_date||'',c.end_date||'',Number(c.contract_value||0),Number(c.paid_value||0),Number(c.progress||0),c.status||'فعال',c.responsible_person||'',c.notes||'',c.created_by||null,c.created_at||new Date().toISOString(),c.updated_at||new Date().toISOString());
+        const li=db.prepare(`INSERT INTO landfill_cells(id,cell_name,design_capacity_m3,design_capacity_tons,used_volume_m3,received_tons,average_daily_tons,current_level,compaction_density,status,measurement_date,notes,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for(const c of cells)li.run(Number(c.id)||null,c.cell_name||'',Number(c.design_capacity_m3||0),Number(c.design_capacity_tons||0),Number(c.used_volume_m3||0),Number(c.received_tons||0),Number(c.average_daily_tons||0),c.current_level==null?null:Number(c.current_level),Number(c.compaction_density||0.92),c.status||'قيد التشغيل',c.measurement_date||'',c.notes||'',c.created_by||null,c.created_at||new Date().toISOString(),c.updated_at||new Date().toISOString());
+        const mfi=db.prepare(`INSERT INTO management_files(id,entity_type,entity_id,file_name,mime_type,size_bytes,data,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)`);
+        for(const f of managementFiles){const buf=decode(f.data_base64);if(!buf)continue;mfi.run(Number(f.id)||null,f.entity_type||'',Number(f.entity_id),f.file_name||'مرفق',f.mime_type||'application/octet-stream',buf.length,buf,f.created_by||null,f.created_at||new Date().toISOString());}
         const exi=db.prepare(`INSERT INTO external_diesel_entries(id,source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`);
         for(const e of externalDiesel)exi.run(Number(e.id)||null,e.source_name||'',e.entry_date||'',e.driver_name||'',e.vehicle_number||'',Number(e.quantity_liters||0),e.receipt_number||'',e.notes||'',e.created_by||null,e.created_at||new Date().toISOString(),e.updated_at||new Date().toISOString());
         const pi=db.prepare(`INSERT INTO feature_permissions(user_id,feature,can_view,can_edit,updated_at) VALUES(?,?,?,?,?)`);
@@ -46,8 +58,8 @@ module.exports=function installOpsRestore(app,{db,requireRole,audit}){
       });
       tx();
       try{const keep=new Set(drivers.map(d=>cleanFileName(d.image_name)).filter(Boolean));for(const name of fs.readdirSync(driverDir)){const file=path.join(driverDir,name);if(fs.statSync(file).isFile()&&!keep.has(name))fs.unlinkSync(file);}}catch{}
-      audit(req.user,'RESTORE_OPERATIONS_DATA','system','operations',`drivers:${drivers.length},vehicles:${vehicles.length},incidents:${incidents.length},environment:${environment.length},external_diesel:${externalDiesel.length}`);
-      res.json({ok:true,summary:{drivers:drivers.length,vehicles:vehicles.length,incidents:incidents.length,incident_files:files.length,environment:environment.length,external_diesel:externalDiesel.length,permissions:permissions.length}});
+      audit(req.user,'RESTORE_OPERATIONS_DATA','system','operations',`drivers:${drivers.length},vehicles:${vehicles.length},incidents:${incidents.length},environment:${environment.length},tasks:${tasks.length},contracts:${contracts.length},cells:${cells.length},external_diesel:${externalDiesel.length}`);
+      res.json({ok:true,summary:{drivers:drivers.length,vehicles:vehicles.length,incidents:incidents.length,incident_files:files.length,environment:environment.length,tasks:tasks.length,contracts:contracts.length,cells:cells.length,management_files:managementFiles.length,external_diesel:externalDiesel.length,permissions:permissions.length}});
     }catch(error){console.error('Operations restore failed',error);res.status(500).json({ok:false,message:'فشل استعادة بيانات التشغيل الإضافية',error:error.message});}
   });
 };
