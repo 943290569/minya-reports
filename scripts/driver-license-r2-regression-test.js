@@ -6,5 +6,7 @@ need('driver-licenses.js',"r2SignedUrl('GET'");
 need('driver-licenses.js','await r2PutObject');
 need('driver-licenses.js','await r2DeleteObject');
 need('scripts/migrate-driver-licenses-to-r2.js','local_backup');
+need('scripts/cleanup-local-driver-license-images.js',"signedUrl('HEAD'");
+need('scripts/cleanup-local-driver-license-images.js','fs.unlinkSync(local)');
 need('r2-storage.js',"'UNSIGNED-PAYLOAD'");
 console.log('Driver license R2 regression: OK');
