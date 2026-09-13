@@ -1,0 +1,14 @@
+const fs=require('fs');
+const read=file=>fs.readFileSync(file,'utf8');
+const need=(file,text)=>{if(!read(file).includes(text))throw new Error(`${file} missing ${text}`);};
+need('cloud-files.js','R2_SECRET_ACCESS_KEY');
+need('cloud-files.js',"requireRole('admin', 'editor')");
+need('cloud-files.js',"requireRole('admin')");
+need('cloud-files.js',"'UNSIGNED-PAYLOAD'");
+need('public/js/app-cloud-files.js',"route!=='/files'");
+need('public/js/app-cloud-files.js','upload_url');
+need('public/app.js','js/app-cloud-files.js');
+need('public/app.js','cloud-files.css');
+need('server.js','require("./cloud-files")');
+need('server.js','"/files"');
+console.log('Cloud files regression checks passed.');

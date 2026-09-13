@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.7.0-20260913-equipment-management-v1";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -5552,6 +5552,24 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
 
 ;
 
+/* ===== js/app-cloud-files.js ===== */
+(function(){
+  const route=location.pathname.replace(/\/+$/,'')||'/';if(route!=='/files')return;
+  const el=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const api=async(url,opt)=>{const r=await fetch(url,{cache:'no-store',...opt}),d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw new Error(d.message||'فشل الطلب');return d;};
+  const json=body=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const fmt=n=>{const units=['B','KB','MB','GB'];let x=Number(n||0),i=0;while(x>=1024&&i<3){x/=1024;i++;}return `${x.toFixed(i?1:0)} ${units[i]}`;};
+  let folderId=null,trail=[],editable=false,isAdmin=false;
+  async function load(){const [status,list]=await Promise.all([api('/api/cloud-files/status'),api(`/api/cloud-files/list${folderId?`?folder_id=${folderId}`:''}`)]);editable=['admin','editor'].includes(window.MINYA_USER?.role);isAdmin=window.MINYA_USER?.role==='admin';drawStatus(status);draw(list);}
+  function drawStatus(s){el('cloudStatus').className=`cloud-status ${s.configured?'ready':'waiting'}`;el('cloudStatus').innerHTML=s.configured?`<strong>R2 متصل</strong><span>${esc(s.bucket)} · ${fmt(s.total_bytes)} · ${Number(s.file_count||0)} ملف</span>`:'<strong>بانتظار ربط R2</strong><span>الواجهة جاهزة، ويلزم إضافة مفاتيح التخزين إلى الخادم.</span>';el('cloudActions').hidden=!editable||!s.configured;}
+  function draw(d){if(d.current&&!trail.some(x=>x.id===d.current.id))trail.push({id:d.current.id,name:d.current.name});if(!d.current)trail=[];el('cloudBreadcrumbs').innerHTML=`<button data-root>ملفات الموقع</button>${trail.map((x,i)=>`<span>‹</span><button data-crumb="${i}">${esc(x.name)}</button>`).join('')}`;el('cloudGrid').innerHTML=[...d.folders.map(x=>`<button class="cloud-card folder" data-folder="${x.id}" data-name="${esc(x.name)}"><span>مجلد</span><strong>${esc(x.name)}</strong></button>`),...d.files.map(x=>`<article class="cloud-card file"><span>${fmt(x.size_bytes)}</span><strong>${esc(x.original_name)}</strong><small>${esc(String(x.created_at||'').slice(0,10))}</small><div><a href="/api/cloud-files/${x.id}/download" target="_blank" rel="noopener">فتح</a>${isAdmin?`<button data-delete="${x.id}">حذف</button>`:''}</div></article>`)].join('')||'<p class="minya-empty-state">هذا المجلد فارغ</p>';document.querySelector('[data-root]').onclick=()=>{folderId=null;trail=[];load();};document.querySelectorAll('[data-crumb]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.crumb);folderId=trail[i].id;trail=trail.slice(0,i+1);load();});document.querySelectorAll('[data-folder]').forEach(b=>b.onclick=()=>{folderId=Number(b.dataset.folder);trail.push({id:folderId,name:b.dataset.name});load();});document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('حذف الملف نهائيًا؟'))return;await api(`/api/cloud-files/${b.dataset.delete}`,{method:'DELETE'});load();});}
+  async function uploadFiles(files){const progress=el('cloudProgress');for(let i=0;i<files.length;i++){const file=files[i];progress.textContent=`رفع ${i+1} من ${files.length}: ${file.name}`;const ticket=await api('/api/cloud-files/upload-url',json({folder_id:folderId,name:file.name,mime_type:file.type||'application/octet-stream',size_bytes:file.size}));const put=await fetch(ticket.upload_url,{method:'PUT',body:file,headers:{'Content-Type':file.type||'application/octet-stream'}});if(!put.ok)throw new Error(`فشل رفع ${file.name}. تحقق من إعداد CORS في R2`);await api(`/api/cloud-files/${ticket.id}/complete`,json({}));}progress.textContent='اكتمل رفع الملفات';await load();}
+  async function render(){const main=document.querySelector('main.container');if(!main)return;main.innerHTML=`<section class="v3-page cloud-page"><div class="v3-hero"><div><span>CLOUD FILES V3.8</span><h2>ملفات ومرفقات الموقع</h2><p>تخزين خاص على Cloudflare R2 مع مجلدات وروابط فتح مؤقتة.</p></div></div><div id="cloudStatus"></div><div id="cloudActions" class="v3-panel cloud-actions"><label>إنشاء مجلد<div><input id="cloudFolderName" maxlength="220" placeholder="اسم المجلد"><button id="cloudFolderAdd" class="v3-primary">إنشاء</button></div></label><label>رفع ملفات<input id="cloudUpload" type="file" multiple></label><span id="cloudProgress"></span></div><div class="v3-panel"><nav id="cloudBreadcrumbs" class="cloud-breadcrumbs"></nav><div id="cloudGrid" class="cloud-grid"></div></div></section>`;el('cloudFolderAdd').onclick=async()=>{try{await api('/api/cloud-files/folders',json({parent_id:folderId,name:el('cloudFolderName').value}));el('cloudFolderName').value='';load();}catch(e){el('cloudProgress').textContent=e.message;}};el('cloudUpload').onchange=async e=>{try{await uploadFiles([...e.target.files]);e.target.value='';}catch(error){el('cloudProgress').textContent=error.message;}};try{await load();}catch(e){el('cloudStatus').textContent=e.message;}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
+})();
+
+;
+
 /* ===== js/app-v3-pages.js ===== */
 /* =========================================================
    V3 management pages
@@ -7988,6 +8006,7 @@ ${payload.sections.join("\n")}
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
     {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
     {label:"إدارة المعدات الوقائية", href:"/equipment-management", icon:"⚙"},
+    {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
     {label:"المركبات والسائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
     {label:"مركبات حركة المكب والسائقون", href:"/fleet", icon:"▣"},
