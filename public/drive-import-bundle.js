@@ -321,6 +321,7 @@
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
     {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
     {label:"إدارة المعدات الوقائية", href:"/equipment-management", icon:"⚙"},
+    {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
     {label:"المركبات والسائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
     {label:"مركبات حركة المكب والسائقون", href:"/fleet", icon:"▣"},

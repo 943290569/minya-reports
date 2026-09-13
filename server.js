@@ -307,6 +307,7 @@ app.use(express.static(path.join(__dirname, "public"), {
 }));
 require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
 require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomaticBackup});
+require("./cloud-files")(app,{db,requireAuth,requireRole,audit});
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
@@ -933,7 +934,7 @@ app.post("/api/backup/restore", requireRole("admin"), (req,res)=>{
 });
 
 app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
-const appPages=["/report","/archive","/monthly","/annual","/equipment","/weekly","/search","/managerial","/reviews","/admin"];
+const appPages=["/report","/archive","/monthly","/annual","/equipment","/files","/weekly","/search","/managerial","/reviews","/admin"];
 appPages.forEach(route=>app.get(route,(req,res)=>res.sendFile(path.join(__dirname,"public","index.html"))));
 
 app.listen(PORT, HOST, () => console.log(`Minya Landfill V3 running on http://${HOST}:${PORT}`));

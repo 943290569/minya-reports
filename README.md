@@ -1,10 +1,23 @@
-# Minya Landfill System V3.7
+# Minya Landfill System V3.8
+
+## Cloudflare R2 file storage
+
+Set these secrets only on the production server (never commit them):
+
+```text
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET=minya-landfill-files
+```
+
+The R2 bucket must stay private. Allow the site origin in the bucket CORS policy for `PUT`, `GET`, and `HEAD`; the browser uploads directly using short-lived signed URLs.
 
 Operational and management reporting system for Al-Minya Landfill.
 
 ## Version
 
-Current version: **3.7.0**
+Current version: **3.8.0**
 
 ## Main features
 
