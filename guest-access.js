@@ -92,5 +92,6 @@ module.exports = function installGuestAccess(app, { db, requireRole, audit, COOK
   require('./incident-files')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
   require('./fleet-environment')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
   require('./operations-management')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
+  require('./equipment-management')(app,{db,requireAuth:requireAnyUser,requireRole,audit});
   require('./ops-restore')(app,{db,requireRole,audit});
 };
