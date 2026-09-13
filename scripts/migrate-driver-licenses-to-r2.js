@@ -21,6 +21,11 @@ async function main(){
   const root=path.resolve(__dirname,'..');
   const dataDir=process.env.MINYA_DATA_DIR?path.resolve(process.env.MINYA_DATA_DIR):root;
   const db=new Database(path.join(dataDir,'database.db'));
+  const backupsDir=path.join(dataDir,'backups');
+  fs.mkdirSync(backupsDir,{recursive:true});
+  const backupPath=path.join(backupsDir,`pre-driver-r2-${new Date().toISOString().replace(/[:.]/g,'-')}.db`);
+  await db.backup(backupPath);
+  console.log(`BACKUP: ${backupPath}`);
   const dir=path.join(dataDir,'uploads','driver-licenses');
   const cols=new Set(db.pragma('table_info(driver_licenses)').map(x=>x.name));
   if(!cols.has('image_storage'))db.exec(`ALTER TABLE driver_licenses ADD COLUMN image_storage TEXT DEFAULT 'local'`);
