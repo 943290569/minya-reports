@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.5.0-20260912-external-diesel-v3";
+const MINYA_ASSET_VERSION = "3.6.0-20260913-management-suite-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -240,6 +240,7 @@ document.documentElement.style.setProperty("--appearance-line-height", String(wi
   "js/app-executive-dashboard.js",
   "js/app-system-link.js",
   "js/app-credit.js",
+  "js/app-management-suite.js",
   "js/app-v3-pages.js",
   "js/app-driver-license-badge.js",
   "js/app-report-attachments.js",
@@ -303,7 +304,8 @@ document.documentElement.style.setProperty("--appearance-line-height", String(wi
   "review-polish.css",
   "appearance-day.css",
   "appearance-night.css",
-  "period-linked-summary.css"
+  "period-linked-summary.css",
+  "management-suite.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");

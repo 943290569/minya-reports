@@ -1,10 +1,10 @@
-# Minya Landfill System V3.5 Stable
+# Minya Landfill System V3.6
 
 Operational and management reporting system for Al-Minya Landfill.
 
 ## Version
 
-Current stable version: **3.5.0**
+Current version: **3.6.0**
 
 ## Main features
 
@@ -14,6 +14,9 @@ Current stable version: **3.5.0**
 - Optimized monthly loading for the selected month and comparison month only.
 - Optimized annual loading for the selected year only.
 - Equipment and maintenance tracking.
+- Tasks and field-observation follow-up with priorities, deadlines and completion rates.
+- Contractor and contract tracking with values, payments, progress and expiry alerts.
+- Landfill-cell capacity, utilization and remaining-life calculations.
 - Weekly and managerial reports.
 - Advanced report search and CSV export.
 - Report workflow: draft → pending review → approved.
