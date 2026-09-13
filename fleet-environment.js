@@ -27,7 +27,7 @@ module.exports=function installFleetEnvironment(app,{db,requireAuth,requireRole,
   const clean=(v,n=300)=>String(v??'').trim().slice(0,n);
   const dateOk=v=>!v||/^\d{4}-\d{2}-\d{2}$/.test(String(v));
   const daysUntil=v=>{if(!v||!dateOk(v))return null;const t=new Date(`${v}T00:00:00Z`).getTime();return Number.isFinite(t)?Math.ceil((t-Date.now())/86400000):null};
-  const features=['fleet','incidents','environment','tasks','contracts','cells','global_search','backups'];
+  const features=['fleet','incidents','environment','tasks','contracts','cells','equipment_management','global_search','backups'];
   function permission(user,feature){if(!user)return{can_view:0,can_edit:0};if(user.role==='admin')return{can_view:1,can_edit:1};const row=db.prepare('SELECT can_view,can_edit FROM feature_permissions WHERE user_id=? AND feature=?').get(user.id,feature);if(row)return{can_view:Number(row.can_view),can_edit:Number(row.can_edit)};return user.role==='editor'?{can_view:1,can_edit:1}:{can_view:1,can_edit:0};}
   function featureGuard(feature,edit=false){return(req,res,next)=>requireAuth(req,res,()=>{const p=permission(req.user,feature);if(!p.can_view||(edit&&!p.can_edit))return res.status(403).json({ok:false,message:'لا توجد صلاحية كافية لهذا القسم'});next();});}
 
