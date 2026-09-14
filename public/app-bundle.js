@@ -3357,13 +3357,13 @@ window.loadAnnualArchiveData = loadAnnualArchiveData;
 
   function quantityTable(title,rows){
     if(!Array.isArray(rows)||!rows.length)return '';
-    return `<section class="linked-summary-block"><h5>${esc(title)}</h5><div class="linked-summary-scroll"><table><thead><tr><th>البيان</th><th>المركبات / المرات</th><th>الكمية</th><th>المعدل اليومي</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.name)}</td><td>${fmt(row.vehicles)}</td><td>${fmt(row.quantity)} ${esc(row.unit||'')}</td><td>${fmt(row.daily_average)} ${esc(row.unit||'')}</td></tr>`).join('')}</tbody></table></div></section>`;
+    return `<section class="linked-summary-block"><h5>${esc(title)}</h5><div class="linked-summary-scroll"><table class="linked-summary-table linked-summary-table--quantity"><thead><tr><th>البيان</th><th>المركبات / المرات</th><th>الكمية</th><th>المعدل اليومي</th></tr></thead><tbody>${rows.map(row=>`<tr><td data-label="البيان">${esc(row.name)}</td><td data-label="المركبات / المرات">${fmt(row.vehicles)}</td><td data-label="الكمية">${fmt(row.quantity)} ${esc(row.unit||'')}</td><td data-label="المعدل اليومي">${fmt(row.daily_average)} ${esc(row.unit||'')}</td></tr>`).join('')}</tbody></table></div></section>`;
   }
 
   function equipmentTable(rows){
     if(!Array.isArray(rows)||!rows.length)return '';
     const total=rows.reduce((sum,row)=>sum+Number(row.diesel_liters||0),0);
-    return `<section class="linked-summary-block"><h5>مجموع سولار المعدات</h5><div class="linked-summary-scroll"><table><thead><tr><th>الآلية</th><th>السولار</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.name)}</td><td>${fmt(row.diesel_liters)} لتر</td></tr>`).join('')}<tr class="linked-summary-total"><th>المجموع</th><th>${fmt(total)} لتر</th></tr></tbody></table></div></section>`;
+    return `<section class="linked-summary-block"><h5>مجموع سولار المعدات</h5><div class="linked-summary-scroll"><table class="linked-summary-table linked-summary-table--equipment"><thead><tr><th>الآلية</th><th>السولار</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.name)}</td><td>${fmt(row.diesel_liters)} لتر</td></tr>`).join('')}<tr class="linked-summary-total"><th>المجموع</th><th>${fmt(total)} لتر</th></tr></tbody></table></div></section>`;
   }
 
   function renderLinkedPeriodSummary(mode,details){
