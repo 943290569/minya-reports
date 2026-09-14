@@ -27,7 +27,7 @@
     if(!enabled||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
     try{
       const reg=await navigator.serviceWorker.ready;
-      await reg.showNotification(title,{body,icon:'/assets/app-icon-jsc-192.png',badge:'/assets/app-icon-jsc-192.png',tag:`minya-${title}-${body}`.slice(0,120),renotify:false,data:{href}});
+      await reg.showNotification(title,{body,icon:'/assets/app-icon-final-192.png',badge:'/assets/app-icon-final-192.png',tag:`minya-${title}-${body}`.slice(0,120),renotify:false,data:{href}});
     }catch(_){ }
   }
 
