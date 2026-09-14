@@ -1,5 +1,5 @@
-const CACHE_NAME='minya-pwa-v10-approved-app-icon';
-const STATIC_ASSETS=['/','/style.css','/manifest.webmanifest','/assets/app-icon-192.png','/assets/app-icon-512.png','/assets/app-icon-maskable-512.png'];
+const CACHE_NAME='minya-pwa-v11-jsc-truck-icon';
+const STATIC_ASSETS=['/','/style.css','/manifest.webmanifest','/assets/app-icon-jsc-192.png','/assets/app-icon-jsc-512.png','/assets/app-icon-jsc-maskable-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(STATIC_ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
@@ -26,8 +26,8 @@ self.addEventListener('push',event=>{
   const title=data.title||'تنبيه من مكب المنيا';
   const options={
     body:data.body||'',
-    icon:'/assets/app-icon-192.png',
-    badge:'/assets/app-icon-192.png',
+    icon:'/assets/app-icon-jsc-192.png',
+    badge:'/assets/app-icon-jsc-192.png',
     tag:data.tag||`minya-push-${Date.now()}`,
     renotify:false,
     data:{href:data.href||'/'},
