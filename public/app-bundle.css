@@ -5637,3 +5637,45 @@ body[data-page="report"] #saveBtn {
     font-size: 9px !important;
   }
 }
+
+
+/* Keep annual highest/lowest day dates inside their mobile cards. */
+@media (max-width: 760px) {
+  #annualInsights > div {
+    min-width: 0 !important;
+    overflow: hidden;
+    padding-inline: 5px !important;
+  }
+
+  #annualBestDay,
+  #annualWorstDay {
+    width: 100%;
+    min-width: 0;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: center;
+  }
+
+  #annualBestDayValue,
+  #annualWorstDayValue {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 420px) {
+  #annualBestDay,
+  #annualWorstDay {
+    font-size: 11px !important;
+    letter-spacing: -0.25px;
+  }
+
+  #annualBestDayValue,
+  #annualWorstDayValue {
+    font-size: 11px !important;
+  }
+}
