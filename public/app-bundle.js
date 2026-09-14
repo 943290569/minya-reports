@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-mobile-ui-20260914";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-mobile-ui2-20260914";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -3053,8 +3053,8 @@ function setupAnnualInsights() {
     <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">أقل شهر نفايات</span><strong id="annualWorstMonth" style="display:block;font-size:18px;">-</strong><small id="annualWorstMonthValue" style="display:block;margin-top:4px;color:#6b7280;">-</small></div>
     <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">متوسط النفايات الشهري</span><strong id="annualMonthlyWasteAverage" style="display:block;font-size:18px;">0 طن</strong><small id="annualMonthlyWasteAverageNote" style="display:block;margin-top:4px;color:#6b7280;">للأشهر التي تحتوي بيانات</small></div>
     <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">متوسط النفايات اليومي</span><strong id="annualDailyWasteAverage" style="display:block;font-size:18px;">0 طن</strong><small id="annualDailyWasteAverageNote" style="display:block;margin-top:4px;color:#6b7280;">لأيام التشغيل المسجلة</small></div>
-    <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">أعلى يوم نفايات</span><strong id="annualBestDay" style="display:block;width:100%;min-width:0;font-size:11px;line-height:1.4;white-space:nowrap;direction:ltr;text-align:center;">-</strong><small id="annualBestDayValue" style="display:block;margin-top:4px;color:#6b7280;font-size:11px;line-height:1.4;">-</small></div>
-    <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">أقل يوم نفايات</span><strong id="annualWorstDay" style="display:block;width:100%;min-width:0;font-size:11px;line-height:1.4;white-space:nowrap;direction:ltr;text-align:center;">-</strong><small id="annualWorstDayValue" style="display:block;margin-top:4px;color:#6b7280;font-size:11px;line-height:1.4;">-</small></div>
+    <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">أعلى يوم نفايات</span><strong id="annualBestDay" style="display:block;width:100%;min-width:0;font-size:8px;line-height:1.3;letter-spacing:-0.6px;white-space:nowrap;direction:ltr;text-align:center;">-</strong><small id="annualBestDayValue" style="display:block;margin-top:4px;color:#6b7280;font-size:11px;line-height:1.4;">-</small></div>
+    <div style="${cardStyle}"><span style="display:block;color:#6b7280;margin-bottom:6px;">أقل يوم نفايات</span><strong id="annualWorstDay" style="display:block;width:100%;min-width:0;font-size:8px;line-height:1.3;letter-spacing:-0.6px;white-space:nowrap;direction:ltr;text-align:center;">-</strong><small id="annualWorstDayValue" style="display:block;margin-top:4px;color:#6b7280;font-size:11px;line-height:1.4;">-</small></div>
   `;
 
   cards.insertAdjacentElement("afterend", insights);
