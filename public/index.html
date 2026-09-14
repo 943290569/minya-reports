@@ -282,7 +282,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نظام إدارة مكب المنيا</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="app-bundle.css?v=3.8.0-20260913-cloud-files-v1-mobile-ui2-20260914-wa8">
+  <link rel="stylesheet" href="app-bundle.css?v=3.8.0-20260913-cloud-files-v1-mobile-ui3-20260914-wa8">
+
+  <style id="annual-mobile-card-fix">
+    @media (max-width: 760px) {
+      #annualInsights {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+      }
+      #annualInsights > div {
+        min-width: 0 !important;
+        padding: 10px 6px !important;
+        overflow: hidden !important;
+      }
+      #annualInsights #annualBestDay,
+      #annualInsights #annualWorstDay {
+        font-size: 12px !important;
+        line-height: 1.35 !important;
+        letter-spacing: -0.35px !important;
+        white-space: nowrap !important;
+      }
+      #annualInsights #annualBestDayValue,
+      #annualInsights #annualWorstDayValue {
+        font-size: 11px !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -388,7 +413,7 @@
     </section>
   </main>
 
-  <script src="app-bundle.js?v=3.8.0-20260913-cloud-files-v1-mobile-ui2-20260914-wa8"></script>
+  <script src="app-bundle.js?v=3.8.0-20260913-cloud-files-v1-mobile-ui3-20260914-wa8"></script>
   <script src="workday-ui.js?v=workday-v1"></script>
   <script>
   (function () {
