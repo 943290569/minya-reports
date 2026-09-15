@@ -125,7 +125,7 @@
       ["إدارة النظام", "/system.html"],
       ["الاستيراد", "/drive-import.html"],
     ];
-    const currentPath = window.location.pathname.replace(/\\+$/, "") || "/";
+    const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
     const primary = primaryItems.map(([key, label, href]) =>
       `<a class="app-nav-link minya-primary-nav-link${page === key || currentPath === href ? " active" : ""}" href="${href}">${label}</a>`
     ).join("");
