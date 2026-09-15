@@ -49,21 +49,20 @@
 
   function mountPageNavigation(){
     if(currentPath()==="/" || document.getElementById("minyaPageNavigation")) return;
-    const main=document.querySelector("main");
-    const header=document.querySelector(".top-header");
-    if(!main && !header) return;
+    const header=document.querySelector(".top-header,.me-header");
+    if(!header) return;
 
     if(!document.getElementById("minyaPageNavigationStyle")){
       const style=document.createElement("style");
       style.id="minyaPageNavigationStyle";
       style.textContent=`
         #minyaPageNavigation{
-          width:min(1180px,calc(100% - 24px));
-          margin:12px auto 0;
+          margin-inline-start:auto;
           display:flex;
           align-items:center;
           gap:8px;
           direction:rtl;
+          flex:0 0 auto;
         }
         #minyaPageNavigation a,#minyaPageNavigation button,.minya-menu-actions a,.minya-menu-actions button{
           min-height:40px;
@@ -96,7 +95,7 @@
         .minya-menu-actions a,.minya-menu-actions button{width:100%;box-shadow:none;}
         .minya-menu-actions a{background:var(--appearance-accent,#176b4f);color:#fff;}
         @media(max-width:760px){
-          #minyaPageNavigation{width:calc(100% - 20px);margin-top:10px;}
+          #minyaPageNavigation{order:20;width:100%;margin:4px 0 0;justify-content:center;}
           #minyaPageNavigation a,#minyaPageNavigation button{flex:1;padding:8px 10px;}
         }
         @media print{#minyaPageNavigation,.minya-menu-actions{display:none!important;}}
@@ -109,8 +108,7 @@
     nav.setAttribute("aria-label","التنقل داخل النظام");
     nav.innerHTML='<button type="button" data-page-back>رجوع</button><a href="/">القائمة الرئيسية</a>';
     nav.querySelector("[data-page-back]").addEventListener("click",goBack);
-    if(main) main.parentNode.insertBefore(nav,main);
-    else header.insertAdjacentElement("afterend",nav);
+    header.appendChild(nav);
   }
 
   function renderItems(menu){
