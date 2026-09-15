@@ -17,7 +17,7 @@
     overflow: visible !important;
   }
 
-  .top-header > .header-identity {
+  body header.top-header > div.header-identity {
     grid-column: 1 !important;
     grid-row: 1 !important;
     display: flex !important;
@@ -33,7 +33,7 @@
     position: static !important;
   }
 
-  .top-header > .header-identity > .header-brand-logo {
+  body header.top-header > div.header-identity > .header-brand-logo {
     display: block !important;
     flex: 0 0 52px !important;
     width: 52px !important;
@@ -95,11 +95,11 @@
 }
 
 @media screen and (max-width: 1050px) and (min-width: 761px) {
-  .top-header > .header-identity { padding-left: 250px !important; }
+  body header.top-header > div.header-identity { padding-left: 250px !important; }
 }
 
 @media screen and (max-width: 760px) {
-  .top-header > .header-identity {
+  body header.top-header > div.header-identity {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
