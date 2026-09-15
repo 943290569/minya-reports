@@ -36,12 +36,91 @@
     return (window.MINYA_USER && window.MINYA_USER.role) || document.documentElement.dataset.userRole || "";
   }
 
+  function goBack(){
+    try{
+      const previous=document.referrer ? new URL(document.referrer) : null;
+      if(previous && previous.origin===location.origin && history.length>1){
+        history.back();
+        return;
+      }
+    }catch(_){}
+    location.assign("/");
+  }
+
+  function mountPageNavigation(){
+    if(currentPath()==="/" || document.getElementById("minyaPageNavigation")) return;
+    const main=document.querySelector("main");
+    const header=document.querySelector(".top-header");
+    if(!main && !header) return;
+
+    if(!document.getElementById("minyaPageNavigationStyle")){
+      const style=document.createElement("style");
+      style.id="minyaPageNavigationStyle";
+      style.textContent=`
+        #minyaPageNavigation{
+          width:min(1180px,calc(100% - 24px));
+          margin:12px auto 0;
+          display:flex;
+          align-items:center;
+          gap:8px;
+          direction:rtl;
+        }
+        #minyaPageNavigation a,#minyaPageNavigation button,.minya-menu-actions a,.minya-menu-actions button{
+          min-height:40px;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          padding:8px 18px;
+          border:1px solid rgba(23,107,79,.25);
+          border-radius:10px;
+          background:#fff;
+          color:#145c45;
+          font:inherit;
+          font-weight:800;
+          text-decoration:none;
+          cursor:pointer;
+          box-shadow:0 3px 10px rgba(15,67,50,.08);
+        }
+        #minyaPageNavigation a{background:var(--appearance-accent,#176b4f);color:#fff;}
+        .minya-menu-actions{
+          position:sticky;
+          top:0;
+          z-index:2;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:8px;
+          padding:10px;
+          background:#f4f8f6;
+          border-bottom:1px solid #d9e6e0;
+        }
+        .minya-menu-actions a,.minya-menu-actions button{width:100%;box-shadow:none;}
+        .minya-menu-actions a{background:var(--appearance-accent,#176b4f);color:#fff;}
+        @media(max-width:760px){
+          #minyaPageNavigation{width:calc(100% - 20px);margin-top:10px;}
+          #minyaPageNavigation a,#minyaPageNavigation button{flex:1;padding:8px 10px;}
+        }
+        @media print{#minyaPageNavigation,.minya-menu-actions{display:none!important;}}
+      `;
+      document.head.appendChild(style);
+    }
+
+    const nav=document.createElement("nav");
+    nav.id="minyaPageNavigation";
+    nav.setAttribute("aria-label","التنقل داخل النظام");
+    nav.innerHTML='<button type="button" data-page-back>رجوع</button><a href="/">القائمة الرئيسية</a>';
+    nav.querySelector("[data-page-back]").addEventListener("click",goBack);
+    if(main) main.parentNode.insertBefore(nav,main);
+    else header.insertAdjacentElement("afterend",nav);
+  }
+
   function renderItems(menu){
     if(!menu) return;
     const role=currentRole();
     const path=currentPath();
     menu.dataset.renderedRole=role;
-    menu.innerHTML=items.filter(item=>{
+    const actions=path==="/" ? "" : '<div class="minya-menu-actions"><button type="button" data-menu-back>رجوع</button><a href="/">القائمة الرئيسية</a></div>';
+    menu.innerHTML=actions+items.filter(item=>{
+      if(path!=="/" && item.href==="/") return false;
       if(item.adminOnly && role!=="admin") return false;
       if(item.hideFor && item.hideFor.includes(role)) return false;
       return true;
@@ -142,6 +221,9 @@
 
     wrap.append(btn,menu);
     header.appendChild(wrap);
+    menu.addEventListener("click",(event)=>{
+      if(event.target.closest("[data-menu-back]")) goBack();
+    });
 
     const close=()=>{
       menu.hidden=true;
@@ -235,6 +317,7 @@
 
   function start(){
     mountBackToTop();
+    mountPageNavigation();
     build();
     buildDesktop();
     setTimeout(buildDesktop,150);
