@@ -107,3 +107,26 @@
     gap: 8px !important;
   }
 }
+
+
+/* Visible colors for the desktop More menu */
+@media screen and (min-width: 761px) {
+  body header.top-header > nav .minya-nav-more-panel > a.app-nav-link,
+  body header.top-header > nav .minya-nav-more-panel > a.app-nav-link:link,
+  body header.top-header > nav .minya-nav-more-panel > a.app-nav-link:visited {
+    display: flex !important;
+    color: #29463b !important;
+    background-color: #ffffff !important;
+    border-color: transparent !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+  }
+
+  body header.top-header > nav .minya-nav-more-panel > a.app-nav-link:hover,
+  body header.top-header > nav .minya-nav-more-panel > a.app-nav-link:focus-visible,
+  body header.top-header > nav .minya-nav-more-panel > a.app-nav-link.active {
+    color: #0f5138 !important;
+    background-color: #e3f2ea !important;
+    border-color: #c9e1d5 !important;
+  }
+}
