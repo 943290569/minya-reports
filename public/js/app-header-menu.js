@@ -166,6 +166,19 @@
     });
   }
 
+  function compactText(node){
+    return String(node?.textContent || "").replace(/\s+/g,"").trim();
+  }
+
+  function isLegacyMoreNode(node){
+    if(!node || node.nodeType!==1) return false;
+    if(node.classList?.contains("minya-desktop-more")) return true;
+    const text=compactText(node);
+    const ownMoreClass=[...(node.classList || [])].some((name)=>/(^|[-_])more($|[-_])/i.test(name));
+    const marked=node.hasAttribute?.("data-more-menu") || node.hasAttribute?.("data-nav-more");
+    return marked || ownMoreClass || text==="المزيد" || text.startsWith("المزيد⌄") || text.startsWith("المزيد▼") || text.startsWith("المزيد▾");
+  }
+
   function buildDesktop(){
     if(!window.matchMedia("(min-width: 761px)").matches) return;
     const header=document.querySelector(".top-header");
@@ -182,10 +195,10 @@
     };
     const primaryHrefs=["/","/report","/archive","/monthly","/annual","/ops-dashboard"];
 
-    /* Remove every old More container first so only one can survive. */
-    const existingMores=[...nav.querySelectorAll(":scope > .minya-desktop-more")];
-    const storedLinks=existingMores.flatMap((entry)=>[...entry.querySelectorAll("a[href]")]);
-    existingMores.forEach((entry)=>entry.remove());
+    /* Remove any old or duplicate More control regardless of its legacy class. */
+    const legacyMores=[...nav.children].filter(isLegacyMoreNode);
+    const storedLinks=legacyMores.flatMap((entry)=>[...entry.querySelectorAll?.("a[href]") || []]);
+    legacyMores.forEach((entry)=>entry.remove());
 
     const directLinks=[...nav.querySelectorAll(":scope > a[href]")];
     const existingByHref=new Map();
@@ -211,6 +224,7 @@
 
     const more=document.createElement("div");
     more.className="minya-desktop-more";
+    more.dataset.navMore="current";
     const moreButton=document.createElement("button");
     moreButton.type="button";
     moreButton.className="minya-desktop-more-button";
@@ -275,8 +289,14 @@
     const hasActiveSecondary=morePanel.querySelector(".app-nav-link.active");
     moreButton.classList.toggle("active",Boolean(hasActiveSecondary));
 
-    /* More is always appended last on desktop. */
-    if(morePanel.children.length) nav.appendChild(more);
+    /* One working More only, always as the final desktop navigation item. */
+    [...nav.children].forEach((child)=>{
+      if(child!==more && isLegacyMoreNode(child)) child.remove();
+    });
+    if(morePanel.children.length){
+      nav.appendChild(more);
+      if(nav.lastElementChild!==more) nav.appendChild(more);
+    }
   }
 
   function start(){
@@ -285,6 +305,7 @@
     buildDesktop();
     setTimeout(buildDesktop,150);
     setTimeout(buildDesktop,600);
+    setTimeout(buildDesktop,1400);
     let tries=0,lastRole=currentRole();
     const timer=setInterval(()=>{
       tries+=1;
