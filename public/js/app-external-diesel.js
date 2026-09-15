@@ -320,8 +320,15 @@
         const errors = [];
         if (!entry.entry_date) errors.push("تاريخ غير صالح"); else if (!entry.entry_date.startsWith(month)) errors.push("خارج الشهر المحدد");
         if (!entry.driver_name) errors.push("اسم السائق مفقود"); if (!entry.vehicle_number) errors.push("رقم المركبة مفقود"); if (!(entry.quantity_liters > 0)) errors.push("الكمية غير صالحة");
-        return {\n          entry,\n          rowNumber: selected.headerIndex + index + 2,\n          errors,\n          summaryRow: normalizedHeader(columns.driver_name >= 0 ? row[columns.driver_name] : "").includes("مجموعاليوم")\n            || normalizedHeader(columns.entry_date >= 0 ? row[columns.entry_date] : "").startsWith("الاجمالي")\n        };
-      }).filter((item) => !item.summaryRow)\n        .filter((item) => Object.values(item.entry).some((value) => value !== "" && value !== 0));
+        return {
+          entry,
+          rowNumber: selected.headerIndex + index + 2,
+          errors,
+          summaryRow: normalizedHeader(columns.driver_name >= 0 ? row[columns.driver_name] : "").includes("مجموعاليوم")
+            || normalizedHeader(columns.entry_date >= 0 ? row[columns.entry_date] : "").startsWith("الاجمالي")
+        };
+      }).filter((item) => !item.summaryRow)
+        .filter((item) => Object.values(item.entry).some((value) => value !== "" && value !== 0));
     });
   }
   function bufferToBase64(buffer) {
