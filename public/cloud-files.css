@@ -1,1 +1,109 @@
 .cloud-page{display:grid;gap:16px}.cloud-status{display:flex;justify-content:space-between;gap:12px;padding:16px 20px;border-radius:14px}.cloud-status.ready{background:#e8f6ee;color:#145c3b}.cloud-status.waiting{background:#fff4d8;color:#754f00}.cloud-status span{font-size:.9rem}.cloud-actions{display:grid;grid-template-columns:1fr 1fr;gap:16px}.cloud-actions label{display:grid;gap:8px}.cloud-actions label div{display:flex;gap:8px}.cloud-actions input{width:100%}.cloud-breadcrumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}.cloud-breadcrumbs button{background:transparent;border:0;color:var(--appearance-accent,#176b4f);font-weight:700}.cloud-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}.cloud-card{min-height:120px;padding:15px;border:1px solid rgba(20,92,59,.16);border-radius:14px;background:#fff;color:inherit;text-align:right;display:flex;flex-direction:column;gap:8px}.cloud-card.folder{cursor:pointer}.cloud-card.folder:before{content:'▰';font-size:28px;color:#d29a22}.cloud-card span,.cloud-card small{color:#68766f;font-size:.82rem}.cloud-card div{margin-top:auto;display:flex;gap:8px}.cloud-card a,.cloud-card div button{padding:6px 10px;border-radius:8px;border:1px solid #cbd8d1;background:#f7faf8;text-decoration:none;color:#145c3b}@media(max-width:700px){.cloud-actions{grid-template-columns:1fr}.cloud-status{flex-direction:column}.cloud-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.cloud-grid{grid-template-columns:1fr}}
+
+
+/* Final header layout: this file loads last to prevent later overrides */
+@media screen and (min-width: 761px) {
+  .top-header {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) !important;
+    grid-template-rows: 64px 46px !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    gap: 0 !important;
+    width: 100% !important;
+    min-height: 110px !important;
+    height: 110px !important;
+    padding: 0 22px 0 18px !important;
+    overflow: visible !important;
+  }
+
+  .top-header > .header-identity {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 11px !important;
+    width: 100% !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    margin: 0 !important;
+    padding: 0 0 0 300px !important;
+    position: static !important;
+  }
+
+  .top-header > .header-identity > .header-brand-logo {
+    display: block !important;
+    flex: 0 0 52px !important;
+    width: 52px !important;
+    height: 52px !important;
+    margin: 0 !important;
+    position: static !important;
+    transform: none !important;
+  }
+
+  .top-header .header-identity-copy {
+    display: block !important;
+    flex: 0 1 auto !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+  }
+
+  .top-header .header-identity-copy h1 {
+    display: block !important;
+    width: auto !important;
+    margin: 0 0 2px !important;
+    font-size: 21px !important;
+    line-height: 1.2 !important;
+  }
+
+  .top-header .header-identity-copy p {
+    display: block !important;
+    width: auto !important;
+    margin: 0 !important;
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .top-header > nav,
+  .top-header > nav.minya-legacy-nav-hidden {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
+    width: 100% !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    padding: 6px 0 !important;
+    position: static !important;
+    overflow: visible !important;
+    border-top: 1px solid rgba(255,255,255,.10) !important;
+  }
+
+  .top-header > nav > .app-nav-link:not(.minya-primary-nav-link) {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 1050px) and (min-width: 761px) {
+  .top-header > .header-identity { padding-left: 250px !important; }
+}
+
+@media screen and (max-width: 760px) {
+  .top-header > .header-identity {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+}
