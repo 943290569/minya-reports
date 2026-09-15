@@ -36,8 +36,5 @@ if(backupPattern.test(server)){
 }
 fs.writeFileSync(serverPath,server,'utf8');
 require('./install-monthly-close');
-let app=fs.readFileSync(appPath,'utf8');
-app=app.replace(/const MINYA_ASSET_VERSION = "[^"]+";/,'const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1";');
-fs.writeFileSync(appPath,app,'utf8');
-console.log('Operations suite routes, management modules, permissions, complete backup/restore limits and asset version installed.');
+console.log('Operations suite routes, management modules, permissions and complete backup/restore limits installed.');
 // Deployment marker: external diesel mobile layout v2.
