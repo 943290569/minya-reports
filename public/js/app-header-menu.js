@@ -181,8 +181,12 @@
       }catch(_){ return String(value || ""); }
     };
     const primaryHrefs=["/","/report","/archive","/monthly","/annual","/ops-dashboard"];
-    const existingMore=nav.querySelector(".minya-desktop-more");
-    const storedLinks=existingMore ? [...existingMore.querySelectorAll("a[href]")] : [];
+
+    /* Remove every old More container first so only one can survive. */
+    const existingMores=[...nav.querySelectorAll(":scope > .minya-desktop-more")];
+    const storedLinks=existingMores.flatMap((entry)=>[...entry.querySelectorAll("a[href]")]);
+    existingMores.forEach((entry)=>entry.remove());
+
     const directLinks=[...nav.querySelectorAll(":scope > a[href]")];
     const existingByHref=new Map();
     [...directLinks,...storedLinks].forEach((link)=>{
@@ -205,33 +209,51 @@
       if(button) button.hidden=!visibleKeys.has(key);
     });
 
-    let more=existingMore;
-    let moreButton=more?.querySelector(".minya-desktop-more-button");
-    let morePanel=more?.querySelector(".minya-desktop-more-panel");
-    if(!more){
-      more=document.createElement("div");
-      more.className="minya-desktop-more";
-      moreButton=document.createElement("button");
-      moreButton.type="button";
-      moreButton.className="minya-desktop-more-button";
-      moreButton.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
-      moreButton.setAttribute("aria-expanded","false");
-      morePanel=document.createElement("div");
-      morePanel.className="minya-desktop-more-panel";
+    const more=document.createElement("div");
+    more.className="minya-desktop-more";
+    const moreButton=document.createElement("button");
+    moreButton.type="button";
+    moreButton.className="minya-desktop-more-button";
+    moreButton.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
+    moreButton.setAttribute("aria-expanded","false");
+    const morePanel=document.createElement("div");
+    morePanel.className="minya-desktop-more-panel";
+    morePanel.hidden=true;
+    morePanel.style.left="auto";
+    morePanel.style.right="0";
+
+    const keepPanelInsideViewport=()=>{
+      morePanel.style.left="auto";
+      morePanel.style.right="0";
+      const rect=morePanel.getBoundingClientRect();
+      const edge=8;
+      if(rect.left<edge){
+        morePanel.style.right="auto";
+        morePanel.style.left="0";
+      }
+      const adjusted=morePanel.getBoundingClientRect();
+      if(adjusted.right>window.innerWidth-edge){
+        morePanel.style.left="auto";
+        morePanel.style.right="0";
+      }
+    };
+
+    const close=()=>{
       morePanel.hidden=true;
-      const close=()=>{morePanel.hidden=true;moreButton.setAttribute("aria-expanded","false");more.classList.remove("open");};
-      moreButton.addEventListener("click",(event)=>{
-        event.stopPropagation();
-        const open=morePanel.hidden;
-        morePanel.hidden=!open;
-        moreButton.setAttribute("aria-expanded",String(open));
-        more.classList.toggle("open",open);
-      });
-      document.addEventListener("click",(event)=>{if(!more.contains(event.target)) close();});
-      document.addEventListener("keydown",(event)=>{if(event.key==="Escape") close();});
-      more.append(moreButton,morePanel);
-    }
-    morePanel.innerHTML="";
+      moreButton.setAttribute("aria-expanded","false");
+      more.classList.remove("open");
+    };
+    moreButton.addEventListener("click",(event)=>{
+      event.stopPropagation();
+      const open=morePanel.hidden;
+      morePanel.hidden=!open;
+      moreButton.setAttribute("aria-expanded",String(open));
+      more.classList.toggle("open",open);
+      if(open) requestAnimationFrame(keepPanelInsideViewport);
+    });
+    document.addEventListener("click",(event)=>{if(!more.contains(event.target)) close();});
+    document.addEventListener("keydown",(event)=>{if(event.key==="Escape") close();});
+    more.append(moreButton,morePanel);
 
     visibleItems.forEach((item)=>{
       const key=normalizeHref(item.href);
@@ -252,8 +274,9 @@
 
     const hasActiveSecondary=morePanel.querySelector(".app-nav-link.active");
     moreButton.classList.toggle("active",Boolean(hasActiveSecondary));
+
+    /* More is always appended last on desktop. */
     if(morePanel.children.length) nav.appendChild(more);
-    else more.remove();
   }
 
   function start(){
