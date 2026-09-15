@@ -150,6 +150,10 @@ assert(loader.indexOf('"mobile-vertical-menu.css"') > loader.indexOf('"desktop-n
 assert(mobileMenu.includes('{label:"المركبات والسائقين"'), "vehicles and drivers is missing from the mobile menu");
 assert(mobileMenu.includes('{label:"إدارة النظام"'), "system management is missing from the mobile menu");
 assert(mobileMenu.includes('{label:"المراجعة والاعتماد"'), "reviews is missing from the mobile menu");
+assert(mobileMenu.includes('if(currentPath()==="/"'), "page navigation is not excluded from the home page");
+assert(mobileMenu.includes("header.appendChild(nav)"), "back and home navigation is not mounted inside the page header");
+assert(drivePage.includes("js/app-header-menu.js?v=page-navigation-v2"), "Drive import page is missing header navigation");
+assert(read("public/monthly-entry.html").includes("js/app-header-menu.js?v=page-navigation-v2"), "monthly entry page is missing header navigation");
 assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
 assert(mobileMenuStyles.includes('overflow-y: auto !important'), "mobile menu cannot scroll to its final items");
 assert(mobileMenuStyles.includes('#minyaHeaderMenu[hidden]'), "closed mobile menu is not reliably hidden");
