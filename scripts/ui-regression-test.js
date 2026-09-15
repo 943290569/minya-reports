@@ -150,6 +150,11 @@ assert(loader.indexOf('"mobile-vertical-menu.css"') > loader.indexOf('"desktop-n
 assert(mobileMenu.includes('{label:"المركبات والسائقين"'), "vehicles and drivers is missing from the mobile menu");
 assert(mobileMenu.includes('{label:"إدارة النظام"'), "system management is missing from the mobile menu");
 assert(mobileMenu.includes('{label:"المراجعة والاعتماد"'), "reviews is missing from the mobile menu");
+assert(mobileMenu.includes('function buildDesktop(){'), "desktop navigation builder is missing");
+assert(mobileMenu.includes('link=document.createElement("a")'), "desktop navigation does not add missing page links");
+assert(mobileMenu.includes('build();buildDesktop();'), "desktop navigation is not refreshed after the user role loads");
+assert(read("public/external-diesel.html").includes("js/app-header-menu.js?v=complete-menus-v1"), "company diesel page does not load the complete navigation");
+assert(read("public/drivers-licenses.html").includes("js/app-header-menu.js?v=complete-menus-v1"), "drivers page does not load the complete navigation");
 assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
 assert(mobileMenuStyles.includes('overflow-y: auto !important'), "mobile menu cannot scroll to its final items");
 assert(mobileMenuStyles.includes('#minyaHeaderMenu[hidden]'), "closed mobile menu is not reliably hidden");
