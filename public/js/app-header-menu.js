@@ -167,9 +167,77 @@
     });
   }
 
+  function buildDesktop(){
+    if(!window.matchMedia("(min-width: 761px)").matches) return;
+    const header=document.querySelector(".top-header");
+    const nav=header?.querySelector("nav");
+    if(!nav) return;
+
+    const primaryHrefs=["/","/report","/archive","/monthly","/annual","/ops-dashboard"];
+    const current=currentPath();
+    const existing=[...nav.querySelectorAll("a[href]")];
+    const byHref=new Map();
+
+    existing.forEach(link=>{
+      const href=link.getAttribute("href");
+      if(!href) return;
+      if(byHref.has(href)){ link.remove(); return; }
+      byHref.set(href,link);
+    });
+
+    const oldMore=nav.querySelector(".minya-desktop-more");
+    const oldLinks=oldMore ? [...oldMore.querySelectorAll("a[href]")] : [];
+    oldLinks.forEach(link=>{
+      const href=link.getAttribute("href");
+      if(href && !byHref.has(href)) byHref.set(href,link);
+    });
+    oldMore?.remove();
+
+    primaryHrefs.forEach(href=>{
+      const link=byHref.get(href);
+      if(link) nav.appendChild(link);
+    });
+
+    const secondary=[...byHref.entries()]
+      .filter(([href])=>!primaryHrefs.includes(href))
+      .map(([,link])=>link);
+
+    if(!secondary.length) return;
+
+    const wrap=document.createElement("div");
+    wrap.className="minya-desktop-more";
+    const button=document.createElement("button");
+    button.type="button";
+    button.className="minya-desktop-more-button";
+    button.setAttribute("aria-expanded","false");
+    button.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
+    const panel=document.createElement("div");
+    panel.className="minya-desktop-more-panel";
+    panel.hidden=true;
+    secondary.forEach(link=>panel.appendChild(link));
+    if(secondary.some(link=>link.classList.contains("active") || (link.getAttribute("href")!=="/" && current.startsWith(link.getAttribute("href"))))){
+      button.classList.add("active");
+    }
+    const close=()=>{ panel.hidden=true; button.setAttribute("aria-expanded","false"); wrap.classList.remove("open"); };
+    button.addEventListener("click",event=>{
+      event.stopPropagation();
+      const open=panel.hidden;
+      panel.hidden=!open;
+      button.setAttribute("aria-expanded",String(open));
+      wrap.classList.toggle("open",open);
+    });
+    document.addEventListener("click",event=>{ if(!wrap.contains(event.target)) close(); });
+    document.addEventListener("keydown",event=>{ if(event.key==="Escape") close(); });
+    wrap.append(button,panel);
+    nav.appendChild(wrap);
+  }
+
   function start(){
     mountBackToTop();
     build();
+    buildDesktop();
+    setTimeout(buildDesktop,150);
+    setTimeout(buildDesktop,600);
     let tries=0,lastRole=currentRole();
     const timer=setInterval(()=>{
       tries+=1;
@@ -184,5 +252,6 @@
 
   window.addEventListener("resize",()=>{
     if(window.matchMedia("(max-width: 760px)").matches) build();
+    else buildDesktop();
   });
 })();
