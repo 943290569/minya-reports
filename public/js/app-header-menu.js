@@ -167,69 +167,49 @@
   }
 
   function buildDesktop(){
-    return;
     if(!window.matchMedia("(min-width: 761px)").matches) return;
     const header=document.querySelector(".top-header");
     const nav=header?.querySelector("nav");
     if(!nav) return;
 
-    const primaryHrefs=["/","/report","/archive","/monthly","/annual","/ops-dashboard"];
-    const current=currentPath();
-    const existing=[...nav.querySelectorAll("a[href]")];
-    const byHref=new Map();
-
-    existing.forEach(link=>{
-      const href=link.getAttribute("href");
-      if(!href) return;
-      if(byHref.has(href)){ link.remove(); return; }
-      byHref.set(href,link);
+    const role=currentRole();
+    const path=currentPath();
+    const normalizeHref=(value)=>{
+      try{
+        const pathname=new URL(value,location.origin).pathname.replace(/\/+$/,"") || "/";
+        return pathname.endsWith(".html") ? pathname.slice(0,-5) : pathname;
+      }catch(_){ return String(value || ""); }
+    };
+    const existingByHref=new Map();
+    [...nav.querySelectorAll("a[href]")].forEach((link)=>{
+      const key=normalizeHref(link.getAttribute("href"));
+      if(existingByHref.has(key)){ link.remove(); return; }
+      existingByHref.set(key,link);
     });
+    const routeButtons=new Map([
+      ["/report",document.getElementById("newReportBtn")],
+      ["/archive",document.getElementById("archiveBtn")]
+    ]);
 
-    const oldMore=nav.querySelector(".minya-desktop-more");
-    const oldLinks=oldMore ? [...oldMore.querySelectorAll("a[href]")] : [];
-    oldLinks.forEach(link=>{
-      const href=link.getAttribute("href");
-      if(href && !byHref.has(href)) byHref.set(href,link);
+    items.filter((item)=>{
+      if(item.adminOnly && role!=="admin") return false;
+      if(item.hideFor && item.hideFor.includes(role)) return false;
+      return true;
+    }).forEach((item)=>{
+      const key=normalizeHref(item.href);
+      let link=routeButtons.get(key) || existingByHref.get(key);
+      if(!link){
+        link=document.createElement("a");
+        link.className="app-nav-link";
+        link.href=item.href;
+      }
+      if(link.tagName==="A"){
+        link.textContent=item.label;
+        const active=normalizeHref(path)===key || (key!=="/" && normalizeHref(path).startsWith(key));
+        link.classList.toggle("active",active);
+      }
+      nav.appendChild(link);
     });
-    oldMore?.remove();
-
-    primaryHrefs.forEach(href=>{
-      const link=byHref.get(href);
-      if(link) nav.appendChild(link);
-    });
-
-    const secondary=[...byHref.entries()]
-      .filter(([href])=>!primaryHrefs.includes(href))
-      .map(([,link])=>link);
-
-    if(!secondary.length) return;
-
-    const wrap=document.createElement("div");
-    wrap.className="minya-desktop-more";
-    const button=document.createElement("button");
-    button.type="button";
-    button.className="minya-desktop-more-button";
-    button.setAttribute("aria-expanded","false");
-    button.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
-    const panel=document.createElement("div");
-    panel.className="minya-desktop-more-panel";
-    panel.hidden=true;
-    secondary.forEach(link=>panel.appendChild(link));
-    if(secondary.some(link=>link.classList.contains("active") || (link.getAttribute("href")!=="/" && current.startsWith(link.getAttribute("href"))))){
-      button.classList.add("active");
-    }
-    const close=()=>{ panel.hidden=true; button.setAttribute("aria-expanded","false"); wrap.classList.remove("open"); };
-    button.addEventListener("click",event=>{
-      event.stopPropagation();
-      const open=panel.hidden;
-      panel.hidden=!open;
-      button.setAttribute("aria-expanded",String(open));
-      wrap.classList.toggle("open",open);
-    });
-    document.addEventListener("click",event=>{ if(!wrap.contains(event.target)) close(); });
-    document.addEventListener("keydown",event=>{ if(event.key==="Escape") close(); });
-    wrap.append(button,panel);
-    nav.appendChild(wrap);
   }
 
   function start(){
@@ -242,7 +222,7 @@
     const timer=setInterval(()=>{
       tries+=1;
       const role=currentRole();
-      if(role!==lastRole){lastRole=role;build();}
+      if(role!==lastRole){lastRole=role;build();buildDesktop();}
       if(tries>=24) clearInterval(timer);
     },250);
   }
