@@ -11,19 +11,19 @@
   "theme_color": "#176b4f",
   "icons": [
     {
-      "src": "/assets/app-icon-final-192.png",
+      "src": "/assets/app-icon-recycle-truck-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/app-icon-final-512.png",
+      "src": "/assets/app-icon-recycle-truck-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/app-icon-final-maskable-512.png",
+      "src": "/assets/app-icon-recycle-truck-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
