@@ -320,8 +320,15 @@
         const errors = [];
         if (!entry.entry_date) errors.push("تاريخ غير صالح"); else if (!entry.entry_date.startsWith(month)) errors.push("خارج الشهر المحدد");
         if (!entry.driver_name) errors.push("اسم السائق مفقود"); if (!entry.vehicle_number) errors.push("رقم المركبة مفقود"); if (!(entry.quantity_liters > 0)) errors.push("الكمية غير صالحة");
-        return { entry, rowNumber: selected.headerIndex + index + 2, errors };
-      }).filter((item) => Object.values(item.entry).some((value) => value !== "" && value !== 0));
+        return {
+          entry,
+          rowNumber: selected.headerIndex + index + 2,
+          errors,
+          summaryRow: normalizedHeader(columns.driver_name >= 0 ? row[columns.driver_name] : "").includes("مجموعاليوم")
+            || normalizedHeader(columns.entry_date >= 0 ? row[columns.entry_date] : "").startsWith("الاجمالي")
+        };
+      }).filter((item) => !item.summaryRow)
+        .filter((item) => Object.values(item.entry).some((value) => value !== "" && value !== 0));
     });
   }
   function bufferToBase64(buffer) {
@@ -354,7 +361,7 @@
   }
   function renderPreview() {
     $("edPreviewWrap").classList.remove("hidden");
-    $("edPreviewBody").innerHTML = state.preview.slice(0, 60).map((item) => `<tr><td>${esc(formatDate(item.entry.entry_date))}</td><td>${esc(item.entry.driver_name)}</td><td>${esc(item.entry.vehicle_number)}</td><td>${formatNumber(item.entry.quantity_liters)}</td><td>${esc(item.entry.receipt_number || "-")}</td><td class="${item.errors.length ? "ed-preview-error" : "ed-preview-ok"}">${item.errors.length ? esc(item.errors.join("، ")) : "جاهز"}</td></tr>`).join("");
+    $("edPreviewBody").innerHTML = state.preview.map((item) => `<tr><td>${esc(formatDate(item.entry.entry_date))}</td><td>${esc(item.entry.driver_name)}</td><td>${esc(item.entry.vehicle_number)}</td><td>${formatNumber(item.entry.quantity_liters)}</td><td>${esc(item.entry.receipt_number || "-")}</td><td class="${item.errors.length ? "ed-preview-error" : "ed-preview-ok"}">${item.errors.length ? esc(item.errors.join("، ")) : "جاهز"}</td></tr>`).join("");
     const valid = state.preview.filter((item) => !item.errors.length).length;
     const invalid = state.preview.length - valid;
     const previewLiters = state.preview.filter((item) => !item.errors.length).reduce((sum, item) => sum + Number(item.entry.quantity_liters || 0), 0);
