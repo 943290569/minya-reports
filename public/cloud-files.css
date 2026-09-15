@@ -130,3 +130,122 @@
     border-color: #c9e1d5 !important;
   }
 }
+
+
+/* Mobile header typography and control spacing */
+@media screen and (max-width: 760px) {
+  body header.top-header {
+    display: block !important;
+    width: 100% !important;
+    min-height: 104px !important;
+    height: 104px !important;
+    padding: 8px 12px 8px 142px !important;
+    overflow: visible !important;
+  }
+
+  body header.top-header > div.header-identity {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 48px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body header.top-header > div.header-identity > img.header-brand-logo {
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    margin: 0 !important;
+  }
+
+  body header.top-header .header-identity-copy {
+    min-width: 0 !important;
+    width: auto !important;
+  }
+
+  body header.top-header .header-identity-copy h1 {
+    margin: 0 0 2px !important;
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    letter-spacing: 0 !important;
+  }
+
+  body header.top-header .header-identity-copy p {
+    margin: 0 !important;
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+  }
+
+  body header.top-header #minyaLogoutBtn {
+    left: 10px !important;
+    top: 10px !important;
+    min-width: 58px !important;
+    width: 58px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 4px 7px !important;
+    font-size: 11px !important;
+  }
+
+  body header.top-header .minya-header-menu-wrap {
+    left: 74px !important;
+    top: 10px !important;
+  }
+
+  body header.top-header #minyaMenuButton {
+    min-width: 60px !important;
+    width: 60px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 4px 6px !important;
+  }
+
+  body header.top-header #minyaMenuButton > span {
+    font-size: 14px !important;
+  }
+
+  body header.top-header #minyaMenuButton > small {
+    font-size: 9px !important;
+  }
+
+  body header.top-header .minya-notification-host {
+    left: 10px !important;
+    right: auto !important;
+    top: 52px !important;
+  }
+
+  body header.top-header #minyaNotificationButton {
+    min-width: 92px !important;
+    height: 31px !important;
+    min-height: 31px !important;
+    padding: 4px 9px !important;
+    font-size: 11px !important;
+  }
+
+  body header.top-header #minyaNotificationButton strong {
+    min-width: 20px !important;
+    height: 20px !important;
+    font-size: 10px !important;
+  }
+}
+
+@media screen and (max-width: 390px) {
+  body header.top-header {
+    padding-left: 136px !important;
+  }
+
+  body header.top-header .header-identity-copy h1 {
+    font-size: 14.5px !important;
+  }
+
+  body header.top-header .header-identity-copy p {
+    font-size: 8.5px !important;
+  }
+}
