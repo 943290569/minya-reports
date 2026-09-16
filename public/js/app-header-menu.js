@@ -166,19 +166,6 @@
     });
   }
 
-  function compactText(node){
-    return String(node?.textContent || "").replace(/\s+/g,"").trim();
-  }
-
-  function isLegacyMoreNode(node){
-    if(!node || node.nodeType!==1) return false;
-    if(node.classList?.contains("minya-desktop-more")) return true;
-    const text=compactText(node);
-    const ownMoreClass=[...(node.classList || [])].some((name)=>/(^|[-_])more($|[-_])/i.test(name));
-    const marked=node.hasAttribute?.("data-more-menu") || node.hasAttribute?.("data-nav-more");
-    return marked || ownMoreClass || text==="المزيد" || text.startsWith("المزيد⌄") || text.startsWith("المزيد▼") || text.startsWith("المزيد▾");
-  }
-
   function buildDesktop(){
     if(!window.matchMedia("(min-width: 761px)").matches) return;
     const header=document.querySelector(".top-header");
@@ -194,12 +181,9 @@
       }catch(_){ return String(value || ""); }
     };
     const primaryHrefs=["/","/report","/archive","/monthly","/annual","/ops-dashboard"];
-
-    /* Remove any old or duplicate More control regardless of its legacy class. */
-    const legacyMores=[...nav.children].filter(isLegacyMoreNode);
-    const storedLinks=legacyMores.flatMap((entry)=>[...entry.querySelectorAll?.("a[href]") || []]);
-    legacyMores.forEach((entry)=>entry.remove());
-
+    nav.querySelectorAll(".minya-nav-more").forEach((legacyMore)=>legacyMore.remove());
+    const existingMore=nav.querySelector(".minya-desktop-more");
+    const storedLinks=existingMore ? [...existingMore.querySelectorAll("a[href]")] : [];
     const directLinks=[...nav.querySelectorAll(":scope > a[href]")];
     const existingByHref=new Map();
     [...directLinks,...storedLinks].forEach((link)=>{
@@ -222,52 +206,33 @@
       if(button) button.hidden=!visibleKeys.has(key);
     });
 
-    const more=document.createElement("div");
-    more.className="minya-desktop-more";
-    more.dataset.navMore="current";
-    const moreButton=document.createElement("button");
-    moreButton.type="button";
-    moreButton.className="minya-desktop-more-button";
-    moreButton.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
-    moreButton.setAttribute("aria-expanded","false");
-    const morePanel=document.createElement("div");
-    morePanel.className="minya-desktop-more-panel";
-    morePanel.hidden=true;
-    morePanel.style.left="auto";
-    morePanel.style.right="0";
-
-    const keepPanelInsideViewport=()=>{
-      morePanel.style.left="auto";
-      morePanel.style.right="0";
-      const rect=morePanel.getBoundingClientRect();
-      const edge=8;
-      if(rect.left<edge){
-        morePanel.style.right="auto";
-        morePanel.style.left="0";
-      }
-      const adjusted=morePanel.getBoundingClientRect();
-      if(adjusted.right>window.innerWidth-edge){
-        morePanel.style.left="auto";
-        morePanel.style.right="0";
-      }
-    };
-
-    const close=()=>{
-      morePanel.hidden=true;
+    let more=existingMore;
+    let moreButton=more?.querySelector(".minya-desktop-more-button");
+    let morePanel=more?.querySelector(".minya-desktop-more-panel");
+    if(!more){
+      more=document.createElement("div");
+      more.className="minya-desktop-more";
+      moreButton=document.createElement("button");
+      moreButton.type="button";
+      moreButton.className="minya-desktop-more-button";
+      moreButton.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
       moreButton.setAttribute("aria-expanded","false");
-      more.classList.remove("open");
-    };
-    moreButton.addEventListener("click",(event)=>{
-      event.stopPropagation();
-      const open=morePanel.hidden;
-      morePanel.hidden=!open;
-      moreButton.setAttribute("aria-expanded",String(open));
-      more.classList.toggle("open",open);
-      if(open) requestAnimationFrame(keepPanelInsideViewport);
-    });
-    document.addEventListener("click",(event)=>{if(!more.contains(event.target)) close();});
-    document.addEventListener("keydown",(event)=>{if(event.key==="Escape") close();});
-    more.append(moreButton,morePanel);
+      morePanel=document.createElement("div");
+      morePanel.className="minya-desktop-more-panel";
+      morePanel.hidden=true;
+      const close=()=>{morePanel.hidden=true;moreButton.setAttribute("aria-expanded","false");more.classList.remove("open");};
+      moreButton.addEventListener("click",(event)=>{
+        event.stopPropagation();
+        const open=morePanel.hidden;
+        morePanel.hidden=!open;
+        moreButton.setAttribute("aria-expanded",String(open));
+        more.classList.toggle("open",open);
+      });
+      document.addEventListener("click",(event)=>{if(!more.contains(event.target)) close();});
+      document.addEventListener("keydown",(event)=>{if(event.key==="Escape") close();});
+      more.append(moreButton,morePanel);
+    }
+    morePanel.innerHTML="";
 
     visibleItems.forEach((item)=>{
       const key=normalizeHref(item.href);
@@ -288,15 +253,8 @@
 
     const hasActiveSecondary=morePanel.querySelector(".app-nav-link.active");
     moreButton.classList.toggle("active",Boolean(hasActiveSecondary));
-
-    /* One working More only, always as the final desktop navigation item. */
-    [...nav.children].forEach((child)=>{
-      if(child!==more && isLegacyMoreNode(child)) child.remove();
-    });
-    if(morePanel.children.length){
-      nav.appendChild(more);
-      if(nav.lastElementChild!==more) nav.appendChild(more);
-    }
+    if(morePanel.children.length) nav.appendChild(more);
+    else more.remove();
   }
 
   function start(){
@@ -305,7 +263,6 @@
     buildDesktop();
     setTimeout(buildDesktop,150);
     setTimeout(buildDesktop,600);
-    setTimeout(buildDesktop,1400);
     let tries=0,lastRole=currentRole();
     const timer=setInterval(()=>{
       tries+=1;

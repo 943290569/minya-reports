@@ -104,43 +104,13 @@
       ["annual", "التقرير السنوي", "/annual"],
       ["ops", "لوحة التشغيل", "/ops-dashboard"],
     ];
-    const secondaryItems = [
-      ["المركبات والسائقون", "/fleet"],
-      ["رخص السائقين", "/drivers-licenses.html"],
-      ["المعدات والصيانة", "/equipment"],
-      ["إدارة المعدات", "/equipment-management"],
-      ["الصيانة والحوادث", "/maintenance-incidents"],
-      ["العصارة والغطاء", "/environment"],
-      ["السولار الخارجي", "/external-diesel"],
-      ["الملاحظات والمهام", "/tasks"],
-      ["المقاولون والعقود", "/contracts"],
-      ["الخلايا والسعة", "/cells"],
-      ["ملفات الموقع", "/files"],
-      ["البحث الشامل", "/global-search"],
-      ["التقرير الأسبوعي", "/weekly"],
-      ["البحث المتقدم", "/search"],
-      ["التقرير الإداري", "/managerial"],
-      ["المراجعة والاعتماد", "/reviews"],
-      ["الإدارة والصلاحيات", "/admin"],
-      ["إدارة النظام", "/system.html"],
-      ["الاستيراد", "/drive-import.html"],
-    ];
     const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
     const primary = primaryItems.map(([key, label, href]) =>
       `<a class="app-nav-link minya-primary-nav-link${page === key || currentPath === href ? " active" : ""}" href="${href}">${label}</a>`
     ).join("");
-    const secondaryActive = secondaryItems.some(([, href]) => currentPath === href || (href !== "/" && currentPath.startsWith(href)));
-    const more = `
-      <details class="minya-nav-more${secondaryActive ? " active" : ""}">
-        <summary>المزيد <span aria-hidden="true">⌄</span></summary>
-        <div class="minya-nav-more-panel">
-          ${secondaryItems.map(([label, href]) =>
-            `<a class="app-nav-link${currentPath === href || (href !== "/" && currentPath.startsWith(href)) ? " active" : ""}" href="${href}">${label}</a>`
-          ).join("")}
-        </div>
-      </details>`;
-
-    nav.innerHTML = primary + more;
+    // The shared header menu owns the single desktop “More” dropdown.
+    // Keeping a second dropdown here caused a duplicate, non-working button.
+    nav.innerHTML = primary;
   }
 
   function hideReportEditor() {

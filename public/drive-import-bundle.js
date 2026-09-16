@@ -455,7 +455,6 @@
 
     wrap.append(btn,menu);
     header.appendChild(wrap);
-
     const close=()=>{
       menu.hidden=true;
       wrap.classList.remove("open");
@@ -480,14 +479,108 @@
     });
   }
 
+  function buildDesktop(){
+    if(!window.matchMedia("(min-width: 761px)").matches) return;
+    const header=document.querySelector(".top-header");
+    const nav=header?.querySelector("nav");
+    if(!nav) return;
+
+    const role=currentRole();
+    const path=currentPath();
+    const normalizeHref=(value)=>{
+      try{
+        const pathname=new URL(value,location.origin).pathname.replace(/\/+$/,"") || "/";
+        return pathname.endsWith(".html") ? pathname.slice(0,-5) : pathname;
+      }catch(_){ return String(value || ""); }
+    };
+    const primaryHrefs=["/","/report","/archive","/monthly","/annual","/ops-dashboard"];
+    nav.querySelectorAll(".minya-nav-more").forEach((legacyMore)=>legacyMore.remove());
+    const existingMore=nav.querySelector(".minya-desktop-more");
+    const storedLinks=existingMore ? [...existingMore.querySelectorAll("a[href]")] : [];
+    const directLinks=[...nav.querySelectorAll(":scope > a[href]")];
+    const existingByHref=new Map();
+    [...directLinks,...storedLinks].forEach((link)=>{
+      const key=normalizeHref(link.getAttribute("href"));
+      if(!existingByHref.has(key)) existingByHref.set(key,link);
+      link.remove();
+    });
+
+    const routeButtons=new Map([
+      ["/report",document.getElementById("newReportBtn")],
+      ["/archive",document.getElementById("archiveBtn")]
+    ]);
+    const visibleItems=items.filter((item)=>{
+      if(item.adminOnly && role!=="admin") return false;
+      if(item.hideFor && item.hideFor.includes(role)) return false;
+      return true;
+    });
+    const visibleKeys=new Set(visibleItems.map((item)=>normalizeHref(item.href)));
+    routeButtons.forEach((button,key)=>{
+      if(button) button.hidden=!visibleKeys.has(key);
+    });
+
+    let more=existingMore;
+    let moreButton=more?.querySelector(".minya-desktop-more-button");
+    let morePanel=more?.querySelector(".minya-desktop-more-panel");
+    if(!more){
+      more=document.createElement("div");
+      more.className="minya-desktop-more";
+      moreButton=document.createElement("button");
+      moreButton.type="button";
+      moreButton.className="minya-desktop-more-button";
+      moreButton.innerHTML='<span>المزيد</span><span aria-hidden="true">⌄</span>';
+      moreButton.setAttribute("aria-expanded","false");
+      morePanel=document.createElement("div");
+      morePanel.className="minya-desktop-more-panel";
+      morePanel.hidden=true;
+      const close=()=>{morePanel.hidden=true;moreButton.setAttribute("aria-expanded","false");more.classList.remove("open");};
+      moreButton.addEventListener("click",(event)=>{
+        event.stopPropagation();
+        const open=morePanel.hidden;
+        morePanel.hidden=!open;
+        moreButton.setAttribute("aria-expanded",String(open));
+        more.classList.toggle("open",open);
+      });
+      document.addEventListener("click",(event)=>{if(!more.contains(event.target)) close();});
+      document.addEventListener("keydown",(event)=>{if(event.key==="Escape") close();});
+      more.append(moreButton,morePanel);
+    }
+    morePanel.innerHTML="";
+
+    visibleItems.forEach((item)=>{
+      const key=normalizeHref(item.href);
+      let link=routeButtons.get(key) || existingByHref.get(key);
+      if(!link){
+        link=document.createElement("a");
+        link.className="app-nav-link";
+        link.href=item.href;
+      }
+      if(link.tagName==="A"){
+        link.textContent=item.label;
+        const active=normalizeHref(path)===key || (key!=="/" && normalizeHref(path).startsWith(key));
+        link.classList.toggle("active",active);
+      }
+      if(primaryHrefs.includes(key)) nav.appendChild(link);
+      else morePanel.appendChild(link);
+    });
+
+    const hasActiveSecondary=morePanel.querySelector(".app-nav-link.active");
+    moreButton.classList.toggle("active",Boolean(hasActiveSecondary));
+    if(morePanel.children.length) nav.appendChild(more);
+    else more.remove();
+  }
+
   function start(){
     mountBackToTop();
     build();
+    buildDesktop();
+    setTimeout(buildDesktop,150);
+    setTimeout(buildDesktop,600);
     let tries=0,lastRole=currentRole();
     const timer=setInterval(()=>{
       tries+=1;
       const role=currentRole();
-      if(role!==lastRole){lastRole=role;build();}
+      if(role!==lastRole){lastRole=role;build();buildDesktop();}
       if(tries>=24) clearInterval(timer);
     },250);
   }
@@ -497,6 +590,7 @@
 
   window.addEventListener("resize",()=>{
     if(window.matchMedia("(max-width: 760px)").matches) build();
+    else buildDesktop();
   });
 })();
 
