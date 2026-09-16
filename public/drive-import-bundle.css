@@ -995,7 +995,9 @@ table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;borde
 
   .minya-desktop-more-panel[hidden] { display: none !important; }
 
-  .minya-desktop-more-panel .app-nav-link {
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link,
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:link,
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:visited {
     width: 100% !important;
     height: auto !important;
     min-height: 38px !important;
@@ -1006,8 +1008,9 @@ table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;borde
     border: 1px solid transparent !important;
   }
 
-  .minya-desktop-more-panel .app-nav-link:hover,
-  .minya-desktop-more-panel .app-nav-link.active {
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:hover,
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:focus-visible,
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link.active {
     color: #15543f !important;
     background: #eaf4ef !important;
     border-color: #d2e5dc !important;
