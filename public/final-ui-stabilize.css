@@ -521,6 +521,13 @@
     border-color: #d2e5dc !important;
   }
 
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link.active:hover,
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link.active:focus-visible {
+    color: #fff !important;
+    background: #17634c !important;
+    border-color: #17634c !important;
+  }
+
   #minyaLogoutBtn {
     top: 16px !important;
     left: 16px !important;
