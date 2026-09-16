@@ -156,8 +156,10 @@ assert(mobileMenu.includes('const primaryHrefs=["/","/report","/archive","/month
 assert(mobileMenu.includes('morePanel.appendChild(link)'), "secondary desktop links are not placed in the More menu");
 assert(mobileMenu.includes('moreButton.classList.toggle("active"'), "More menu does not show the active secondary page");
 assert(mobileMenu.includes('build();buildDesktop();'), "desktop navigation is not refreshed after the user role loads");
-assert(read("public/external-diesel.html").includes("js/app-header-menu.js?v=desktop-menu-v2"), "company diesel page does not load the complete navigation");
-assert(read("public/drivers-licenses.html").includes("js/app-header-menu.js?v=desktop-menu-v2"), "drivers page does not load the complete navigation");
+assert(read("public/external-diesel.html").includes("js/app-header-menu.js?v=desktop-menu-v3"), "company diesel page does not load the complete navigation");
+assert(read("public/drivers-licenses.html").includes("js/app-header-menu.js?v=desktop-menu-v3"), "drivers page does not load the complete navigation");
+assert(!read("public/js/page-mode.js").includes('class="minya-nav-more'), "page mode still creates the obsolete duplicate More menu");
+assert(read("public/js/app-header-menu.js").includes('querySelectorAll(".minya-nav-more")'), "shared header does not remove obsolete More menus");
 assert(mobileMenuStyles.includes('max-height: calc(100dvh - 86px)'), "mobile menu cannot fit the visible phone viewport");
 assert(mobileMenuStyles.includes('overflow-y: auto !important'), "mobile menu cannot scroll to its final items");
 assert(mobileMenuStyles.includes('#minyaHeaderMenu[hidden]'), "closed mobile menu is not reliably hidden");
