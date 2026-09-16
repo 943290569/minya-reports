@@ -4317,7 +4317,12 @@ body[data-page="report"] #saveBtn {
   }
 
   body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:hover,
-  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:focus-visible,
+  body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link:focus-visible {
+    color: #fff !important;
+    background: #17634c !important;
+    border-color: #17634c !important;
+  }
+
   body header.top-header > nav .minya-desktop-more-panel > a.app-nav-link.active {
     color: #15543f !important;
     background: #eaf4ef !important;
