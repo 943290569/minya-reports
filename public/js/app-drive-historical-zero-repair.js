@@ -43,15 +43,22 @@
     if(running||!driveToken||!window.XLSX)return;running=true;
     try{
       const rr=await originalFetch('/api/reports',{cache:'no-store'}),rd=await rr.json();const reports=Array.isArray(rd.reports)?rd.reports:[];
-      const zeros=new Map(reports.filter(r=>r?.id&&r?.report_date&&num(r.total_trucks)===0&&num(r.total_waste_tons)===0&&num(r.total_diesel)===0).map(r=>[String(r.report_date),r]));
-      if(!zeros.size){setState('تم ربط Google Drive — لا توجد تقارير صفرية تحتاج إصلاحًا','ok');return}
-      setState(`جاري فحص ملفات Drive لإصلاح ${zeros.size} تقريرًا صفريًا...`);
+      const targets=new Map(reports.filter(r=>{
+        if(!r?.id||!r?.report_date)return false;
+        const date=String(r.report_date);
+        const q1Broken=/^2026-(01|02|03)-/.test(date);
+        const zeroSummary=num(r.total_trucks)===0&&num(r.total_waste_tons)===0&&num(r.total_diesel)===0;
+        return q1Broken||zeroSummary;
+      }).map(r=>[String(r.report_date),r]));
+      if(!targets.size){setState('تم ربط Google Drive — لا توجد تقارير تاريخية تحتاج إصلاحًا','ok');return}
+      setState(`جاري استعادة تفاصيل يناير–مارس وفحص ${targets.size} تقريرًا...`);
       const files=await allDriveFiles(),found=new Map();let checked=0;
-      for(const file of files){if(found.size===zeros.size)break;const n=norm(file.name);if(!(n.includes('تقرير')||n.includes('يومي')||n.includes('مكب')||n.includes('شهر')))continue;try{const wb=await driveWorkbook(file);checked++;for(const s of wb.SheetNames){if(norm(s)==='summary')continue;const row=parseSheet(s,wb.Sheets[s]);if(row&&zeros.has(row.report_date)&&!found.has(row.report_date))found.set(row.report_date,row)}}catch(e){console.warn('historical repair skipped',file.name,e.message)}}
+      for(const file of files){if(found.size===targets.size)break;const n=norm(file.name);if(!(n.includes('تقرير')||n.includes('يومي')||n.includes('مكب')||n.includes('شهر')))continue;try{const wb=await driveWorkbook(file);checked++;for(const s of wb.SheetNames){if(norm(s)==='summary')continue;const row=parseSheet(s,wb.Sheets[s]);if(row&&targets.has(row.report_date)&&!found.has(row.report_date))found.set(row.report_date,row)}}catch(e){console.warn('historical repair skipped',file.name,e.message)}}
       let fixed=0,failed=0;
-      for(const [date,row] of found){const target=zeros.get(date);try{const res=await originalFetch(`/api/reports/${target.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(row)});const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok)throw new Error(data.message||'فشل الحفظ');fixed++}catch(e){failed++;console.error('historical repair save',date,e)}}
-      setState(`اكتملت المزامنة التاريخية: تم إصلاح ${fixed} تقرير${failed?`، وتعذر ${failed}`:''}. تم فحص ${checked} ملف.` ,failed?'':'ok');
-    }catch(e){console.error('historical zero repair',e);setState(`تعذر الإصلاح التاريخي: ${e.message}`,'error')}finally{running=false}
+      for(const [date,row] of found){const target=targets.get(date);try{const res=await originalFetch(`/api/reports/${target.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(row)});const data=await res.json().catch(()=>({}));if(!res.ok||!data.ok)throw new Error(data.message||'فشل الحفظ');fixed++}catch(e){failed++;console.error('historical repair save',date,e)}}
+      if(fixed)window.dispatchEvent(new CustomEvent('minya:historical-repair-complete',{detail:{fixed,failed}}));
+      setState(`اكتملت الاستعادة التاريخية: تم تحديث ${fixed} تقرير${failed?`، وتعذر ${failed}`:''}. تم فحص ${checked} ملف.` ,failed?'':'ok');
+    }catch(e){console.error('historical repair',e);setState(`تعذر الإصلاح التاريخي: ${e.message}`,'error')}finally{running=false}
   }
   window.fetch=async function(input,init){
     const url=typeof input==='string'?input:String(input?.url||''),headers=new Headers(init?.headers||(input instanceof Request?input.headers:undefined));
