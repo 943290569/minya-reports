@@ -72,6 +72,24 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
     }
     return out;
   }
+  function loadDailyReportRows(month, stagedDates) {
+    const reports = db.prepare(`SELECT id,report_date,weather,temperature,start_time,end_time,notes FROM daily_reports WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`);
+    const reportIds = reports.map(x => x.id);
+    if (!reportIds.length) return [];
+    const placeholders = reportIds.map(() => '?').join(',');
+    const crews = db.prepare(`SELECT report_id,crew_name,crew_count,notes FROM crews WHERE report_id IN (${placeholders})`).all(...reportIds);
+    const operations = db.prepare(`SELECT report_id,operation_name,start_time,end_time,vehicle_count,quantity,unit,notes FROM operations WHERE report_id IN (${placeholders})`).all(...reportIds);
+    const stations = db.prepare(`SELECT report_id,station_name,truck_count,waste_tons,unit,notes FROM transfer_stations WHERE report_id IN (${placeholders})`).all(...reportIds);
+    const equipment = db.prepare(`SELECT report_id,equipment_name,operating_status,status_description,working_hours,diesel_liters,notes FROM equipment WHERE report_id IN (${placeholders})`).all(...reportIds);
+    const crewsByReport = new Map(), operationsByReport = new Map(), stationsByReport = new Map(), equipmentByReport = new Map();
+    const group = (map, items) => items.forEach(item => { const list = map.get(item.report_id) || []; list.push(item); map.set(item.report_id, list); });
+    group(crewsByReport, crews); group(operationsByReport, operations); group(stationsByReport, stations); group(equipmentByReport, equipment);
+    return reports.filter(report => !stagedDates.has(report.report_date)).map(report => {
+      const workday = hasWorkdayColumns() ? db.prepare(`SELECT workday_type,workday_reason,workday_manual FROM daily_reports WHERE id=?`).get(report.id) : {};
+      const data = normalizeRow({ ...report, ...workday, crews: crewsByReport.get(report.id) || [], operations: operationsByReport.get(report.id) || [], stations: stationsByReport.get(report.id) || [], equipment: equipmentByReport.get(report.id) || [], auto: { water: false, workday: false } }, report.report_date);
+      return { report_date: report.report_date, data, source: 'daily-report' };
+    });
+  }
   function canonicalTotals(row) {
     const norm = s => String(s || '').replace(/\s+/g,'');
     const landfill = row.operations.filter(x => norm(x.operation_name).includes('مكبنفاياتالمنيا'));
@@ -116,9 +134,10 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
   app.get('/api/monthly-entry', requireAuth, (req,res)=>{
     const month=normalizeMonth(req.query.month);
     if(!month) return res.status(400).json({ok:false,message:'الشهر غير صالح'});
-    const rows=db.prepare(`SELECT report_date,data_json,updated_at FROM monthly_entry_rows WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`).map(x=>({report_date:x.report_date,data:normalizeRow(JSON.parse(x.data_json||'{}'),x.report_date),updated_at:x.updated_at}));
+    const rows=db.prepare(`SELECT report_date,data_json,updated_at FROM monthly_entry_rows WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`).map(x=>({report_date:x.report_date,data:normalizeRow(JSON.parse(x.data_json||'{}'),x.report_date),updated_at:x.updated_at,source:'monthly-entry'}));
+    const fallbackRows=loadDailyReportRows(month,new Set(rows.map(x=>x.report_date)));
     const existing=db.prepare(`SELECT id,report_date,workflow_status FROM daily_reports WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`);
-    res.json({ok:true,month,rows,existing});
+    res.json({ok:true,month,rows:[...rows,...fallbackRows].sort((a,b)=>a.report_date.localeCompare(b.report_date)),existing});
   });
 
   app.put('/api/monthly-entry', requireAuth, (req,res)=>{
