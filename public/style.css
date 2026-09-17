@@ -206,3 +206,17 @@ table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;borde
 .dashboard-layer-body {
   padding: 16px 18px;
 }
+
+/* حالات مؤشرات اليوم: تمييز "لا يوجد تقرير" عن "قيمة صفر فعلية" */
+.dashboard-metric-card.state-missing {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+.dashboard-metric-card.state-missing strong {
+  color: #9ca3af;
+  font-size: 15px;
+}
+.dashboard-metric-card.state-recorded {
+  border-color: #86efac;
+  background: #f0fdf4;
+}

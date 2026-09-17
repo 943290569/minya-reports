@@ -164,9 +164,6 @@
       const recent = Array.isArray(data.recent) ? data.recent : [];
 
       const values = {
-        todayWaste: todayReport ? Number(todayReport.total_waste_tons || 0) : 0,
-        todayTrucks: todayReport ? Number(todayReport.total_trucks || 0) : 0,
-        todayDiesel: todayReport ? Number(todayReport.total_diesel || 0) : 0,
         yearWaste: Number(year.waste || 0),
         yearReports: Number(year.reports || 0),
       };
@@ -174,6 +171,24 @@
       Object.entries(values).forEach(([key, value]) => {
         const element = document.getElementById(`dash-${key}`);
         if (element) element.textContent = formatDashboardNumber(value);
+      });
+
+      const todayMetrics = [
+        ["todayWaste", "نفايات اليوم", "total_waste_tons", "طن"],
+        ["todayTrucks", "شاحنات اليوم", "total_trucks", "شاحنة"],
+        ["todayDiesel", "سولار اليوم", "total_diesel", "لتر"],
+      ];
+      todayMetrics.forEach(([key, label, field, unit]) => {
+        const strong = document.getElementById(`dash-${key}`);
+        const card = strong?.closest(".dashboard-metric-card");
+        card?.classList.remove("state-missing", "state-recorded");
+        if (!todayReport) {
+          setMetricCard(`dash-${key}`, label, "لا يوجد تقرير", "");
+          card?.classList.add("state-missing");
+        } else {
+          setMetricCard(`dash-${key}`, label, formatDashboardNumber(todayReport[field]), unit);
+          card?.classList.add("state-recorded");
+        }
       });
 
       const currentMonthDays = Number(month.days || 0);
