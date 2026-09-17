@@ -108,7 +108,9 @@
   }
 
   function splitLine(line){
-    let cells=line.includes('\t')?line.split('\t'):line.split(/\s{2,}/);
+    let cells;
+    if(line.includes('|')) cells=line.split('|').map(x=>x.trim()).filter(Boolean);
+    else cells=line.includes('\t')?line.split('\t'):line.split(/\s{2,}/);
     return cells.map(x=>latin(x).replace(/\*\*/g,'').trim());
   }
 
