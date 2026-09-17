@@ -29,7 +29,9 @@
   function setSummaryValue(label,value){
     const root=document.getElementById('summary');if(!root)return;
     const span=[...root.querySelectorAll('span')].find(x=>String(x.textContent||'').includes(label));
-    const strong=span?.querySelector('strong');if(strong)strong.textContent=fmt(value);
+    const strong=span?.querySelector('strong');if(!strong)return;
+    const next=fmt(value);
+    if(String(strong.textContent||'').trim()!==next)strong.textContent=next;
   }
   function patchSummary(){
     const totals=monthlyArchiveTotals();if(!totals.days)return;
@@ -42,8 +44,9 @@
       const d=await json('/api/reports');
       archiveReports=Array.isArray(d.reports)?d.reports:[];
       patchSummary();
-      setTimeout(patchSummary,150);
-      setTimeout(patchSummary,600);
+      setTimeout(patchSummary,120);
+      setTimeout(patchSummary,500);
+      setTimeout(patchSummary,1200);
     }catch(e){console.warn('monthly archive totals compatibility',e);}
   }
   function hook(){
@@ -51,8 +54,6 @@
     btn.dataset.archiveTotalsHooked='1';
     btn.addEventListener('click',()=>setTimeout(recover,500));
     setTimeout(recover,1000);
-    const summary=document.getElementById('summary');
-    if(summary)new MutationObserver(()=>queueMicrotask(patchSummary)).observe(summary,{childList:true,subtree:true,characterData:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook,{once:true});else hook();
 })();
