@@ -17,12 +17,12 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     return row.operations.find(x=>{
       const n=norm(x.operation_name);
       if(n===c)return true;
-      if(c.includes('مكبنفاياتالمنيا'))return n.includes('مكب')&&n.includes('المنيا');
+      if(c.includes('مكبنفاياتالمنيا'))return (n.includes('مكب')&&n.includes('المنيا'))||(n.includes('نفايات')&&n.includes('المنيا'));
       if(c.includes('كمياتالعصارةالمرحلة'))return n.includes('عصار');
       if(c.includes('خطالفرز'))return n.includes('فرز');
-      if(c.includes('طممخارجي'))return n.includes('طمم')&&n.includes('خارجي');
-      if(c.includes('موادالتغطيةاسلوب'))return n.includes('اسلوب')||n.includes('سلوب');
-      if(c.includes('موادالتغطيةطمم'))return n.includes('طمم')&&!n.includes('خارجي');
+      if(c.includes('طممخارجي'))return (n.includes('طمم')||n.includes('ردم'))&&n.includes('خارجي');
+      if(c.includes('موادالتغطيةاسلوب'))return (n.includes('تغطي')||n.includes('مواد'))&&(n.includes('اسلوب')||n.includes('سلوب'));
+      if(c.includes('موادالتغطيةطمم'))return (n.includes('تغطي')||n.includes('مواد'))&&n.includes('طمم')&&!n.includes('خارجي');
       if(c.includes('كمياتالمياه'))return n.includes('مياه')&&!n.includes('رش');
       if(c.includes('عددمراترشالمياه'))return n.includes('رش')&&n.includes('مياه');
       return false;
@@ -36,7 +36,7 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     const originalOperations=Array.isArray(row.operations)?row.operations.map(x=>({...x})):[];
     row.operations=Array.isArray(row.operations)?row.operations:[];
     row.stations=Array.isArray(row.stations)?row.stations:[];
-    for(const [name,unit] of operationDefaults){const hit=matchOperation(row,name);if(hit)hit.operation_name=name;else row.operations.push({operation_name:name,start_time:'',end_time:'',vehicle_count:0,quantity:0,unit,notes:''});}
+    for(const [name,unit] of operationDefaults){const hit=matchOperation(row,name);if(hit){hit.operation_name=name;if(!hit.unit)hit.unit=unit;}else row.operations.push({operation_name:name,start_time:'',end_time:'',vehicle_count:0,quantity:0,unit,notes:''});}
     for(const name of stationDefaults){const hit=matchStation(row,name);if(hit)hit.station_name=name;else row.stations.push({station_name:name,truck_count:0,waste_tons:0,unit:'طن',notes:''});}
     row.crews=Array.isArray(row.crews)&&row.crews.length?row.crews:blank(row.report_date).crews;
     row.equipment=Array.isArray(row.equipment)&&row.equipment.length?row.equipment:blank(row.report_date).equipment;
@@ -53,6 +53,27 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     row.stored_totals={waste:Number(report?.total_waste_tons||0),trucks:Number(report?.total_trucks||0),diesel:Number(report?.total_diesel||0)};
     row.auto={water:true,workday:true,weather:true,...(row.auto||{})};
     return row;
+  }
+  function mergeNonZero(primary,backup){
+    const out={...backup,...primary};
+    out.operations=operationDefaults.map(([name,unit])=>{
+      const p=matchOperation(primary,name)||{};
+      const b=matchOperation(backup,name)||{};
+      return {...b,...p,operation_name:name,unit:p.unit||b.unit||unit,vehicle_count:Number(p.vehicle_count||0)!==0?Number(p.vehicle_count):Number(b.vehicle_count||0),quantity:Number(p.quantity||0)!==0?Number(p.quantity):Number(b.quantity||0)};
+    });
+    out.stations=stationDefaults.map(name=>{
+      const p=matchStation(primary,name)||{};
+      const b=matchStation(backup,name)||{};
+      return {...b,...p,station_name:name,unit:p.unit||b.unit||'طن',truck_count:Number(p.truck_count||0)!==0?Number(p.truck_count):Number(b.truck_count||0),waste_tons:Number(p.waste_tons||0)!==0?Number(p.waste_tons):Number(b.waste_tons||0)};
+    });
+    const crewMap=new Map((backup.crews||[]).map(x=>[norm(x.crew_name),x]));
+    out.crews=(primary.crews||[]).map(x=>{const b=crewMap.get(norm(x.crew_name))||{};return {...b,...x,crew_count:Number(x.crew_count||0)!==0?Number(x.crew_count):Number(b.crew_count||0)}});
+    if(!out.crews.length)out.crews=backup.crews||[];
+    const equipmentMap=new Map((backup.equipment||[]).map(x=>[norm(x.equipment_name),x]));
+    out.equipment=(primary.equipment||[]).map(x=>{const b=equipmentMap.get(norm(x.equipment_name))||{};return {...b,...x,working_hours:Number(x.working_hours||0)!==0?Number(x.working_hours):Number(b.working_hours||0),diesel_liters:Number(x.diesel_liters||0)!==0?Number(x.diesel_liters):Number(b.diesel_liters||0)}});
+    if(!out.equipment.length)out.equipment=backup.equipment||[];
+    out.auto={...(backup.auto||{}),...(primary.auto||{})};
+    return out;
   }
   function reportData(report){
     const row=blank(report.report_date);
@@ -84,10 +105,16 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
       const weather=await getWeather(month),rows=[];
       for(let day=1;day<=daysInMonth(month);day++){
         const date=`${month}-${String(day).padStart(2,'0')}`;let data,source='new',updated_at=null;
-        if(reportMap.has(date)){data=reportData(reportMap.get(date));source='report';}
-        else if(stagedMap.has(date)){data=canonicalize({...blank(date),...stagedMap.get(date).data,report_date:date});source='saved-entry';updated_at=stagedMap.get(date).updated_at;}
+        const stagedItem=stagedMap.get(date);
+        const stagedData=stagedItem?canonicalize({...blank(date),...stagedItem.data,report_date:date}):null;
+        if(reportMap.has(date)){
+          const report=reportMap.get(date);
+          data=reportData(report);
+          if(stagedData){data=canonicalize(mergeNonZero(data,stagedData),report);source='report+saved-entry';updated_at=stagedItem.updated_at;}
+          else source='report';
+        }else if(stagedData){data=stagedData;source='saved-entry';updated_at=stagedItem.updated_at;}
         else data=canonicalize(blank(date));
-        if(source!=='report'&&data.auto?.weather!==false&&weather.has(date)){const w=weather.get(date);data.weather=w.weather;data.temperature=w.temperature;data.weather_source='Open-Meteo';}
+        if(source==='new'&&data.auto?.weather!==false&&weather.has(date)){const w=weather.get(date);data.weather=w.weather;data.temperature=w.temperature;data.weather_source='Open-Meteo';}
         rows.push({report_date:date,data,updated_at,source});
       }
       res.json({ok:true,month,rows,existing:reports.map(r=>({id:r.id,report_date:r.report_date,workflow_status:r.workflow_status||'draft'})),weather:{source:'Open-Meteo',available_days:weather.size}});
