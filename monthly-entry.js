@@ -164,8 +164,16 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
     const month=normalizeMonth(req.body?.month); const existingAction=String(req.body?.existing_action||'cancel');
     if(!month) return res.status(400).json({ok:false,message:'الشهر غير صالح'});
     if(!['ignore','replace','cancel'].includes(existingAction)) return res.status(400).json({ok:false,message:'خيار التقارير الموجودة غير صالح'});
-    const staged=db.prepare(`SELECT report_date,data_json FROM monthly_entry_rows WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`);
-    if(!staged.length) return res.status(400).json({ok:false,message:'لا توجد بيانات محفوظة لهذا الشهر'});
+
+    const datesProvided=Array.isArray(req.body?.dates);
+    const requestedDates=datesProvided?[...new Set(req.body.dates.map(x=>String(x||'')))]:[];
+    if(datesProvided&&requestedDates.some(date=>!isValidDate(date)||!date.startsWith(`${month}-`))) return res.status(400).json({ok:false,message:'أحد تواريخ التعديل غير صالح'});
+
+    const allStaged=db.prepare(`SELECT report_date,data_json FROM monthly_entry_rows WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`);
+    const requestedSet=new Set(requestedDates);
+    const staged=datesProvided?allStaged.filter(item=>requestedSet.has(item.report_date)):allStaged;
+    if(!staged.length) return res.status(400).json({ok:false,message:datesProvided?'لا توجد بيانات معدلة محفوظة للاعتماد':'لا توجد بيانات محفوظة لهذا الشهر'});
+
     const conflicts=staged.map(x=>x.report_date).filter(date=>db.prepare(`SELECT id FROM daily_reports WHERE report_date=?`).get(date));
     if(conflicts.length && existingAction==='cancel') return res.status(409).json({ok:false,conflicts,message:`يوجد ${conflicts.length} تقريرًا محفوظًا. اختر تجاهل أو استبدال.`});
     const result={created:0,replaced:0,ignored:0,dates:[]};
@@ -179,6 +187,12 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
         result.dates.push(item.report_date);
       }
     });
-    try { tx(); audit?.(req.user,'COMMIT_MONTHLY_ENTRY','monthly_entry',month,JSON.stringify(result)); res.json({ok:true,...result,message:`تم إنشاء ${result.created} واستبدال ${result.replaced} وتجاهل ${result.ignored}`}); } catch(error){ res.status(500).json({ok:false,message:'فشل اعتماد تقارير الشهر',error:error.message}); }
+    try {
+      tx();
+      audit?.(req.user,'COMMIT_MONTHLY_ENTRY','monthly_entry',month,JSON.stringify({...result,scope:datesProvided?'modified':'all'}));
+      res.json({ok:true,...result,scope:datesProvided?'modified':'all',message:`تم إنشاء ${result.created} واستبدال ${result.replaced} وتجاهل ${result.ignored}`});
+    } catch(error){
+      res.status(500).json({ok:false,message:'فشل اعتماد تقارير الشهر',error:error.message});
+    }
   });
 };
