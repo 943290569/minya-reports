@@ -238,11 +238,11 @@
   function buildDashboard() {
     const main = document.querySelector("main.container");
     if (!main) return;
-
+  
     main.querySelectorAll(":scope > section").forEach((section) => {
       section.style.display = "none";
     });
-
+  
     const dashboard = document.createElement("section");
     dashboard.className = "dashboard-home";
     dashboard.innerHTML = `
@@ -255,7 +255,7 @@
         </div>
         <a class="dashboard-primary-action" href="/report">إنشاء تقرير جديد</a>
       </div>
-
+  
       <div class="dashboard-section-head">
         <div>
           <span>نظرة سريعة</span>
@@ -263,7 +263,7 @@
         </div>
         <small id="dashboardDataStatus">جاري تحميل المؤشرات...</small>
       </div>
-
+  
       <div class="dashboard-metrics">
         <div class="dashboard-metric-card"><span>نفايات اليوم</span><strong id="dash-todayWaste">0</strong><small>طن</small></div>
         <div class="dashboard-metric-card"><span>شاحنات اليوم</span><strong id="dash-todayTrucks">0</strong><small>شاحنة</small></div>
@@ -274,14 +274,17 @@
         <div class="dashboard-metric-card"><span>نفايات السنة</span><strong id="dash-yearWaste">0</strong><small>طن</small></div>
         <div class="dashboard-metric-card"><span>تقارير السنة</span><strong id="dash-yearReports">0</strong><small>تقرير</small></div>
       </div>
-
+  
+      <!-- الطبقة 1: تشغيل يومي — تظهر دائمًا -->
+      <div id="dashboardLayer1" class="dashboard-layer-slot"></div>
+  
       <div class="dashboard-grid">
         <a class="dashboard-card" href="/report"><span class="dashboard-icon">01</span><h3>التقرير اليومي</h3><p>إدخال بيانات التشغيل والموظفين والعمليات والمعدات وحفظ التقرير.</p></a>
         <a class="dashboard-card" href="/archive"><span class="dashboard-icon">02</span><h3>أرشيف التقارير</h3><p>البحث والفتح والتعديل والطباعة والوصول السريع للتقارير السابقة.</p></a>
         <a class="dashboard-card" href="/monthly"><span class="dashboard-icon">03</span><h3>التقرير الشهري</h3><p>المجاميع والمتوسطات والمقارنات والرسوم البيانية والتصدير.</p></a>
         <a class="dashboard-card" href="/annual"><span class="dashboard-icon">04</span><h3>التقرير السنوي</h3><p>تحليل سنوي متكامل، مقارنة السنوات، المؤشرات والطباعة والتصدير.</p></a>
       </div>
-
+  
       <div class="dashboard-recent-panel">
         <div class="dashboard-section-head compact">
           <div><span>آخر النشاطات</span><h3>آخر 5 تقارير محفوظة</h3></div>
@@ -294,12 +297,23 @@
           </table>
         </div>
       </div>
+  
+      <!-- الطبقة 2: العمل الإداري — قابلة للطي، مغلقة افتراضيًا -->
+      <details id="dashboardLayer2" class="dashboard-layer">
+        <summary>العمل الإداري <span class="dashboard-layer-hint">مراجعات، صلاحية النظام، ملخصات الأدوار</span></summary>
+        <div class="dashboard-layer-body"></div>
+      </details>
+  
+      <!-- الطبقة 3: التحليل — قابلة للطي، مغلقة افتراضيًا -->
+      <details id="dashboardLayer3" class="dashboard-layer">
+        <summary>التحليل <span class="dashboard-layer-hint">تحليلات ذكية، مؤشرات تنفيذية، ملخصات تشغيلية</span></summary>
+        <div class="dashboard-layer-body"></div>
+      </details>
     `;
-
+  
     main.appendChild(dashboard);
     loadDashboardData();
   }
-
   function applyPageMode() {
     const archive = document.getElementById("archiveSection");
     const monthly = document.getElementById("monthlyReportSection");
