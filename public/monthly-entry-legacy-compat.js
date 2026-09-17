@@ -1,7 +1,6 @@
 (()=>{
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
   const fmt=v=>num(v).toLocaleString('en-US',{maximumFractionDigits:2});
-  let archiveReports=[];
 
   function monthKey(){
     const y=document.getElementById('yearSelect')?.value||'';
@@ -15,17 +14,6 @@
     if(!r.ok)throw new Error(d.message||`HTTP ${r.status}`);
     return d;
   }
-  function monthlyArchiveTotals(){
-    const month=monthKey();
-    const list=archiveReports.filter(r=>String(r.report_date||'').startsWith(month+'-'));
-    return list.reduce((a,r)=>{
-      a.days++;
-      a.trucks+=num(r.total_trucks);
-      a.waste+=num(r.total_waste_tons);
-      a.diesel+=num(r.total_diesel);
-      return a;
-    },{days:0,trucks:0,waste:0,diesel:0});
-  }
   function setSummaryValue(label,value){
     const root=document.getElementById('summary');if(!root)return;
     const span=[...root.querySelectorAll('span')].find(x=>String(x.textContent||'').includes(label));
@@ -33,25 +21,26 @@
     const next=fmt(value);
     if(String(strong.textContent||'').trim()!==next)strong.textContent=next;
   }
-  function patchSummary(){
-    const totals=monthlyArchiveTotals();if(!totals.days)return;
+  function patchSummary(totals){
+    if(!totals)return;
     setSummaryValue('الشاحنات',totals.trucks);
     setSummaryValue('نفايات المكب',totals.waste);
     setSummaryValue('السولار',totals.diesel);
   }
   async function recover(){
+    const month=monthKey();if(!/^\d{4}-\d{2}$/.test(month))return;
     try{
-      const d=await json('/api/reports');
-      archiveReports=Array.isArray(d.reports)?d.reports:[];
-      patchSummary();
-      setTimeout(patchSummary,120);
-      setTimeout(patchSummary,500);
-      setTimeout(patchSummary,1200);
-    }catch(e){console.warn('monthly archive totals compatibility',e);}
+      const d=await json(`/api/monthly-entry?month=${encodeURIComponent(month)}`);
+      const totals=d.monthly_totals||null;
+      if(!totals)return;
+      patchSummary(totals);
+      setTimeout(()=>patchSummary(totals),120);
+      setTimeout(()=>patchSummary(totals),500);
+    }catch(e){console.warn('monthly totals compatibility',e);}
   }
   function hook(){
-    const btn=document.getElementById('loadBtn');if(!btn||btn.dataset.archiveTotalsHooked)return;
-    btn.dataset.archiveTotalsHooked='1';
+    const btn=document.getElementById('loadBtn');if(!btn||btn.dataset.monthlyTotalsHooked)return;
+    btn.dataset.monthlyTotalsHooked='1';
     btn.addEventListener('click',()=>setTimeout(recover,500));
     setTimeout(recover,1000);
   }
