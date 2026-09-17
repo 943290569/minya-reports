@@ -12,7 +12,14 @@
 <body data-page="external-diesel">
   <header class="top-header">
     <div><h1>نظام إدارة مكب المنيا</h1><p>كشوف السولار الذي عبّأه طاقم المكب للشركات الخارجية</p></div>
-    <nav><a class="app-nav-link" href="/">الرئيسية</a><a class="app-nav-link active" href="/external-diesel">سولار الشركات</a></nav>
+    <nav>
+      <a class="app-nav-link" href="/">الرئيسية</a>
+      <a class="app-nav-link" href="/report">تقرير جديد</a>
+      <a class="app-nav-link" href="/archive">أرشيف التقارير</a>
+      <a class="app-nav-link" href="/monthly">التقرير الشهري</a>
+      <a class="app-nav-link" href="/annual">التقرير السنوي</a>
+      <a class="app-nav-link" href="/ops-dashboard">لوحة التشغيل</a>
+    </nav>
   </header>
 
   <main class="container external-diesel-page">
@@ -78,10 +85,6 @@
 
     <section class="panel" id="edImportPanel">
       <div class="ed-section-head"><div><h2>استيراد كشف إكسل أو وورد</h2><p>يقرأ النظام ملفات DOC وDOCX وExcel ويستبعد أسطر المجاميع والتواقيع.</p></div><button id="edTemplateBtn" type="button">تنزيل نموذج Excel</button></div>
-      <div class="ed-actions ed-import-navigation">
-        <button type="button" onclick="history.back()">رجوع</button>
-        <a class="v3-primary" href="/">العودة للرئيسية</a>
-      </div>
       <div class="ed-import-row">
         <label class="ed-file-picker" for="edExcelFile">
           <span class="ed-file-button">اختيار كشف إكسل أو وورد</span>
