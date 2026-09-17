@@ -72,6 +72,13 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
     }
     return out;
   }
+  function hasMeaningfulData(row) {
+    const totals = canonicalTotals(row || {});
+    return totals.total_waste_tons !== 0 || totals.total_trucks !== 0 || totals.total_diesel !== 0 ||
+      (row?.operations || []).some(x => String(x.notes || '').trim()) ||
+      (row?.stations || []).some(x => String(x.notes || '').trim()) ||
+      (row?.equipment || []).some(x => String(x.status_description || x.notes || '').trim());
+  }
   function loadDailyReportRows(month, stagedDates) {
     const reports = db.prepare(`SELECT id,report_date,weather,temperature,start_time,end_time,notes FROM daily_reports WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`);
     const reportIds = reports.map(x => x.id);
@@ -135,9 +142,11 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
     const month=normalizeMonth(req.query.month);
     if(!month) return res.status(400).json({ok:false,message:'الشهر غير صالح'});
     const rows=db.prepare(`SELECT report_date,data_json,updated_at FROM monthly_entry_rows WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`).map(x=>({report_date:x.report_date,data:normalizeRow(JSON.parse(x.data_json||'{}'),x.report_date),updated_at:x.updated_at,source:'monthly-entry'}));
-    const fallbackRows=loadDailyReportRows(month,new Set(rows.map(x=>x.report_date)));
+    const stagedDates=new Set(rows.filter(x=>hasMeaningfulData(x.data)).map(x=>x.report_date));
+    const fallbackRows=loadDailyReportRows(month,stagedDates);
+    const fallbackDates=new Set(fallbackRows.map(x=>x.report_date));
     const existing=db.prepare(`SELECT id,report_date,workflow_status FROM daily_reports WHERE report_date LIKE ? ORDER BY report_date`).all(`${month}-%`);
-    res.json({ok:true,month,rows:[...rows,...fallbackRows].sort((a,b)=>a.report_date.localeCompare(b.report_date)),existing});
+    res.json({ok:true,month,rows:[...rows.filter(x=>!fallbackDates.has(x.report_date)),...fallbackRows].sort((a,b)=>a.report_date.localeCompare(b.report_date)),existing});
   });
 
   app.put('/api/monthly-entry', requireAuth, (req,res)=>{
