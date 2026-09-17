@@ -77,6 +77,12 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     const originalStations=Array.isArray(row.stations)?row.stations.map(x=>({...x})):[];
     const originalEquipment=Array.isArray(row.equipment)?row.equipment.map(x=>({...x})):[];
     const probe={...row,operations:originalOperations,stations:originalStations};
+    const legacyWaste=originalOperations.filter(x=>{const n=norm(x.operation_name);return n.includes('نفايات')&&!n.includes('ترحيل')&&!n.includes('محطه')&&!(n.includes('مكب')&&n.includes('المنيا'));});
+    const legacyWasteTons=legacyWaste.reduce((sum,x)=>sum+number(x.quantity),0);
+    const legacyWasteTrucks=legacyWaste.reduce((sum,x)=>sum+number(x.vehicle_count),0);
+    const directWasteRows=originalOperations.filter(x=>{const n=norm(x.operation_name);return n.includes('مكب')&&n.includes('المنيا');});
+    const directWasteTons=directWasteRows.reduce((sum,x)=>sum+number(x.quantity),0);
+    const directWasteTrucks=directWasteRows.reduce((sum,x)=>sum+number(x.vehicle_count),0);
     row.operations=operationDefaults.map(([name,unit])=>{
       const hit=matchOperation(probe,name)||{};
       return {...hit,operation_name:name,start_time:hit.start_time||'',end_time:hit.end_time||'',vehicle_count:number(hit.vehicle_count),quantity:number(hit.quantity),unit:hit.unit||unit,notes:hit.notes||''};
@@ -94,15 +100,18 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     const storedTrucks=Math.max(0,number(report?.total_trucks)-stationTrucks);
     if(landfill){
       const target=row.operations.find(x=>x.operation_name==='مكب نفايات المنيا');
+      if(target&&directWasteTons===0&&legacyWasteTons>0)target.quantity=legacyWasteTons;
+      if(target&&directWasteTrucks===0&&legacyWasteTrucks>0)target.vehicle_count=legacyWasteTrucks;
       if(target&&number(target.quantity)===0&&storedWaste>0)target.quantity=storedWaste;
       if(target&&number(target.vehicle_count)===0&&storedTrucks>0)target.vehicle_count=storedTrucks;
     }
     const detailDiesel=row.equipment.reduce((sum,x)=>sum+number(x.diesel_liters),0);
+    const rawDiesel=originalEquipment.reduce((sum,x)=>sum+number(x.diesel_liters),0);
     row.stored_totals={waste:number(report?.total_waste_tons),trucks:number(report?.total_trucks),diesel:number(report?.total_diesel)};
     row.summary_totals={
       waste:number(report?.total_waste_tons)>0?number(report.total_waste_tons):number(row.operations.find(x=>x.operation_name==='مكب نفايات المنيا')?.quantity)+stationWaste,
       trucks:number(report?.total_trucks)>0?number(report.total_trucks):number(row.operations.find(x=>x.operation_name==='مكب نفايات المنيا')?.vehicle_count)+stationTrucks,
-      diesel:number(report?.total_diesel)>0?number(report.total_diesel):detailDiesel
+      diesel:number(report?.total_diesel)>0?number(report.total_diesel):(detailDiesel>0?detailDiesel:rawDiesel)
     };
     row.auto={water:true,workday:true,weather:true,...(row.auto||{})};
     return row;
@@ -170,7 +179,7 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
       }
       const existingRows=rows.filter(x=>x.source!=='new');
       const monthlyTotals=existingRows.reduce((a,x)=>{const t=x.data?.summary_totals||{};a.trucks+=number(t.trucks);a.waste+=number(t.waste);a.diesel+=number(t.diesel);return a;},{trucks:0,waste:0,diesel:0});
-      res.json({ok:true,month,rows,monthly_totals:monthlyTotals,existing:reports.map(r=>({id:r.id,report_date:r.report_date,workflow_status:r.workflow_status||'draft'})),weather:{source:'Open-Meteo',available_days:weather.size}});
+      res.json({ok:true,month,rows:existingRows,monthly_totals:monthlyTotals,existing:reports.map(r=>({id:r.id,report_date:r.report_date,workflow_status:r.workflow_status||'draft'})),weather:{source:'Open-Meteo',available_days:weather.size}});
     }catch(error){console.error('monthly entry live fix failed',error);res.status(500).json({ok:false,message:'تعذر تحميل بيانات الشهر',error:error.message});}
   });
 };
