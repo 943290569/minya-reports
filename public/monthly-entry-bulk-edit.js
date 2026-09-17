@@ -37,7 +37,7 @@
       <div class="me-bulk-head">
         <div>
           <strong>تعديل عمود لجميع أيام الشهر</strong>
-          <small>اختر العمود، اكتب القيمة مرة واحدة، ثم طبّقها على كل أيام الشهر.</small>
+          <small>اختر العمود ثم استخدم قيمة واحدة لجميع الأيام، أو ألصق عمودًا كاملًا من Excel.</small>
         </div>
         <span id="bulkSelectedName" class="me-bulk-selected">لم يتم تحديد عمود</span>
       </div>
@@ -46,15 +46,26 @@
           <select id="bulkColumnSelect"><option value="">اختر العمود</option></select>
         </label>
         <div id="bulkValueWrap" class="me-bulk-value"><input id="bulkValue" type="text" placeholder="اختر العمود أولًا" disabled></div>
-        <button id="bulkApplyBtn" class="me-btn me-primary" type="button" disabled>تطبيق على جميع أيام الشهر</button>
+        <button id="bulkApplyBtn" class="me-btn me-primary" type="button" disabled>تطبيق قيمة واحدة على جميع الأيام</button>
         <button id="bulkUndoBtn" class="me-btn me-secondary" type="button" disabled>تراجع عن آخر تطبيق</button>
         <button id="bulkClearBtn" class="me-btn me-secondary" type="button">إلغاء التحديد</button>
+      </div>
+      <div class="me-bulk-paste-box">
+        <label>لصق عمود كامل من Excel
+          <textarea id="bulkColumnPaste" rows="5" placeholder="انسخ عمودًا من Excel ثم الصقه هنا بـ Ctrl + V" disabled></textarea>
+        </label>
+        <div class="me-bulk-paste-row">
+          <span id="bulkPasteCount">0 قيمة</span>
+          <button id="bulkPasteApplyBtn" class="me-btn me-primary" type="button" disabled>تطبيق القيم على العمود</button>
+        </div>
       </div>
       <div id="bulkEditState" class="me-bulk-state">اختر عمودًا من القائمة أو اضغط على عنوان العمود في الجدول.</div>`;
     target.parentNode.insertBefore(panel,target);
 
     $('#bulkColumnSelect').addEventListener('change',()=>selectByKey($('#bulkColumnSelect').value));
     $('#bulkApplyBtn').addEventListener('click',applyBulk);
+    $('#bulkPasteApplyBtn').addEventListener('click',applyPastedColumn);
+    $('#bulkColumnPaste').addEventListener('input',updatePasteCount);
     $('#bulkUndoBtn').addEventListener('click',undoBulk);
     $('#bulkClearBtn').addEventListener('click',clearSelection);
   }
@@ -69,6 +80,7 @@
     if(current&&cols.some(c=>c.key===current))select.value=current;
     else if(current){selectedKey='';selectedLabel='';}
     decorateHeaders(cols);
+    updatePasteCount();
   }
 
   function escapeHtml(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
@@ -120,10 +132,28 @@
     const editor=makeEditor(controls[0]);
     $('#bulkSelectedName').textContent=`العمود المحدد: ${selectedLabel}`;
     $('#bulkApplyBtn').disabled=false;
-    $('#bulkEditState').textContent=`القيمة ستُطبّق على ${controls.length} يومًا في عمود «${selectedLabel}».`;
+    $('#bulkColumnPaste').disabled=false;
+    $('#bulkEditState').textContent=`يمكن تطبيق قيمة واحدة أو لصق ${controls.length} قيمة بالترتيب على عمود «${selectedLabel}».`;
     decorateHeaders();
+    updatePasteCount();
     editor?.focus();
     editor?.select?.();
+  }
+
+  function normalizeForControl(control,raw){
+    const v=String(raw??'').trim();
+    if(control.tagName==='SELECT'){
+      const options=[...control.options];
+      let hit=options.find(o=>o.value===v)||options.find(o=>o.text.trim()===v);
+      if(!hit&&/عطلة|طوارئ/.test(v))hit=options.find(o=>o.value==='holiday');
+      if(!hit&&/رسمي|دوام/.test(v))hit=options.find(o=>o.value==='official');
+      return hit?{ok:true,value:hit.value}:{ok:false,value:v};
+    }
+    if(control.type==='number'){
+      const value=v.replace(/,/g,'').replace(/٫/g,'.');
+      return value===''||Number.isFinite(Number(value))?{ok:true,value}:{ok:false,value};
+    }
+    return{ok:true,value:v};
   }
 
   function triggerValue(control,value){
@@ -132,25 +162,86 @@
     control.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
+  function rememberCurrent(controls){
+    lastBulk={
+      key:selectedKey,
+      label:selectedLabel,
+      items:controls.map(control=>({i:control.dataset.i,key:control.dataset.key,value:control.value}))
+    };
+  }
+
   function applyBulk(){
     if(!selectedKey)return;
     const editor=$('#bulkValue');
     if(!editor)return;
     const controls=controlsForKey(selectedKey);
     if(!controls.length)return;
-    const value=editor.value;
+    const normalized=normalizeForControl(controls[0],editor.value);
+    if(!normalized.ok){
+      $('#bulkEditState').textContent='القيمة المدخلة غير مقبولة لهذا العمود.';
+      return;
+    }
 
-    lastBulk={
-      key:selectedKey,
-      label:selectedLabel,
-      items:controls.map(control=>({i:control.dataset.i,key:control.dataset.key,value:control.value}))
-    };
-
-    controls.forEach(control=>triggerValue(control,value));
+    rememberCurrent(controls);
+    controls.forEach(control=>triggerValue(control,normalized.value));
     $('#bulkUndoBtn').disabled=false;
-    $('#bulkEditState').textContent=`تم تطبيق «${value}» على جميع أيام الشهر (${controls.length} يومًا) في عمود «${selectedLabel}». اضغط «تحديث البيانات» للحفظ.`;
+    $('#bulkEditState').textContent=`تم تطبيق «${normalized.value}» على جميع أيام الشهر (${controls.length} يومًا) في عمود «${selectedLabel}». اضغط «تحديث البيانات» للحفظ.`;
     const status=$('#status');
     if(status)status.textContent=`تم تعديل عمود «${selectedLabel}» لجميع أيام الشهر — اضغط تحديث البيانات للحفظ`;
+  }
+
+  function pastedValues(){
+    const area=$('#bulkColumnPaste');
+    if(!area)return[];
+    const raw=String(area.value||'').replace(/\r/g,'');
+    if(!raw)return[];
+    const lines=raw.split('\n');
+    while(lines.length&&lines.at(-1)==='')lines.pop();
+    return lines.map(line=>{
+      const cells=line.split('\t');
+      return cells[0]??'';
+    });
+  }
+
+  function updatePasteCount(){
+    const count=$('#bulkPasteCount');
+    const btn=$('#bulkPasteApplyBtn');
+    if(!count||!btn)return;
+    const values=pastedValues();
+    const expected=selectedKey?controlsForKey(selectedKey).length:0;
+    count.textContent=expected?`${values.length} / ${expected} قيمة`:`${values.length} قيمة`;
+    btn.disabled=!selectedKey||values.length!==expected||expected===0;
+    count.classList.toggle('is-ok',!!expected&&values.length===expected);
+    count.classList.toggle('is-error',values.length>0&&!!expected&&values.length!==expected);
+  }
+
+  function applyPastedColumn(){
+    if(!selectedKey)return;
+    const controls=controlsForKey(selectedKey);
+    const values=pastedValues();
+    if(!controls.length)return;
+    if(values.length!==controls.length){
+      $('#bulkEditState').textContent=`عدد القيم الملصقة ${values.length} لا يساوي عدد أيام الشهر ${controls.length}. لم يتم تغيير أي قيمة.`;
+      updatePasteCount();
+      return;
+    }
+
+    const normalized=[];
+    for(let i=0;i<controls.length;i++){
+      const n=normalizeForControl(controls[i],values[i]);
+      if(!n.ok){
+        $('#bulkEditState').textContent=`القيمة في الصف ${i+1} غير مقبولة لهذا العمود. لم يتم تغيير أي قيمة.`;
+        return;
+      }
+      normalized.push(n.value);
+    }
+
+    rememberCurrent(controls);
+    controls.forEach((control,i)=>triggerValue(control,normalized[i]));
+    $('#bulkUndoBtn').disabled=false;
+    $('#bulkEditState').textContent=`تم لصق ${controls.length} قيمة على عمود «${selectedLabel}» من أول يوم إلى آخر يوم. اضغط «تحديث البيانات» للحفظ.`;
+    const status=$('#status');
+    if(status)status.textContent=`تم لصق عمود «${selectedLabel}» كاملًا (${controls.length} يومًا) — اضغط تحديث البيانات للحفظ`;
   }
 
   function findControl(item){
@@ -177,7 +268,10 @@
     $('#bulkSelectedName').textContent='لم يتم تحديد عمود';
     $('#bulkValueWrap').innerHTML='<input id="bulkValue" type="text" placeholder="اختر العمود أولًا" disabled>';
     $('#bulkApplyBtn').disabled=true;
+    const area=$('#bulkColumnPaste');if(area){area.value='';area.disabled=true;}
+    $('#bulkPasteApplyBtn').disabled=true;
     $('#bulkEditState').textContent='اختر عمودًا من القائمة أو اضغط على عنوان العمود في الجدول.';
+    updatePasteCount();
     decorateHeaders();
   }
 
