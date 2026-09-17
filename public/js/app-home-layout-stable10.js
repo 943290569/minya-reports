@@ -1,68 +1,74 @@
-/* Stable 10 — home dashboard ordering only. Keeps every feature, changes placement. */
-(function(){
-  function isHome(){return (location.pathname.replace(/\/+$/,'')||'/')==='/';}
-  const order=[
-    'todayOperationsSection',
-    'adminTodayOps',
-    'freeSmartInsights',
-    'smartOperationsFree',
-    'operationalSummaries',
-    'executiveDashboardSection',
-    'adminWorkflowSummary',
-    'adminSystemHealth'
-  ];
+/* Home dashboard layering — replaces the old flat-reorder version.
+   Moves each injected section into its correct layer container
+   (Layer 1 = always visible, Layer 2/3 = collapsible <details>)
+   instead of just reordering siblings in place. */
+(function () {
+  function isHome() {
+    return (location.pathname.replace(/\/+$/, "") || "/") === "/";
+  }
 
-  function arrange(){
-    if(!isHome()) return;
-    const home=document.querySelector('.dashboard-home');
-    if(!home) return;
-    const grid=home.querySelector('.dashboard-grid');
+  // sectionId -> which layer body it belongs in
+  const layerMap = {
+    todayOperationsSection: "layer1",
+    adminTodayOps: "layer1",
+    adminWorkflowSummary: "layer2",
+    adminSystemHealth: "layer2",
+    freeSmartInsights: "layer3",
+    smartOperationsFree: "layer3",
+    operationalSummaries: "layer3",
+    executiveDashboardSection: "layer3",
+  };
 
-    if(grid){
-      for(const id of order.slice(0,2)){
-        const el=document.getElementById(id);
-        if(el&&el.parentElement===home&&el.nextElementSibling!==grid)home.insertBefore(el,grid);
-      }
-      let anchor=grid;
-      for(const id of order.slice(2)){
-        const el=document.getElementById(id);
-        if(!el||el.parentElement!==home)continue;
-        if(anchor.nextElementSibling!==el){
-          if(anchor.nextSibling)home.insertBefore(el,anchor.nextSibling);else home.appendChild(el);
-        }
-        anchor=el;
-      }
-    }else{
-      let anchor=null;
-      for(const id of order){
-        const el=document.getElementById(id);
-        if(!el||el.parentElement!==home)continue;
-        if(!anchor){
-          if(home.firstElementChild!==el)home.insertBefore(el,home.firstElementChild);
-        }else if(anchor.nextElementSibling!==el){
-          if(anchor.nextSibling)home.insertBefore(el,anchor.nextSibling);else home.appendChild(el);
-        }
-        anchor=el;
+  function getLayerContainer(home, key) {
+    if (key === "layer1") return home.querySelector("#dashboardLayer1");
+    if (key === "layer2") return home.querySelector("#dashboardLayer2 .dashboard-layer-body");
+    if (key === "layer3") return home.querySelector("#dashboardLayer3 .dashboard-layer-body");
+    return null;
+  }
+
+  function arrange() {
+    if (!isHome()) return;
+    const home = document.querySelector(".dashboard-home");
+    if (!home) return;
+
+    let moved = false;
+    for (const [id, layerKey] of Object.entries(layerMap)) {
+      const el = document.getElementById(id);
+      const target = getLayerContainer(home, layerKey);
+      if (!el || !target) continue;
+      if (el.parentElement !== target) {
+        target.appendChild(el);
+        moved = true;
       }
     }
-    home.dataset.stable10Ordered='1';
+    if (moved) home.dataset.layeredOrdered = "1";
   }
 
-  function init(){
-    const home=document.querySelector('.dashboard-home');
-    if(!home)return;
+  function init() {
+    const home = document.querySelector(".dashboard-home");
+    if (!home) return;
     arrange();
-    let timer=null;
-    let stopped=false;
-    const observer=new MutationObserver(()=>{
-      if(stopped)return;
+
+    let timer = null;
+    let stopped = false;
+    const observer = new MutationObserver(() => {
+      if (stopped) return;
       clearTimeout(timer);
-      timer=setTimeout(arrange,80);
+      timer = setTimeout(arrange, 80);
     });
-    observer.observe(home,{childList:true});
-    setTimeout(()=>{stopped=true;observer.disconnect();clearTimeout(timer);arrange();},5000);
+    observer.observe(home, { childList: true, subtree: true });
+
+    setTimeout(() => {
+      stopped = true;
+      observer.disconnect();
+      clearTimeout(timer);
+      arrange();
+    }, 5000);
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,120),{once:true});
-  else setTimeout(init,120);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => setTimeout(init, 120), { once: true });
+  } else {
+    setTimeout(init, 120);
+  }
 })();
