@@ -25,12 +25,12 @@
     const bodyRows=[...table.tBodies[0]?.rows||[]].filter(r=>!r.dataset.quantitiesTotal);
     if(!bodyRows.length)return;
 
-    const totals={landfillCount:0,landfillQty:0,tarq:{count:0,qty:0},yata:{count:0,qty:0},heb:{count:0,qty:0},leach:{count:0,qty:0},ext:{count:0,qty:0},int:{count:0,qty:0},style:{count:0,qty:0},sort:{count:0,qty:0}};
+    const totals={landfillCount:0,landfillQty:0,tarq:{count:0,qty:0},yata:{count:0,qty:0},aziz:{count:0,qty:0},heb:{count:0,qty:0},leach:{count:0,qty:0},ext:{count:0,qty:0},int:{count:0,qty:0},style:{count:0,qty:0},sort:{count:0,qty:0}};
     for(const r of bodyRows){
       const c=r.cells;
       totals.landfillCount+=num(c[1]?.textContent);
       totals.landfillQty+=num(c[2]?.textContent);
-      const keys=['tarq','yata','heb','leach','ext','int','style','sort'];
+      const keys=['tarq','yata','aziz','heb','leach','ext','int','style','sort'];
       keys.forEach((k,i)=>{const p=splitPair(c[3+i]?.textContent);totals[k].count+=p.count;totals[k].qty+=p.qty;});
     }
 
@@ -44,6 +44,7 @@
       `<strong>${fmt(totals.landfillQty)}</strong>`,
       `<strong>${fmt(totals.tarq.count)} / ${fmt(totals.tarq.qty)}</strong>`,
       `<strong>${fmt(totals.yata.count)} / ${fmt(totals.yata.qty)}</strong>`,
+      `<strong>${fmt(totals.aziz.count)} / ${fmt(totals.aziz.qty)}</strong>`,
       `<strong>${fmt(totals.heb.count)} / ${fmt(totals.heb.qty)}</strong>`,
       `<strong>${fmt(totals.leach.count)} / ${fmt(totals.leach.qty)}</strong>`,
       `<strong>${fmt(totals.ext.count)} / ${fmt(totals.ext.qty)}</strong>`,
