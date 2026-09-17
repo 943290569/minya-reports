@@ -146,6 +146,11 @@ assert(server.includes('"/equipment"'), 'Server must expose the /equipment app r
 const startServer = read('scripts/start-server.js');
 assert(startServer.includes('require("./web-push-notifications")'), 'Runtime wrapper must load web push notifications');
 
+const monthlyEntryLiveFix = read('monthly-entry-live-fix.js');
+assert(monthlyEntryLiveFix.includes('legacyWasteTons'), 'Monthly entry must aggregate legacy waste operation names');
+assert(monthlyEntryLiveFix.includes('report?.total_waste_tons'), 'Monthly entry must fall back to the stored report waste total');
+assert(monthlyEntryLiveFix.includes('report?.total_trucks'), 'Monthly entry must fall back to the stored report truck total');
+
 const preGuard = read('public/js/app-drive-preimport-consistency.js');
 assert(preGuard.includes('تم إيقاف الاعتماد حفاظًا على البيانات'), 'Pre-import consistency guard is missing');
 

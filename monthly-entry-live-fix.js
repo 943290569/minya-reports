@@ -23,8 +23,8 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
       if(c.includes('طممخارجي'))return n.includes('طمم')&&n.includes('خارجي');
       if(c.includes('موادالتغطيةاسلوب'))return n.includes('اسلوب')||n.includes('سلوب');
       if(c.includes('موادالتغطيةطمم'))return n.includes('طمم')&&!n.includes('خارجي');
-      if(c.includes('كمياتالمياه'))return n.includes('مياه')&&(n.includes('تعقيم')||n.includes('ترطيب'));
-      if(c.includes('عددمرا الرش')||c.includes('عددمرا ترشالمياه'))return n.includes('رش')&&n.includes('مياه');
+      if(c.includes('كمياتالمياه'))return n.includes('مياه')&&!n.includes('رش');
+      if(c.includes('عددمراترشالمياه'))return n.includes('رش')&&n.includes('مياه');
       return false;
     });
   }
@@ -32,13 +32,25 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     const target=norm(canonical);
     return row.stations.find(x=>{const n=norm(x.station_name);if(n===target)return true;if(target.includes('الخليل'))return n.includes('خليل');if(target.includes('ترقوميا'))return n.includes('ترقوميا');if(target.includes('يطا'))return n.includes('يطا');return false;});
   }
-  function canonicalize(row){
+  function canonicalize(row,report=null){
+    const originalOperations=Array.isArray(row.operations)?row.operations.map(x=>({...x})):[];
     row.operations=Array.isArray(row.operations)?row.operations:[];
     row.stations=Array.isArray(row.stations)?row.stations:[];
     for(const [name,unit] of operationDefaults){const hit=matchOperation(row,name);if(hit)hit.operation_name=name;else row.operations.push({operation_name:name,start_time:'',end_time:'',vehicle_count:0,quantity:0,unit,notes:''});}
     for(const name of stationDefaults){const hit=matchStation(row,name);if(hit)hit.station_name=name;else row.stations.push({station_name:name,truck_count:0,waste_tons:0,unit:'طن',notes:''});}
     row.crews=Array.isArray(row.crews)&&row.crews.length?row.crews:blank(row.report_date).crews;
     row.equipment=Array.isArray(row.equipment)&&row.equipment.length?row.equipment:blank(row.report_date).equipment;
+    const landfill=matchOperation(row,'مكب نفايات المنيا');
+    const legacyWaste=originalOperations.filter(x=>{const n=norm(x.operation_name);return n.includes('نفايات')&&!n.includes('ترحيل')&&!n.includes('محطه')&&!(n.includes('مكب')&&n.includes('المنيا'));});
+    const legacyWasteTons=legacyWaste.reduce((sum,x)=>sum+Number(x.quantity||0),0);
+    const legacyWasteTrucks=legacyWaste.reduce((sum,x)=>sum+Number(x.vehicle_count||0),0);
+    const stationWaste=row.stations.reduce((sum,x)=>sum+Number(x.waste_tons||0),0);
+    const stationTrucks=row.stations.reduce((sum,x)=>sum+Number(x.truck_count||0),0);
+    const storedWaste=Math.max(0,Number(report?.total_waste_tons||0)-stationWaste);
+    const storedTrucks=Math.max(0,Number(report?.total_trucks||0)-stationTrucks);
+    if(landfill&&Number(landfill.quantity||0)===0)landfill.quantity=legacyWasteTons>0?legacyWasteTons:storedWaste;
+    if(landfill&&Number(landfill.vehicle_count||0)===0)landfill.vehicle_count=legacyWasteTrucks>0?legacyWasteTrucks:storedTrucks;
+    row.stored_totals={waste:Number(report?.total_waste_tons||0),trucks:Number(report?.total_trucks||0),diesel:Number(report?.total_diesel||0)};
     row.auto={water:true,workday:true,weather:true,...(row.auto||{})};
     return row;
   }
@@ -49,7 +61,7 @@ module.exports=function installMonthlyEntryLiveFix(app,{db,requireAuth}){
     row.operations=db.prepare('SELECT operation_name,start_time,end_time,vehicle_count,quantity,unit,notes FROM operations WHERE report_id=? ORDER BY id').all(report.id);
     row.stations=db.prepare('SELECT station_name,truck_count,waste_tons,unit,notes FROM transfer_stations WHERE report_id=? ORDER BY id').all(report.id);
     row.equipment=db.prepare('SELECT equipment_name,operating_status,status_description,working_hours,diesel_liters,notes FROM equipment WHERE report_id=? ORDER BY id').all(report.id);
-    return canonicalize(row);
+    return canonicalize(row,report);
   }
   function requestJson(url){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'User-Agent':'Minya-Landfill/3.5'}},res=>{let body='';res.setEncoding('utf8');res.on('data',c=>body+=c);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(new Error(`weather ${res.statusCode}`));try{resolve(JSON.parse(body))}catch(e){reject(e)}})});req.setTimeout(10000,()=>req.destroy(new Error('weather timeout')));req.on('error',reject)});}
   function label(code){code=Number(code);if(code===0)return 'مشمس';if([1,2].includes(code))return 'غائم جزئيًا';if(code===3)return 'غائم';if([45,48].includes(code))return 'ضباب';if([51,53,55,56,57].includes(code))return 'رذاذ';if([61,63,65,66,67,80,81,82].includes(code))return 'ماطر';if([71,73,75,77,85,86].includes(code))return 'ثلجي';if([95,96,99].includes(code))return 'عاصف ممطر';return 'متغير';}
