@@ -115,9 +115,8 @@
       let azizSaved=0;
       if(hasAzizColumns){
         const year=Number(String(preview[0]?.date||'').slice(0,4));
-        const azizRows=preview.map(d=>({entry_date:d.date,record_count:Math.max(0,Math.round(num(d.azizCount))),quantity_tons:num(d.azizQty)}));
-        const az=await api('/api/station-subsources/daily/bulk',{method:'POST',body:JSON.stringify({year,station_name:'محطة ترحيل يطا',source_name:'شركة عبد العزيز السعدي',included_in_station_total:true,notes:'الكمية جزء من إجمالي محطة ترحيل يطا ولا تضاف مرة أخرى إلى الإجمالي العام.',rows:azizRows})});
-        azizSaved=Number(az.saved||azizRows.length);
+        const azizRows=preview.filter(d=>num(d.azizCount)!==0||num(d.azizQty)!==0).map(d=>({entry_date:d.date,record_count:Math.max(0,Math.round(num(d.azizCount))),quantity_tons:num(d.azizQty)}));
+        if(azizRows.length){const az=await api('/api/station-subsources/daily/bulk',{method:'POST',body:JSON.stringify({year,station_name:'محطة ترحيل يطا',source_name:'شركة عبد العزيز السعدي',included_in_station_total:true,notes:'الكمية جزء من إجمالي محطة ترحيل يطا ولا تضاف مرة أخرى إلى الإجمالي العام.',rows:azizRows})});azizSaved=Number(az.saved||azizRows.length);}
       }
       if(msg)msg.textContent=`تم استيراد ملف الكميات: ${updated} تقرير محدث · ${created} تقرير جديد${failed?` · ${failed} فشل`:''}.${hasAzizColumns?` تم حفظ تفاصيل عبد العزيز لـ ${azizSaved} يوم.`:''} السولار لم يتغير.`;btn.textContent='✓ تم اعتماد ملف الكميات';
     }catch(e){if(msg)msg.textContent=`تعذر اعتماد ملف الكميات: ${e.message||e}`;}finally{btn.disabled=false;setTimeout(()=>{if(btn)btn.textContent='اعتماد ملف الكميات في التقارير';},2500);}
