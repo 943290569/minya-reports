@@ -152,6 +152,77 @@ table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;borde
 }
 
 @media print{.top-header,.container{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+/* أضف هذا إلى style.css أو ملف CSS مخصص للوحة الرئيسية */
+
+.dashboard-layer-slot {
+  margin: 18px 0;
+}
+
+.dashboard-layer {
+  margin: 22px 0;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+  overflow: hidden;
+}
+
+.dashboard-layer > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 18px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #111827;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: #ffffff;
+  border-bottom: 1px solid transparent;
+}
+
+.dashboard-layer[open] > summary {
+  border-bottom-color: #e5e7eb;
+}
+
+.dashboard-layer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-layer > summary::before {
+  content: "\25B6";
+  font-size: 11px;
+  color: #6b7280;
+  transition: transform 0.15s ease;
+}
+
+.dashboard-layer[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.dashboard-layer-hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dashboard-layer-body {
+  padding: 16px 18px;
+}
+
+/* حالات مؤشرات اليوم: تمييز "لا يوجد تقرير" عن "قيمة صفر فعلية" */
+.dashboard-metric-card.state-missing {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+.dashboard-metric-card.state-missing strong {
+  color: #9ca3af;
+  font-size: 15px;
+}
+.dashboard-metric-card.state-recorded {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
 
 
 /* ===== v3.css ===== */

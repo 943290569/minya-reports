@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-mobile-ui3-brand1-header8-20260916-desktop-menu-v6";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -2493,6 +2493,365 @@ renderAll();
 
 ;
 
+/* ===== js/app-station-subsource-reports.js ===== */
+/* =========================================================
+   تفاصيل مصادر محطة يطا داخل التقارير الشهرية والسنوية
+   شركة عبد العزيز السعدي جزء من إجمالي محطة يطا ولا تُجمع مرة ثانية.
+========================================================= */
+(function(){
+  const STATION_NAME = "محطة ترحيل يطا";
+  const SOURCE_NAME = "شركة عبد العزيز السعدي";
+  const cache = new Map();
+
+  const number = (value) => Number(value || 0);
+  const fmt = (value) => typeof window.formatNumber === "function"
+    ? window.formatNumber(number(value))
+    : new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(number(value));
+
+  async function loadYear(year){
+    const key = String(year || "");
+    if (!/^\d{4}$/.test(key)) return { rows: [], summary: { record_count: 0, quantity_tons: 0 } };
+    if (cache.has(key)) return cache.get(key);
+
+    const params = new URLSearchParams({
+      year: key,
+      station_name: STATION_NAME,
+      source_name: SOURCE_NAME,
+    });
+    const promise = fetch(`/api/station-subsources?${params.toString()}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) throw new Error(data.message || "تعذر تحميل تفاصيل محطة يطا");
+        return {
+          rows: Array.isArray(data.rows) ? data.rows : [],
+          summary: data.summary || { record_count: 0, quantity_tons: 0 },
+        };
+      })
+      .catch((error) => {
+        cache.delete(key);
+        throw error;
+      });
+    cache.set(key, promise);
+    return promise;
+  }
+
+  async function getMonth(monthValue){
+    const match = String(monthValue || "").match(/^(\d{4})-(\d{2})$/);
+    if (!match) return null;
+    const data = await loadYear(match[1]);
+    const month = Number(match[2]);
+    const row = data.rows.find((item) => Number(item.month) === month);
+    if (!row) return null;
+    return {
+      year: Number(match[1]),
+      month,
+      record_count: number(row.record_count),
+      quantity_tons: number(row.quantity_tons),
+      detail_days: number(row.detail_days),
+      included_in_station_total: Number(row.included_in_station_total) !== 0,
+      source: row.source || "monthly",
+      station_name: row.station_name || STATION_NAME,
+      source_name: row.source_name || SOURCE_NAME,
+    };
+  }
+
+  function ensureStyles(){
+    if (document.getElementById("stationSubsourceReportStyles")) return;
+    const style = document.createElement("style");
+    style.id = "stationSubsourceReportStyles";
+    style.textContent = `
+      .station-subsource-report{margin:16px 0;padding:14px;border:1px solid #d9e4df;border-radius:10px;background:#f8fbf9}
+      .station-subsource-report h4{margin:0 0 10px;text-align:center;font-size:16px;color:#183b2e}
+      .station-subsource-report .ssr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .station-subsource-report .ssr-card{background:#fff;border:1px solid #dbe5df;border-radius:8px;padding:11px;text-align:center}
+      .station-subsource-report .ssr-card span{display:block;color:#64748b;font-size:12px;margin-bottom:5px}
+      .station-subsource-report .ssr-card strong{display:block;font-size:20px;color:#111827}
+      .station-subsource-report .ssr-card small{display:block;margin-top:3px;color:#64748b;font-size:11px}
+      .station-subsource-report .ssr-note{margin:10px 0 0;text-align:center;color:#7a5b00;font-size:12px;font-weight:700}
+      .station-subsource-annual{margin:16px 0 0;padding:14px;border:1px solid #d9e4df;border-radius:10px;background:#f8fbf9}
+      .station-subsource-annual h4{margin:0 0 10px;text-align:center;font-size:16px}
+      .station-subsource-annual table{width:100%;border-collapse:collapse}
+      .station-subsource-annual th,.station-subsource-annual td{border:1px solid #dfe8e3;padding:8px;text-align:center}
+      .station-subsource-annual th{background:#edf4f0}
+      @media(max-width:600px){.station-subsource-report .ssr-grid{grid-template-columns:1fr}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  async function renderMonthly(){
+    if (location.pathname.replace(/\/+$/, "") !== "/monthly") return;
+    const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+    const section = document.getElementById("monthlyReportSection");
+    if (!section) return;
+    ensureStyles();
+
+    let box = document.getElementById("monthlyStationSubsourceReport");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "monthlyStationSubsourceReport";
+      box.className = "station-subsource-report";
+      const comparison = document.getElementById("monthlyComparison");
+      if (comparison) comparison.insertAdjacentElement("beforebegin", box);
+      else section.appendChild(box);
+    }
+
+    if (!monthValue) {
+      box.style.display = "none";
+      return;
+    }
+
+    try {
+      const row = await getMonth(monthValue);
+      if (!row || (row.record_count === 0 && row.quantity_tons === 0)) {
+        box.style.display = "none";
+        return;
+      }
+      box.style.display = "block";
+      box.innerHTML = `
+        <h4>تفصيل محطة يطا — ${SOURCE_NAME}</h4>
+        <div class="ssr-grid">
+          <div class="ssr-card"><span>عدد النقلات / الإرساليات</span><strong>${fmt(row.record_count)}</strong></div>
+          <div class="ssr-card"><span>مجموع الكمية</span><strong>${fmt(row.quantity_tons)}</strong><small>طن</small></div>
+        </div>
+        <p class="ssr-note">هذه الكمية مشمولة ضمن إجمالي محطة ترحيل يطا ولا تُضاف مرة أخرى إلى إجمالي الشهر.</p>
+      `;
+    } catch (error) {
+      console.error("تعذر عرض تفصيل محطة يطا في التقرير الشهري", error);
+      box.style.display = "none";
+    }
+  }
+
+  async function renderAnnual(){
+    if (location.pathname.replace(/\/+$/, "") !== "/annual") return;
+    const annual = document.getElementById("annualSummarySection");
+    const select = document.getElementById("annualYearFilter");
+    if (!annual || !select?.value) return;
+    ensureStyles();
+
+    let box = document.getElementById("annualStationSubsourceReport");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "annualStationSubsourceReport";
+      box.className = "station-subsource-annual";
+      annual.appendChild(box);
+    }
+
+    try {
+      const data = await loadYear(select.value);
+      const rows = data.rows.filter((row) => number(row.record_count) !== 0 || number(row.quantity_tons) !== 0);
+      if (!rows.length) {
+        box.style.display = "none";
+        return;
+      }
+      const names = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+      const count = rows.reduce((sum,row) => sum + number(row.record_count), 0);
+      const qty = rows.reduce((sum,row) => sum + number(row.quantity_tons), 0);
+      box.style.display = "block";
+      box.innerHTML = `
+        <h4>تفصيل محطة يطا — ${SOURCE_NAME}</h4>
+        <div style="overflow:auto"><table>
+          <thead><tr><th>الشهر</th><th>عدد النقلات / الإرساليات</th><th>الكمية طن</th></tr></thead>
+          <tbody>${rows.map((row) => `<tr><td>${names[Number(row.month)-1] || row.month}</td><td>${fmt(row.record_count)}</td><td>${fmt(row.quantity_tons)}</td></tr>`).join("")}
+          <tr><th>المجموع</th><th>${fmt(count)}</th><th>${fmt(qty)}</th></tr></tbody>
+        </table></div>
+        <p class="ssr-note">تفصيل فرعي مشمول ضمن إجمالي محطة ترحيل يطا ولا يُضاف إلى الإجمالي السنوي مرة ثانية.</p>
+      `;
+    } catch (error) {
+      console.error("تعذر عرض تفصيل محطة يطا في التقرير السنوي", error);
+      box.style.display = "none";
+    }
+  }
+
+  function monthlyPrintBlock(row){
+    if (!row || (row.record_count === 0 && row.quantity_tons === 0)) return "";
+    return `<div class="section-title">تفصيل محطة يطا - ${SOURCE_NAME}</div>
+      <table><thead><tr><th>الجهة</th><th>عدد النقلات / الإرساليات</th><th>الكمية طن</th><th>ملاحظة</th></tr></thead>
+      <tbody><tr><td>${SOURCE_NAME}</td><td>${fmt(row.record_count)}</td><td>${fmt(row.quantity_tons)}</td><td>مشمولة ضمن إجمالي محطة يطا</td></tr></tbody></table>`;
+  }
+
+  function annualPrintBlock(data){
+    const rows = (data?.rows || []).filter((row) => number(row.record_count) !== 0 || number(row.quantity_tons) !== 0);
+    if (!rows.length) return "";
+    const count = rows.reduce((sum,row) => sum + number(row.record_count), 0);
+    const qty = rows.reduce((sum,row) => sum + number(row.quantity_tons), 0);
+    return `<div class="section-title">تفصيل محطة يطا - ${SOURCE_NAME}</div>
+      <table><thead><tr><th>الجهة</th><th>عدد النقلات / الإرساليات</th><th>الكمية طن</th><th>ملاحظة</th></tr></thead>
+      <tbody><tr><td>${SOURCE_NAME}</td><td>${fmt(count)}</td><td>${fmt(qty)}</td><td>مشمولة ضمن إجمالي محطة يطا</td></tr></tbody></table>`;
+  }
+
+  function installPrintAugmenters(){
+    if (typeof window.buildMonthlyReportHtml === "function" && !window.buildMonthlyReportHtml.__stationSubsourceWrapped) {
+      const originalMonthly = window.buildMonthlyReportHtml;
+      const wrappedMonthly = async function(){
+        let html = await originalMonthly();
+        if (!html) return html;
+        try {
+          const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+          const row = await getMonth(monthValue);
+          const block = monthlyPrintBlock(row);
+          if (block) html = html.replace('<div class="section-title">التفاصيل اليومية للشهر</div>', `${block}<div class="section-title">التفاصيل اليومية للشهر</div>`);
+        } catch (error) {
+          console.error("تعذر إضافة تفصيل محطة يطا للطباعة الشهرية", error);
+        }
+        return html;
+      };
+      wrappedMonthly.__stationSubsourceWrapped = true;
+      window.buildMonthlyReportHtml = wrappedMonthly;
+    }
+
+    if (typeof window.buildAnnualReportHtml === "function" && !window.buildAnnualReportHtml.__stationSubsourceWrapped) {
+      const originalAnnual = window.buildAnnualReportHtml;
+      const wrappedAnnual = async function(){
+        let html = await originalAnnual();
+        if (!html) return html;
+        try {
+          const year = document.getElementById("annualYearFilter")?.value || "";
+          const data = await loadYear(year);
+          const block = annualPrintBlock(data);
+          if (block) html = html.replace('  </div>\n  <div class="official-footer">', `    ${block}\n  </div>\n  <div class="official-footer">`);
+        } catch (error) {
+          console.error("تعذر إضافة تفصيل محطة يطا للطباعة السنوية", error);
+        }
+        return html;
+      };
+      wrappedAnnual.__stationSubsourceWrapped = true;
+      window.buildAnnualReportHtml = wrappedAnnual;
+    }
+  }
+
+  function csvCell(value){
+    const text = String(value ?? "").replace(/"/g, '""');
+    return `"${text}"`;
+  }
+
+  async function exportMonthlyWithSubsource(){
+    const monthValue = document.getElementById("archiveMonthFilter")?.value || "";
+    if (!monthValue) return window.showMessage?.("اختر الشهر أولًا");
+    const reports = [...(window.archiveReports || archiveReports || [])]
+      .filter((report) => String(report.report_date || "").startsWith(monthValue))
+      .sort((a,b) => String(a.report_date || "").localeCompare(String(b.report_date || "")));
+    if (!reports.length) return window.showMessage?.("لا توجد تقارير محفوظة لهذا الشهر");
+    const waste = reports.reduce((s,r)=>s+number(r.total_waste_tons),0);
+    const trucks = reports.reduce((s,r)=>s+number(r.total_trucks),0);
+    const diesel = reports.reduce((s,r)=>s+number(r.total_diesel),0);
+    const sourceRow = await getMonth(monthValue).catch(()=>null);
+    const rows = [
+      ["التقرير الشهري لمكب المنيا", typeof window.getMonthName === "function" ? window.getMonthName(monthValue) : monthValue],
+      [],["البيان","القيمة"],["عدد أيام التشغيل المسجلة",reports.length],["إجمالي النفايات طن",waste],["إجمالي الشاحنات",trucks],["إجمالي السولار لتر",diesel]
+    ];
+    if (sourceRow) rows.push([], ["تفصيل محطة يطا","عدد النقلات / الإرساليات","الكمية طن","الحالة"], [SOURCE_NAME,sourceRow.record_count,sourceRow.quantity_tons,"مشمولة ضمن إجمالي محطة يطا"]);
+    rows.push([], ["التاريخ","عدد الشاحنات","كمية النفايات طن","السولار لتر"], ...reports.map(r=>[r.report_date,number(r.total_trucks),number(r.total_waste_tons),number(r.total_diesel)]), ["المجموع",trucks,waste,diesel]);
+    downloadCsv(`minya-monthly-${monthValue}.csv`, rows);
+    window.showMessage?.("تم تصدير التقرير الشهري بنجاح");
+  }
+
+  async function exportAnnualWithSubsource(){
+    const year = document.getElementById("annualYearFilter")?.value || "";
+    if (!year) return window.showMessage?.("اختر السنة أولًا");
+    const reports = [...(window.archiveReports || archiveReports || [])].filter(r=>String(r.report_date||"").startsWith(`${year}-`));
+    if (!reports.length) return window.showMessage?.("لا توجد تقارير محفوظة لهذه السنة");
+    const sourceData = await loadYear(year).catch(()=>({rows:[],summary:{}}));
+    const months = Array.from({length:12},(_,i)=>{
+      const key=`${year}-${String(i+1).padStart(2,"0")}`;
+      const rs=reports.filter(r=>String(r.report_date||"").startsWith(key));
+      return [typeof window.getMonthName === "function" ? window.getMonthName(key) : key,rs.length,rs.reduce((s,r)=>s+number(r.total_waste_tons),0),rs.reduce((s,r)=>s+number(r.total_trucks),0),rs.reduce((s,r)=>s+number(r.total_diesel),0)];
+    });
+    const rows=[["الملخص السنوي لمكب المنيا",year],[],["الشهر","أيام التشغيل","النفايات طن","الشاحنات","السولار لتر"],...months];
+    const srcRows=(sourceData.rows||[]).filter(r=>number(r.record_count)||number(r.quantity_tons));
+    if(srcRows.length){
+      const names=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+      rows.push([], ["تفصيل محطة يطا - شركة عبد العزيز السعدي","عدد النقلات / الإرساليات","الكمية طن","الحالة"], ...srcRows.map(r=>[names[Number(r.month)-1]||r.month,number(r.record_count),number(r.quantity_tons),"مشمولة ضمن إجمالي محطة يطا"]), ["المجموع",srcRows.reduce((s,r)=>s+number(r.record_count),0),srcRows.reduce((s,r)=>s+number(r.quantity_tons),0),"تفصيل فرعي"]);
+    }
+    downloadCsv(`minya-annual-${year}.csv`,rows);
+    window.showMessage?.("تم تصدير الملخص السنوي بنجاح");
+  }
+
+  function downloadCsv(filename, rows){
+    const csv="\uFEFF"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  }
+
+  function replaceExportButtons(){
+    const monthlyBtn=document.getElementById("exportMonthlyCsvBtn");
+    if(monthlyBtn && monthlyBtn.dataset.stationSubsourceBound!=="1"){
+      const clone=monthlyBtn.cloneNode(true);
+      clone.dataset.stationSubsourceBound="1";
+      monthlyBtn.replaceWith(clone);
+      clone.addEventListener("click",exportMonthlyWithSubsource);
+    }
+    const annualBtn=document.getElementById("exportAnnualCsvBtn");
+    if(annualBtn && annualBtn.dataset.stationSubsourceBound!=="1"){
+      const clone=annualBtn.cloneNode(true);
+      clone.dataset.stationSubsourceBound="1";
+      annualBtn.replaceWith(clone);
+      clone.addEventListener("click",exportAnnualWithSubsource);
+    }
+  }
+
+  function clearYearCache(year){
+    if (year) cache.delete(String(year));
+    else cache.clear();
+  }
+
+  window.getStationSubsourceYearSummary = loadYear;
+  window.getStationSubsourceMonthSummary = getMonth;
+  window.renderStationSubsourceMonthly = renderMonthly;
+  window.renderStationSubsourceAnnual = renderAnnual;
+  window.clearStationSubsourceReportCache = clearYearCache;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const monthInput = document.getElementById("archiveMonthFilter");
+    if (monthInput) {
+      monthInput.addEventListener("change", () => setTimeout(renderMonthly, 30));
+      monthInput.addEventListener("input", () => setTimeout(renderMonthly, 30));
+    }
+    document.addEventListener("change", (event) => {
+      if (event.target?.id === "annualYearFilter") setTimeout(renderAnnual, 80);
+    });
+
+    const monthlyDays = document.getElementById("monthlyDaysCount");
+    if (monthlyDays && typeof MutationObserver !== "undefined") {
+      new MutationObserver(() => renderMonthly()).observe(monthlyDays, { childList:true, subtree:true, characterData:true });
+    }
+
+    const watchAnnual = () => {
+      const body = document.getElementById("annualSummaryBody");
+      if (!body || body.dataset.subsourceObserved === "1") return false;
+      body.dataset.subsourceObserved = "1";
+      new MutationObserver(() => renderAnnual()).observe(body, { childList:true, subtree:true });
+      renderAnnual();
+      return true;
+    };
+    if (!watchAnnual()) {
+      let tries = 0;
+      const timer = setInterval(() => {
+        tries += 1;
+        if (watchAnnual() || tries > 40) clearInterval(timer);
+      }, 100);
+    }
+
+    setTimeout(renderMonthly, 120);
+    setTimeout(renderAnnual, 220);
+  });
+
+  setTimeout(() => {
+    installPrintAugmenters();
+    replaceExportButtons();
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries+=1;
+      installPrintAugmenters();
+      replaceExportButtons();
+      if(tries>30)clearInterval(timer);
+    },150);
+  },0);
+})();
+
+;
+
 /* ===== js/app-monthly-chart-stable10.js ===== */
 /* =========================================================
    Stable 10 — توحيد الرسم الشهري مع المجاميع المحفوظة
@@ -3959,9 +4318,6 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
       const recent = Array.isArray(data.recent) ? data.recent : [];
 
       const values = {
-        todayWaste: todayReport ? Number(todayReport.total_waste_tons || 0) : 0,
-        todayTrucks: todayReport ? Number(todayReport.total_trucks || 0) : 0,
-        todayDiesel: todayReport ? Number(todayReport.total_diesel || 0) : 0,
         yearWaste: Number(year.waste || 0),
         yearReports: Number(year.reports || 0),
       };
@@ -3969,6 +4325,24 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
       Object.entries(values).forEach(([key, value]) => {
         const element = document.getElementById(`dash-${key}`);
         if (element) element.textContent = formatDashboardNumber(value);
+      });
+
+      const todayMetrics = [
+        ["todayWaste", "نفايات اليوم", "total_waste_tons", "طن"],
+        ["todayTrucks", "شاحنات اليوم", "total_trucks", "شاحنة"],
+        ["todayDiesel", "سولار اليوم", "total_diesel", "لتر"],
+      ];
+      todayMetrics.forEach(([key, label, field, unit]) => {
+        const strong = document.getElementById(`dash-${key}`);
+        const card = strong?.closest(".dashboard-metric-card");
+        card?.classList.remove("state-missing", "state-recorded");
+        if (!todayReport) {
+          setMetricCard(`dash-${key}`, label, "لا يوجد تقرير", "");
+          card?.classList.add("state-missing");
+        } else {
+          setMetricCard(`dash-${key}`, label, formatDashboardNumber(todayReport[field]), unit);
+          card?.classList.add("state-recorded");
+        }
       });
 
       const currentMonthDays = Number(month.days || 0);
@@ -4033,11 +4407,11 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   function buildDashboard() {
     const main = document.querySelector("main.container");
     if (!main) return;
-
+  
     main.querySelectorAll(":scope > section").forEach((section) => {
       section.style.display = "none";
     });
-
+  
     const dashboard = document.createElement("section");
     dashboard.className = "dashboard-home";
     dashboard.innerHTML = `
@@ -4050,7 +4424,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
         </div>
         <a class="dashboard-primary-action" href="/report">إنشاء تقرير جديد</a>
       </div>
-
+  
       <div class="dashboard-section-head">
         <div>
           <span>نظرة سريعة</span>
@@ -4058,7 +4432,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
         </div>
         <small id="dashboardDataStatus">جاري تحميل المؤشرات...</small>
       </div>
-
+  
       <div class="dashboard-metrics">
         <div class="dashboard-metric-card"><span>نفايات اليوم</span><strong id="dash-todayWaste">0</strong><small>طن</small></div>
         <div class="dashboard-metric-card"><span>شاحنات اليوم</span><strong id="dash-todayTrucks">0</strong><small>شاحنة</small></div>
@@ -4069,14 +4443,17 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
         <div class="dashboard-metric-card"><span>نفايات السنة</span><strong id="dash-yearWaste">0</strong><small>طن</small></div>
         <div class="dashboard-metric-card"><span>تقارير السنة</span><strong id="dash-yearReports">0</strong><small>تقرير</small></div>
       </div>
-
+  
+      <!-- الطبقة 1: تشغيل يومي — تظهر دائمًا -->
+      <div id="dashboardLayer1" class="dashboard-layer-slot"></div>
+  
       <div class="dashboard-grid">
         <a class="dashboard-card" href="/report"><span class="dashboard-icon">01</span><h3>التقرير اليومي</h3><p>إدخال بيانات التشغيل والموظفين والعمليات والمعدات وحفظ التقرير.</p></a>
         <a class="dashboard-card" href="/archive"><span class="dashboard-icon">02</span><h3>أرشيف التقارير</h3><p>البحث والفتح والتعديل والطباعة والوصول السريع للتقارير السابقة.</p></a>
         <a class="dashboard-card" href="/monthly"><span class="dashboard-icon">03</span><h3>التقرير الشهري</h3><p>المجاميع والمتوسطات والمقارنات والرسوم البيانية والتصدير.</p></a>
         <a class="dashboard-card" href="/annual"><span class="dashboard-icon">04</span><h3>التقرير السنوي</h3><p>تحليل سنوي متكامل، مقارنة السنوات، المؤشرات والطباعة والتصدير.</p></a>
       </div>
-
+  
       <div class="dashboard-recent-panel">
         <div class="dashboard-section-head compact">
           <div><span>آخر النشاطات</span><h3>آخر 5 تقارير محفوظة</h3></div>
@@ -4089,12 +4466,23 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
           </table>
         </div>
       </div>
+  
+      <!-- الطبقة 2: العمل الإداري — قابلة للطي، مغلقة افتراضيًا -->
+      <details id="dashboardLayer2" class="dashboard-layer">
+        <summary>العمل الإداري <span class="dashboard-layer-hint">مراجعات، صلاحية النظام، ملخصات الأدوار</span></summary>
+        <div class="dashboard-layer-body"></div>
+      </details>
+  
+      <!-- الطبقة 3: التحليل — قابلة للطي، مغلقة افتراضيًا -->
+      <details id="dashboardLayer3" class="dashboard-layer">
+        <summary>التحليل <span class="dashboard-layer-hint">تحليلات ذكية، مؤشرات تنفيذية، ملخصات تشغيلية</span></summary>
+        <div class="dashboard-layer-body"></div>
+      </details>
     `;
-
+  
     main.appendChild(dashboard);
     loadDashboardData();
   }
-
   function applyPageMode() {
     const archive = document.getElementById("archiveSection");
     const monthly = document.getElementById("monthlyReportSection");
