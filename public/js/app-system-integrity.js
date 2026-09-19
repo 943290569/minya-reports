@@ -181,6 +181,23 @@
       setText("integrityLastBackup", data.latest_backup ? String(data.latest_backup) : "لا توجد نسخة");
       setText("integrityCheckedAt", formatDateTime(new Date().toISOString()));
 
+      let extended = document.getElementById("integrityExtended");
+      if (!extended) {
+        extended = document.createElement("div");
+        extended.id = "integrityExtended";
+        extended.className = "integrity-extended";
+        list.before(extended);
+      }
+      const missingDates = Array.isArray(data.missing_report_dates) ? data.missing_report_dates : [];
+      const zeroReports = Array.isArray(data.suspicious_zero_reports) ? data.suspicious_zero_reports : [];
+      const mismatches = Array.isArray(data.totals_mismatches) ? data.totals_mismatches : [];
+      extended.innerHTML = `
+        <div><span>أيام بلا تقرير</span><strong>${missingDates.length}</strong><small>${missingDates.slice(0,6).map(escapeHtml).join(" · ") || "لا يوجد"}</small></div>
+        <div><span>تقارير بصفر غير معتاد</span><strong>${zeroReports.length}</strong><small>${zeroReports.slice(0,4).map(x=>escapeHtml(x.report_date)).join(" · ") || "لا يوجد"}</small></div>
+        <div><span>اختلاف المجاميع</span><strong>${mismatches.length}</strong><small>${mismatches.slice(0,4).map(x=>escapeHtml(x.report_date)).join(" · ") || "لا يوجد"}</small></div>
+        <div><span>صلاحية آخر نسخة</span><strong>${data.latest_backup_valid===true?"صالحة":data.latest_backup_valid===false?"غير صالحة":"غير متاحة"}</strong><small>${escapeHtml(data.latest_backup_validation_error || (data.latest_backup_age_hours!=null?`العمر ${fmt(data.latest_backup_age_hours)} ساعة`:""))}</small></div>
+      `;
+
       const issues = Array.isArray(data.issues) ? data.issues : [];
       if (!issues.length) {
         list.innerHTML = `<div class="integrity-empty ok">لم يتم اكتشاف مشاكل في سلامة البيانات.</div>`;

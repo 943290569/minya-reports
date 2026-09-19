@@ -104,9 +104,15 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
       return { report_date: report.report_date, data, source: 'daily-report' };
     });
   }
+  function monthlyNameKey(value) {
+    let key=String(value||'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\sـ\-–—()（）،,:؛.]/g,'');
+    const aliases={
+      'مكبالمنيا':'مكبنفاياتالمنيا','نفاياتمكبالمنيا':'مكبنفاياتالمنيا'
+    };
+    return aliases[key]||key;
+  }
   function canonicalTotals(row) {
-    const norm = s => String(s || '').replace(/\s+/g,'');
-    const landfill = row.operations.filter(x => norm(x.operation_name).includes('مكبنفاياتالمنيا'));
+    const landfill = row.operations.filter(x => monthlyNameKey(x.operation_name)==='مكبنفاياتالمنيا');
     const landfillTons = landfill.reduce((s,x)=>s+Number(x.quantity||0),0);
     const landfillTrucks = landfill.reduce((s,x)=>s+Number(x.vehicle_count||0),0);
     const stationTons = row.stations.reduce((s,x)=>s+Number(x.waste_tons||0),0);

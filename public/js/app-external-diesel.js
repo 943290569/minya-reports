@@ -148,6 +148,13 @@
     if (!entries.length) { message("edQuickMessage", "أدخل تعبئة واحدة على الأقل", "error"); return; }
     const invalidIndex = entries.findIndex((entry) => !entry.entry_date || !entry.entry_date.startsWith(month) || !entry.driver_name || !entry.vehicle_number || !(entry.quantity_liters > 0));
     if (invalidIndex >= 0) { message("edQuickMessage", `أكمل بيانات الصف ${invalidIndex + 1} وتأكد أن تاريخه ضمن الشهر المحدد`, "error"); return; }
+    const dupKey = (entry) => [lookupKey(entry.source_name || source), entry.entry_date, lookupKey(entry.driver_name), lookupKey(entry.vehicle_number), Number(entry.quantity_liters).toFixed(2)].join("|");
+    const seen = new Set();
+    const repeatedInput = entries.filter((entry) => { const key=dupKey(entry); if(seen.has(key)) return true; seen.add(key); return false; });
+    if (repeatedInput.length) { message("edQuickMessage", `يوجد ${repeatedInput.length} صف مكرر داخل الإدخال الحالي. راجع التاريخ والسائق والمركبة والكمية.`, "error"); return; }
+    const existingKeys = new Set(state.entries.map(dupKey));
+    const possibleExisting = entries.filter((entry) => existingKeys.has(dupKey(entry)));
+    if (possibleExisting.length && !confirm(`يوجد ${possibleExisting.length} تعبئة مشابهة مسجلة مسبقًا في نفس اليوم للسائق والمركبة والكمية. هل تريد الحفظ رغم ذلك؟`)) return;
     $("edQuickSaveBtn").disabled = true;
     message("edQuickMessage", `جاري حفظ ${entries.length} صف`);
     try {
@@ -251,6 +258,8 @@
     if (!payload.source_name || !payload.entry_date || !payload.driver_name || !payload.vehicle_number || !(payload.quantity_liters > 0)) {
       message("edFormMessage", "أكمل الشركة والتاريخ والسائق والمركبة والكمية", "error"); return;
     }
+    const similar = state.entries.find((entry) => Number(entry.id)!==Number(state.editingId||0) && entry.entry_date===payload.entry_date && lookupKey(entry.driver_name)===lookupKey(payload.driver_name) && lookupKey(entry.vehicle_number)===lookupKey(payload.vehicle_number) && Number(entry.quantity_liters).toFixed(2)===Number(payload.quantity_liters).toFixed(2));
+    if (similar && !confirm("توجد تعبئة مشابهة مسجلة في اليوم نفسه للسائق والمركبة والكمية. هل تريد الحفظ رغم ذلك؟")) return;
     message("edFormMessage", "جاري الحفظ");
     try {
       await api(state.editingId ? `/api/external-diesel/${state.editingId}` : "/api/external-diesel", { method: state.editingId ? "PUT" : "POST", body: JSON.stringify(payload) });

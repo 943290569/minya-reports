@@ -113,6 +113,11 @@
       if(/^حذف(?:\s|$)/.test(text))b.classList.add('review-danger');
       if(/^(إلغاء|تراجع|طباعة|تحديث|إعادة تحميل|السابق|التالي)/.test(text))b.classList.add('review-secondary');
     });
+    const role=window.MINYA_USER?.role||'';
+    if(role&&!['admin','editor'].includes(role)){
+      main.querySelectorAll('button').forEach(b=>{const text=b.textContent.trim();if(/^(حفظ|إضافة|تعديل|حذف|اعتماد|إعادة فتح|إنشاء|رفع|استيراد|استبدال)/.test(text))b.classList.add('review-readonly-hidden');});
+      main.querySelectorAll('input[type="file"]').forEach(el=>el.classList.add('review-readonly-hidden'));
+    }
     const translations={'TASKS & FOLLOW-UP':'المهام والمتابعة','LANDFILL CELLS':'الخلايا والسعة','EQUIPMENT MANAGEMENT V3.7':'الصيانة الوقائية','CLOUD FILES V3.8':'ملفات الموقع',TASKS:'المهام',CONTRACTS:'العقود',CELLS:'الخلايا والسعة',USERS:'المستخدمون','SUMMARY LINK':'ملخص مرتبط','VIEWER LINKS':'روابط القراءة',TODAY:'اليوم',FLEET:'مركبات الحركة',OPERATIONS:'التشغيل',ENVIRONMENT:'البيئة','MINYA LANDFILL':'مكب المنيا','DRIVE & EXCEL IMPORT':'استيراد البيانات'};
     main.querySelectorAll('.v3-hero span,.today-operations-head span,.linked-summary-head span,.user-management-head span').forEach(el=>{const translated=translations[el.textContent.trim()];if(translated)el.textContent=translated;});
   }
