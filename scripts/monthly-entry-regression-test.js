@@ -26,7 +26,7 @@ const helperEnd = uiSource.indexOf('  function stableRange', helperStart);
 assert(helperStart >= 0 && helperEnd > helperStart, 'monthly grid name matching helpers are missing');
 const context = {};
 vm.createContext(context);
-vm.runInContext(uiSource.slice(helperStart, helperEnd) + '\\nthis.__monthlyMatch={nameKey,findNamed};', context);
+vm.runInContext(uiSource.slice(helperStart, helperEnd) + '\nthis.__monthlyMatch={nameKey,findNamed};', context);
 const match = context.__monthlyMatch.findNamed;
 assert(match([{operation_name:'مكب  نفايات المنيا ',quantity:17}], 'operation_name', 'مكب نفايات المنيا').quantity === 17, 'spacing differences must not zero operation quantities');
 assert(match([{operation_name:'مكب المنيا',quantity:21}], 'operation_name', 'مكب نفايات المنيا').quantity === 21, 'legacy landfill label must map to the canonical operation');
