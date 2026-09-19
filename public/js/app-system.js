@@ -163,8 +163,24 @@
       const data = await api("/api/backups");
       const rows = Array.isArray(data.backups) ? data.backups : [];
       body.innerHTML = rows.length
-        ? rows.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${formatDateTime(item.created_at)}</td><td class="system-ltr-value">${formatBytes(item.size_bytes)}</td><td><a class="backup-download-link" href="/api/backups/${encodeURIComponent(item.name)}/download">تنزيل</a></td></tr>`).join("")
+        ? rows.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${formatDateTime(item.created_at)}</td><td class="system-ltr-value">${formatBytes(item.size_bytes)}</td><td><div class="backup-row-actions"><a class="backup-download-link" href="/api/backups/${encodeURIComponent(item.name)}/download">تنزيل</a><button type="button" class="backup-delete-link" data-backup-delete="${escapeHtml(item.name)}">حذف</button></div></td></tr>`).join("")
         : `<tr><td colspan="4">لا توجد نسخ تلقائية محفوظة بعد.</td></tr>`;
+      body.querySelectorAll("[data-backup-delete]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const name = button.dataset.backupDelete || "";
+          if (!name || !confirm(`حذف النسخة الاحتياطية ${name} نهائيًا؟`)) return;
+          button.disabled = true;
+          try {
+            const response = await fetch(`/api/backups/${encodeURIComponent(name)}`, { method: "DELETE" });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.ok) throw new Error(result.message || "تعذر حذف النسخة");
+            await Promise.all([loadSavedBackups(), loadStorage()]);
+          } catch (error) {
+            alert(error.message || "تعذر حذف النسخة الاحتياطية");
+            button.disabled = false;
+          }
+        });
+      });
     } catch (error) {
       console.error("فشل تحميل النسخ المحفوظة", error);
       body.innerHTML = `<tr><td colspan="4">تعذر تحميل قائمة النسخ.</td></tr>`;
