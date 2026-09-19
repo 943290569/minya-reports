@@ -610,7 +610,7 @@ function buildBackupObject() {
 }
 let lastAutomaticBackupAt = 0;
 const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;
-const AUTO_BACKUP_RETENTION_COUNT = 5;
+const AUTO_BACKUP_RETENTION_COUNT = 3;
 
 function pruneAutomaticBackups() {
   const files = fs.readdirSync(backupsDir)
@@ -1072,6 +1072,19 @@ function directorySize(dir) { try { return fs.readdirSync(dir,{withFileTypes:tru
 app.get("/api/system/storage", requireRole("admin"), (req,res)=>{ const dbBytes=fs.existsSync(dbPath)?fs.statSync(dbPath).size:0;const uploadsBytes=directorySize(uploadsDir);const backupsBytes=directorySize(backupsDir);const totalBytes=dbBytes+uploadsBytes+backupsBytes;const referenceLimitBytes=512*1024*1024;const percent=referenceLimitBytes?Number(((totalBytes/referenceLimitBytes)*100).toFixed(2)):0;const level=percent>=85?"danger":percent>=70?"warning":"ok";const attachmentCount=db.prepare(`SELECT COUNT(*) AS count FROM attachments`).get().count;const backupCount=fs.readdirSync(backupsDir).filter(name=>name.endsWith(".json")).length;res.json({ok:true,db_bytes:dbBytes,uploads_bytes:uploadsBytes,backups_bytes:backupsBytes,total_bytes:totalBytes,reference_limit_bytes:referenceLimitBytes,percent,level,attachment_count:attachmentCount,backup_count:backupCount}); });
 app.get("/api/backups", requireRole("admin"), (req,res)=>{ const backups=fs.readdirSync(backupsDir).filter(name=>/^minya-.*\.json$/.test(name)).map(name=>{const stat=fs.statSync(path.join(backupsDir,name));return{name,size_bytes:stat.size,created_at:stat.mtime.toISOString()};}).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,AUTO_BACKUP_RETENTION_COUNT);res.json({ok:true,backups}); });
 app.get("/api/backups/:name/download", requireRole("admin"), (req,res)=>{ const name=path.basename(String(req.params.name||""));if(!/^minya-.*\.json$/.test(name))return res.status(400).json({ok:false,message:"اسم النسخة غير صالح"});const file=path.join(backupsDir,name);if(!fs.existsSync(file))return res.status(404).json({ok:false,message:"النسخة غير موجودة"});audit(req.user,"DOWNLOAD_SAVED_BACKUP","system",name);res.download(file,name); });
+app.delete("/api/backups/:name", requireRole("admin"), (req,res)=>{
+  const name=path.basename(String(req.params.name||""));
+  if(!/^minya-.*\.json$/.test(name))return res.status(400).json({ok:false,message:"اسم النسخة غير صالح"});
+  const file=path.join(backupsDir,name);
+  if(!fs.existsSync(file))return res.status(404).json({ok:false,message:"النسخة غير موجودة"});
+  try{
+    fs.unlinkSync(file);
+    audit(req.user,"DELETE_SAVED_BACKUP","system",name,"Manual backup deletion");
+    res.json({ok:true,message:"تم حذف النسخة الاحتياطية",name});
+  }catch(error){
+    res.status(500).json({ok:false,message:"تعذر حذف النسخة الاحتياطية",error:error.message});
+  }
+});
 
 app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
   const sqliteIntegrity=db.pragma("integrity_check",{simple:true});

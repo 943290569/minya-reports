@@ -21,5 +21,9 @@ assert(server.includes('missingReportDates')&&server.includes('suspiciousZeroRep
 assert(server.includes('latestBackupValid')&&server.includes('validateBackupObject(parsed)'), 'Latest backup validation missing');
 assert(integrity.includes('integrityExtended')&&integrity.includes('صلاحية آخر نسخة'), 'Extended integrity UI missing');
 assert(css.includes('@media screen and (max-width:760px)')&&css.includes('@media print')&&css.includes('content-visibility:auto'), 'Mobile, print, or performance CSS hardening missing');
-assert(systemHtml.includes('آخر 5 نسخ تلقائية')&&!systemHtml.includes('آخر 10 نسخ تلقائية'), 'Backup retention copy must match server retention of 5');
+const systemJs=fs.readFileSync('public/js/app-system.js','utf8');
+assert(server.includes('const AUTO_BACKUP_RETENTION_COUNT = 3;'), 'Backup retention must keep only the newest 3 files');
+assert(server.includes('app.delete("/api/backups/:name"')&&server.includes('DELETE_SAVED_BACKUP'), 'Admin backup delete endpoint or audit log is missing');
+assert(systemJs.includes('data-backup-delete')&&systemJs.includes('method: "DELETE"'), 'Backup delete button behavior is missing');
+assert(systemHtml.includes('آخر 3 نسخ تلقائية')&&!systemHtml.includes('آخر 5 نسخ تلقائية')&&!systemHtml.includes('آخر 10 نسخ تلقائية'), 'Backup retention copy must match server retention of 3');
 console.log('System hardening regression checks passed.');
