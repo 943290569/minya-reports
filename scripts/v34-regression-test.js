@@ -60,14 +60,14 @@ assert(reviews.includes('واتساب: تم الاعتماد'), 'review approval
 assert(reviews.includes('واتساب: إعادة للتعديل'), 'review return WhatsApp action is missing');
 assert(adminWhatsApp.includes('https://wa.me/'), 'administrator WhatsApp compose link is missing');
 
-assert(drivePage.includes('معاينة مستقرة V33'), 'Drive import page does not advertise the canonical V33 reader');
+assert(drivePage.includes('معاينة البيانات قبل الحفظ'), 'Drive import page must explain preview before saving');
 assert(drivePage.includes('drive-import-bundle.js?v='), 'Drive JavaScript bundle is missing');
 assert(drivePage.includes('drive-import-bundle.css?v='), 'Drive stylesheet bundle is missing');
 assert(driveBundle.includes('js/app-source-stable-v16.js'), 'Drive stable reader is missing from the bundle');
 assert(driveBundle.includes('js/app-source-pivot-raw-v30.js'), 'Drive Pivot compatibility layer is missing from the bundle');
 assert(driveBundle.includes('js/app-source-stations-wide-v9.js'), 'Drive canonical Pivot adapter is missing from the bundle');
 assert(driveBundle.includes('js/app-source-usage-note-v22.js'), 'Drive usage note is missing from the bundle');
-assert(stableShim.includes('معاينة مستقرة V33'), 'stable reader shim still exposes an old version label');
+assert(stableShim.includes('معاينة البيانات قبل الحفظ'), 'stable reader shim still exposes an old version label');
 assert(pivotShim.includes('V33 adapter'), 'legacy Pivot shim still points to an old adapter version');
 assert(pivotAdapter.includes('Pivot adapter: single source of truth for landfill/stations/Aziz'), 'canonical Pivot adapter single-source contract is missing');
 assert(pivotAdapter.includes('تم إيقاف القراءة بدل توزيعها بشكل تخميني'), 'canonical Pivot adapter no longer refuses ambiguous station totals');

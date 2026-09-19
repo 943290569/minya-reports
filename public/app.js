@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919b";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919c";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {

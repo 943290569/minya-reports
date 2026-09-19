@@ -30,11 +30,15 @@
     panel.addEventListener('focusin',()=>{details.open=true;});
   }
   const hints={
+    '/report':'في التقرير الجديد، أعداد الطواقم وحالات المعدات والقيم المعبأة هي قيم افتراضية. راجع كل قسم وفق التشغيل الفعلي قبل الحفظ.',
+    '/ops-dashboard':'للإعداد الأولي: سجّل مركبات الحركة والمعدات الوقائية، ثم أضف سجلات البيئة والمهام. هذه السجلات مستقلة عن أرشيف التقارير اليومية.',
+    '/maintenance-incidents':'هذه السجلات لمتابعة الحوادث والأعطال والإجراءات والمرفقات. ملخص المعدات يستخرج الحالة من التقرير اليومي؛ وخطط الصيانة الوقائية تُدار في سجل المعدات.',
+    '/environment':'هذا سجل بيئي مستقل يتطلب إدخالًا إضافيًا. لا تنسخ الكميات تلقائيًا من التقرير اليومي؛ طابقها مع القياسات الفعلية. م³ تعني مترًا مكعبًا (كوب).',
     '/equipment':'هذا الملخص مستخرج من التقارير اليومية. سجل المعدات الوقائية مستقل؛ أضف الأصول وخطط صيانتها في صفحة إدارة المعدات الوقائية.',
     '/equipment-management':'ابدأ بتسجيل المعدة ثم قراءة العداد وخطة الصيانة. ظهور المعدات في التقارير اليومية لا ينشئ أصلًا وقائيًا تلقائيًا.',
     '/fleet':'هذه القائمة لمركبات حركة المكب. رخص سائقي المجلس محفوظة في سجل مستقل؛ خلو قائمة المركبات لا يعني غياب السائقين.',
-    '/contracts':'سجّل العقد وقيمته وتواريخه أولًا، ثم اربط الملاحظات التشغيلية به. تحقّق من عملة قيمة العقد قبل الحفظ.',
-    '/cells':'أدخل السعة بوحدة النموذج نفسها. السعة المتبقية تقدير يعتمد على السعة المسجلة والكمية المستخدمة، ويحتاج إلى تحديث ميداني.',
+    '/contracts':'سجّل العقد وقيمته وتواريخه أولًا، ثم اربط الملاحظات التشغيلية به. دوّن عملة العقد في الملاحظات واستخدمها نفسها للقيمة والمدفوع. المتبقي هو قيمة العقد ناقص المدفوع.',
+    '/cells':'أدخل السعة بوحدة النموذج نفسها. عند غياب القيمة بالطن يُحسب الطن = الحجم م³ × كثافة الدمك. المتبقي = السعة − المستخدم، والعمر بالأيام = المتبقي ÷ المتوسط اليومي. راجع القيم ميدانيًا.',
     '/tasks':'أضف المهمة وحدد المسؤول والأولوية والموعد، ثم تابع حالتها من القائمة.',
     '/global-search':'ابحث برقم التقرير أو اسم المعدة أو كلمة من الملاحظات، ثم استخدم نوع النتيجة لتحديد السجل المطلوب.',
     '/reviews':'هذه القائمة للتقارير المنتظرة للاعتماد. يمكن مراجعة التقارير المعادة أو المعتمدة من الأرشيف.',
@@ -51,6 +55,33 @@
         const h=panel.querySelector('h2,h3');
         if(h&&/^(إضافة|تسجيل|إدخال)/.test(h.textContent.trim())&&panel.querySelector('input,textarea'))fold(panel,h.textContent);
       });
+    }
+    if(route==='/monthly-entry.html'){
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Hebron',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));const today=`${parts.year}-${parts.month}-${parts.day}`;
+      main.querySelectorAll('tr[data-date]').forEach(row=>{const future=row.dataset.date>today;row.classList.toggle('review-future-day',future);const day=row.querySelector('.me-day');if(future&&day&&!day.querySelector('.review-future-label')){const note=document.createElement('small');note.className='review-future-label';note.textContent='يوم قادم';day.append(note);}});
+    }
+    if(route==='/'){
+      const insights=$('freeSmartInsights')||$('smartOperationsFree');if(insights&&!$('reviewCoverageNote')){const p=document.createElement('p');p.id='reviewCoverageNote';p.className='review-note';p.textContent='التحليلات تعتمد السجلات المتاحة فقط. قلة التقارير أو وجود تقرير واحد لا تكفي للحكم على اتجاه الأداء؛ راجع عدد الأيام وآخر تاريخ مسجّل.';insights.prepend(p);}
+    }
+    if(route==='/report'){
+      ['crewsTable','operationsTable','stationsTable','equipmentTable','notes'].forEach(id=>{const panel=$(id)?.closest('section.panel');fold(panel,panel?.querySelector('h2')?.textContent||'تفاصيل التقرير');});
+    }
+    if(['/external-diesel','/external-diesel.html'].includes(route)){
+      fold($('edQuickPanel'),'إضافة تعبئات السولار');fold($('edImportPanel'),'استيراد كشف التعبئة');
+    }
+    if(route==='/tasks'&&$('managementFilter')){
+      let owner=$('reviewTaskOwner'),priority=$('reviewTaskPriority');
+      if(!owner){
+        const parent=$('managementFilter').parentElement;
+        for(const [id,title] of [['reviewTaskOwner','المسؤول'],['reviewTaskPriority','الأولوية']]){const label=document.createElement('label');label.textContent=title;const select=document.createElement('select');select.id=id;label.append(select);parent.append(label);select.addEventListener('change',apply);}
+        owner=$('reviewTaskOwner');priority=$('reviewTaskPriority');
+      }
+      const rows=[...($('managementBody')?.querySelectorAll('tr')||[])].filter(row=>row.cells.length>3);
+      for(const [select,column,title] of [[owner,2,'جميع المسؤولين'],[priority,3,'جميع الأولويات']]){
+        const values=[...new Set(rows.map(row=>row.cells[column].textContent.trim()))],current=select.value;
+        if(JSON.stringify(values)!==select.dataset.values){select.replaceChildren(...['',...values].map(value=>{const option=document.createElement('option');option.value=value;option.textContent=value||title;return option;}));select.dataset.values=JSON.stringify(values);select.value=values.includes(current)?current:'';}
+      }
+      rows.forEach(row=>row.hidden=!!((owner.value&&row.cells[2].textContent.trim()!==owner.value)||(priority.value&&row.cells[3].textContent.trim()!==priority.value)));
     }
     if(route==='/global-search'&&$('globalQ')){
       let select=$('reviewResultType');
@@ -82,7 +113,7 @@
       if(/^حذف(?:\s|$)/.test(text))b.classList.add('review-danger');
       if(/^(إلغاء|تراجع|طباعة|تحديث|إعادة تحميل|السابق|التالي)/.test(text))b.classList.add('review-secondary');
     });
-    const translations={'TASKS & FOLLOW-UP':'المهام والمتابعة','LANDFILL CELLS':'الخلايا والسعة','EQUIPMENT MANAGEMENT V3.7':'الصيانة الوقائية',TASKS:'المهام',CONTRACTS:'العقود',CELLS:'الخلايا والسعة',USERS:'المستخدمون','SUMMARY LINK':'ملخص مرتبط','VIEWER LINKS':'روابط القراءة',TODAY:'اليوم',FLEET:'مركبات الحركة',OPERATIONS:'التشغيل',ENVIRONMENT:'البيئة','MINYA LANDFILL':'مكب المنيا','DRIVE & EXCEL IMPORT':'استيراد البيانات'};
+    const translations={'TASKS & FOLLOW-UP':'المهام والمتابعة','LANDFILL CELLS':'الخلايا والسعة','EQUIPMENT MANAGEMENT V3.7':'الصيانة الوقائية','CLOUD FILES V3.8':'ملفات الموقع',TASKS:'المهام',CONTRACTS:'العقود',CELLS:'الخلايا والسعة',USERS:'المستخدمون','SUMMARY LINK':'ملخص مرتبط','VIEWER LINKS':'روابط القراءة',TODAY:'اليوم',FLEET:'مركبات الحركة',OPERATIONS:'التشغيل',ENVIRONMENT:'البيئة','MINYA LANDFILL':'مكب المنيا','DRIVE & EXCEL IMPORT':'استيراد البيانات'};
     main.querySelectorAll('.v3-hero span,.today-operations-head span,.linked-summary-head span,.user-management-head span').forEach(el=>{const translated=translations[el.textContent.trim()];if(translated)el.textContent=translated;});
   }
   function filterLicenses(){

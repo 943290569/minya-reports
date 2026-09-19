@@ -23,6 +23,10 @@
       UPDATE_CONTRACT: "تحديث عقد",
       CREATE_CELL: "إضافة خلية",
       UPDATE_CELL: "تحديث خلية",
+      PUSH_SUBSCRIBE: "تفعيل إشعارات المتصفح",
+      PUSH_UNSUBSCRIBE: "إيقاف إشعارات المتصفح",
+      SAVE_MONTHLY_ENTRY: "حفظ مسودات الشهر",
+      COMMIT_MONTHLY_ENTRY: "إنشاء تقارير الشهر",
       LOGIN: "تسجيل دخول",
       LOGOUT: "تسجيل خروج",
       LOGIN_FAILED: "محاولة دخول فاشلة",
@@ -59,7 +63,8 @@
     const raw = String(value).includes("T") ? String(value) : String(value).replace(" ", "T") + "Z";
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("ar-EG-u-nu-latn", {
+      timeZone: "Asia/Hebron",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",

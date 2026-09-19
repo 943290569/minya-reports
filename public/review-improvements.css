@@ -66,3 +66,12 @@
  .review-page-nav { display:flex;gap:10px;flex-wrap:wrap; }
  #annualInsights { grid-template-columns:repeat(auto-fit,minmax(155px,1fr))!important; }
 }
+
+@media screen {
+ .page-report section.actions { position:sticky;bottom:10px;z-index:90;padding:10px;border:1px solid var(--review-border);border-radius:12px;background:var(--review-surface); }
+ .review-future-day { background:#fff8e8; }
+ .review-future-label { display:block;color:#805d13;font-weight:700; }
+ html[data-theme="night"] .review-future-day { background:#3d3420; }
+ html[data-theme="night"] .review-future-label { color:#f8d996; }
+ .review-disclosure .report-table-scroll { margin-bottom:0; }
+}
