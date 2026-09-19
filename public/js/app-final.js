@@ -29,6 +29,7 @@ async function deleteReport(id) {
 }
 
 function resetNewReport() {
+  if (typeof clearLocalReportDraft === "function") clearLocalReportDraft();
   editingId = null;
   document.getElementById("reportDate").value = "";
   document.getElementById("weather").value = "مشمس";
