@@ -126,26 +126,6 @@
     const query=$('reviewLicenseSearch')?.value.trim().toLocaleLowerCase()||'';
     $('licenseBody')?.querySelectorAll('tr').forEach(tr=>{const hidden=!!query&&!tr.textContent.toLocaleLowerCase().includes(query);if(tr.hidden!==hidden)tr.hidden=hidden;});
   }
-  function reportLocalDraft(){
-    if(route!=='/report')return;
-    const ids=['reportDate','weather','temperature','startTime','endTime','notes'];
-    const key='minya_report_basic_draft_v1';
-    const main=document.querySelector('main');if(!main)return;
-    let timer=0;
-    const save=()=>{clearTimeout(timer);timer=setTimeout(()=>{const values={};ids.forEach(id=>{const el=$(id);if(el)values[id]=el.value;});try{localStorage.setItem(key,JSON.stringify({saved_at:Date.now(),values}));}catch{}},350);};
-    if(!new URLSearchParams(location.search).has('edit')){
-      try{
-        const draft=JSON.parse(localStorage.getItem(key)||'null');
-        if(draft&&Date.now()-Number(draft.saved_at||0)<48*3600000&&draft.values&&(!$('reportDate')?.value)){
-          ids.forEach(id=>{const el=$(id);if(el&&draft.values[id]!=null){el.value=draft.values[id];el.dispatchEvent(new Event('change',{bubbles:true}));}});
-          const p=document.createElement('p');p.className='review-note';p.id='reviewDraftNote';p.textContent='تم استعادة الحقول الأساسية من مسودة محلية محفوظة على هذا المتصفح خلال آخر 48 ساعة.';main.prepend(p);
-        }
-      }catch{}
-    }
-    main.addEventListener('input',event=>{if(ids.includes(event.target?.id))save();},true);
-    main.addEventListener('change',event=>{if(ids.includes(event.target?.id))save();},true);
-    $('newReportBtn')?.addEventListener('click',()=>{try{localStorage.removeItem(key);}catch{}});
-  }
   function readingControls(){
     if(document.body.classList.contains('auth-page')||$('reviewReading'))return;
     const box=document.createElement('details');box.id='reviewReading';box.className='review-reading no-print';
@@ -157,7 +137,7 @@
   function init(){
     const standalone=document.querySelector('.me-header');
     if(standalone&&!standalone.querySelector('.review-page-nav')){const nav=document.createElement('nav');nav.className='review-page-nav';nav.setAttribute('aria-label','التنقل');nav.innerHTML='<a href="/">الرئيسية</a> · <a href="/monthly">التقرير الشهري</a> · <a href="/archive">الأرشيف</a>';standalone.append(nav);}
-    apply();readingControls();reportLocalDraft();let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;apply();});}).observe(document.body,{childList:true,subtree:true});}
+    apply();readingControls();let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;apply();});}).observe(document.body,{childList:true,subtree:true});}
   document.addEventListener('click',event=>{
     if(!event.target.closest('[data-edit],[data-edit-task],[data-edit-contract],[data-edit-cell]'))return;
     document.querySelectorAll('.review-disclosure').forEach(d=>{if(d.querySelector('input,textarea'))d.open=true;});
