@@ -1,4 +1,5 @@
 const fs = require('fs');
+const vm = require('vm');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -17,4 +18,17 @@ assert(source.includes('rows.filter(x=>hasMeaningfulData(x.data))'), 'only meani
 assert(source.includes('rows.filter(x=>!fallbackDates.has(x.report_date))'), 'empty staged rows are not replaced by daily report rows');
 assert(source.includes('rows:[...rows.filter(x=>!fallbackDates.has(x.report_date)),...fallbackRows].sort'), 'monthly API does not merge and sort both data sources');
 assert(source.includes('auto: { water: false, workday: false }'), 'saved daily values may be overwritten by automatic rules on load');
-console.log('Monthly entry regression checks passed: saved daily report values are loaded without overwriting staged monthly rows.');
+assert(source.includes('function monthlyNameKey(value)'), 'monthly totals do not normalize legacy operation names');
+
+const uiSource = fs.readFileSync('public/monthly-entry-full-grid.js', 'utf8');
+const helperStart = uiSource.indexOf('  function nameKey(value)');
+const helperEnd = uiSource.indexOf('  function stableRange', helperStart);
+assert(helperStart >= 0 && helperEnd > helperStart, 'monthly grid name matching helpers are missing');
+const context = {};
+vm.createContext(context);
+vm.runInContext(uiSource.slice(helperStart, helperEnd) + '\\nthis.__monthlyMatch={nameKey,findNamed};', context);
+const match = context.__monthlyMatch.findNamed;
+assert(match([{operation_name:'مكب  نفايات المنيا ',quantity:17}], 'operation_name', 'مكب نفايات المنيا').quantity === 17, 'spacing differences must not zero operation quantities');
+assert(match([{operation_name:'مكب المنيا',quantity:21}], 'operation_name', 'مكب نفايات المنيا').quantity === 21, 'legacy landfill label must map to the canonical operation');
+assert(match([{station_name:'محطة ترحيل الخليل -',waste_tons:33}], 'station_name', 'محطة ترحيل الخليل').waste_tons === 33, 'punctuation differences must not zero station quantities');
+console.log('Monthly entry regression checks passed: saved values load correctly and legacy name differences do not become zeros.');
