@@ -105,7 +105,7 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
     });
   }
   function monthlyNameKey(value) {
-    let key=String(value||'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\\sـ\\-–—()（）،,:؛.]/g,'');
+    let key=String(value||'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\sـ\-–—()（）،,:؛.]/g,'');
     const aliases={
       'مكبالمنيا':'مكبنفاياتالمنيا','نفاياتمكبالمنيا':'مكبنفاياتالمنيا'
     };
