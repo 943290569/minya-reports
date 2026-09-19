@@ -13,12 +13,9 @@
   function classify(date){const d=new Date(`${date}T12:00:00+03:00`),md=date.slice(5);if(d.getDay()===5)return{workday_type:'holiday',workday_reason:'يوم الجمعة - عطلة رسمية / دوام طوارئ'};if(FIXED[md])return{workday_type:'holiday',workday_reason:`${FIXED[md]} - عطلة رسمية / دوام طوارئ`};try{const p=new Intl.DateTimeFormat('en-u-ca-islamic',{month:'numeric',day:'numeric',timeZone:'Asia/Hebron'}).formatToParts(d),m=+p.find(x=>x.type==='month').value,day=+p.find(x=>x.type==='day').value;if((m===1&&day===1)||(m===3&&day===12)||(m===7&&day===27))return{workday_type:'holiday',workday_reason:'عطلة رسمية / دوام طوارئ'};}catch{}return{workday_type:'official',workday_reason:'دوام رسمي'}}
   function blank(date){return{report_date:date,weather:'مشمس',temperature:10,humidity:null,start_time:'04:00',end_time:'19:00',notes:'',...classify(date),workday_manual:0,auto:{water:true,workday:true},crews:CREWS.map(([crew_name,crew_count])=>({crew_name,crew_count,notes:''})),operations:OPS.map(([operation_name,unit])=>({operation_name,vehicle_count:0,quantity:0,unit,notes:''})),stations:STATIONS.map(station_name=>({station_name,truck_count:0,waste_tons:0,unit:'طن',notes:''})),equipment:EQUIPMENT.map(equipment_name=>({equipment_name,operating_status:'يعمل',status_description:'',working_hours:0,diesel_liters:0,notes:''}))}}
   function nameKey(value){
-    let key=String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\\sـ\\-–—()（）،,:؛.]/g,'');
+    let key=String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\sـ\-–—()（）،,:؛.]/g,'');
     const aliases={
       'مكبالمنيا':'مكبنفاياتالمنيا','نفاياتمكبالمنيا':'مكبنفاياتالمنيا',
-      'محطهالخليل':'محطهترحيلالخليل','الخليل':'محطهترحيلالخليل',
-      'محطهترقوميا':'محطهترحيلترقوميا','ترقوميا':'محطهترحيلترقوميا',
-      'محطه يطا':'محطهترحيل يطا','محطه يطا':'محطهترحيل يطا','يطا':'محطهترحيل يطا'
     };
     return aliases[key]||key;
   }
