@@ -3,6 +3,7 @@ const Database = require("better-sqlite3");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const tls = require("tls");
 
 const app = express();
 
@@ -171,6 +172,20 @@ db.exec(`
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS password_reset_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    code_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    used_at TEXT,
+    request_ip TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_password_reset_user_time ON password_reset_codes(user_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_password_reset_ip_time ON password_reset_codes(request_ip, created_at);
+
   CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -324,6 +339,83 @@ function normalizeEmail(value) { return String(value || "").trim().toLowerCase()
 function validEmail(value) {
   const email = normalizeEmail(value);
   return !email || (email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+}
+function smtpConfigured() {
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER));
+}
+function smtpRead(socket) {
+  return new Promise((resolve, reject) => {
+    let buffer = "";
+    const cleanup = () => {
+      socket.off("data", onData);
+      socket.off("error", onError);
+      socket.off("close", onClose);
+    };
+    const onError = (err) => { cleanup(); reject(err); };
+    const onClose = () => { cleanup(); reject(new Error("SMTP connection closed")); };
+    const onData = (chunk) => {
+      buffer += chunk.toString("utf8");
+      const lines = buffer.split(/\r?\n/).filter(Boolean);
+      const last = lines[lines.length - 1] || "";
+      if (/^\d{3} /.test(last)) {
+        cleanup();
+        resolve({ code: Number(last.slice(0, 3)), text: buffer });
+      }
+    };
+    socket.on("data", onData);
+    socket.on("error", onError);
+    socket.on("close", onClose);
+  });
+}
+async function smtpCommand(socket, command, expected) {
+  if (command !== null) socket.write(command + "\r\n");
+  const response = await smtpRead(socket);
+  if (!expected.includes(response.code)) throw new Error(`SMTP ${response.code}: ${response.text.trim()}`);
+  return response;
+}
+async function sendMail({ to, subject, text }) {
+  if (!smtpConfigured()) throw new Error("SMTP is not configured");
+  const host = String(process.env.SMTP_HOST);
+  const port = Number(process.env.SMTP_PORT || 465);
+  const user = String(process.env.SMTP_USER);
+  const pass = String(process.env.SMTP_PASS);
+  const fromEmail = String(process.env.SMTP_FROM_EMAIL || user);
+  const fromName = String(process.env.SMTP_FROM_NAME || "نظام إدارة مكب المنيا").replace(/[\r\n]/g, " ");
+  const socket = tls.connect({ host, port, servername: host, rejectUnauthorized: true });
+  await smtpCommand(socket, null, [220]);
+  await smtpCommand(socket, `EHLO ${process.env.SMTP_HELO || "alminya-landfill.local"}`, [250]);
+  await smtpCommand(socket, "AUTH LOGIN", [334]);
+  await smtpCommand(socket, Buffer.from(user).toString("base64"), [334]);
+  await smtpCommand(socket, Buffer.from(pass).toString("base64"), [235]);
+  await smtpCommand(socket, `MAIL FROM:<${fromEmail}>`, [250]);
+  await smtpCommand(socket, `RCPT TO:<${to}>`, [250, 251]);
+  await smtpCommand(socket, "DATA", [354]);
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(String(subject), "utf8").toString("base64")}?=`;
+  const encodedName = `=?UTF-8?B?${Buffer.from(fromName, "utf8").toString("base64")}?=`;
+  const safeText = String(text).replace(/\r?\n/g, "\r\n").replace(/^\./gm, "..");
+  const message = [
+    `From: ${encodedName} <${fromEmail}>`,
+    `To: <${to}>`,
+    `Subject: ${encodedSubject}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    safeText,
+    "."
+  ].join("\r\n");
+  socket.write(message + "\r\n");
+  const dataResponse = await smtpRead(socket);
+  if (dataResponse.code !== 250) throw new Error(`SMTP ${dataResponse.code}: ${dataResponse.text.trim()}`);
+  try { await smtpCommand(socket, "QUIT", [221]); } catch {}
+  socket.end();
+}
+function resetCodeHash(user, code) {
+  const secret = String(process.env.PASSWORD_RESET_SECRET || user.password_hash || user.salt);
+  return crypto.createHmac("sha256", secret).update(String(code)).digest("hex");
+}
+function getClientIp(req) {
+  return String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim().slice(0,120);
 }
 function normalizeMobile(value) {
   let mobile=String(value || "").trim().replace(/[\s().-]/g, "");
@@ -601,6 +693,76 @@ app.post("/api/auth/login", (req, res) => {
   audit(user, "LOGIN", "user", user.id, `Login from ${ip}`);
   res.json({ ok:true,user:{ id:user.id,username:user.username,display_name:user.display_name,email:user.email || "",mobile:user.mobile || "",role:user.role } });
 });
+app.post("/api/auth/forgot-password", async (req, res) => {
+  if (!smtpConfigured()) return res.status(503).json({ ok:false, message:"خدمة إرسال البريد غير مهيأة بعد" });
+  const identifier = String(req.body?.identifier || "").trim();
+  if (!identifier) return res.status(400).json({ ok:false, message:"أدخل اسم المستخدم أو البريد الإلكتروني" });
+  const ip = getClientIp(req);
+  const genericMessage = "إذا كان للحساب بريد إلكتروني مسجل فسيتم إرسال رمز التحقق إليه";
+  const ipWindow = new Date(Date.now() - 15*60*1000).toISOString();
+  const ipCount = db.prepare(`SELECT COUNT(*) AS c FROM password_reset_codes WHERE request_ip=? AND created_at>=?`).get(ip, ipWindow).c;
+  if (ipCount >= 10) return res.status(429).json({ ok:false, message:"تم تجاوز عدد طلبات الاسترجاع مؤقتًا. حاول لاحقًا" });
+
+  const user = db.prepare(`SELECT * FROM users WHERE is_active=1 AND (username=? OR (trim(email)<>'' AND lower(email)=lower(?))) LIMIT 1`).get(identifier, identifier);
+  if (!user || !normalizeEmail(user.email)) return res.json({ ok:true, message:genericMessage });
+
+  const userCount = db.prepare(`SELECT COUNT(*) AS c FROM password_reset_codes WHERE user_id=? AND created_at>=?`).get(user.id, ipWindow).c;
+  if (userCount >= 3) return res.json({ ok:true, message:genericMessage });
+
+  db.prepare(`UPDATE password_reset_codes SET used_at=? WHERE user_id=? AND used_at IS NULL`).run(new Date().toISOString(), user.id);
+  const code = String(crypto.randomInt(100000, 1000000));
+  const expiresAt = new Date(Date.now() + 10*60*1000).toISOString();
+  const result = db.prepare(`INSERT INTO password_reset_codes (user_id,code_hash,expires_at,request_ip) VALUES (?,?,?,?)`).run(user.id, resetCodeHash(user, code), expiresAt, ip);
+
+  try {
+    await sendMail({
+      to: normalizeEmail(user.email),
+      subject: "رمز استعادة كلمة المرور - نظام إدارة مكب المنيا",
+      text: `رمز التحقق الخاص بك هو: ${code}\n\nصلاحية الرمز 10 دقائق. إذا لم تطلب تغيير كلمة المرور فتجاهل هذه الرسالة.`
+    });
+    audit(user, "PASSWORD_RESET_CODE_SENT", "user", user.id, `Password reset code sent to registered email from ${ip}`);
+  } catch (error) {
+    db.prepare(`DELETE FROM password_reset_codes WHERE id=?`).run(result.lastInsertRowid);
+    console.error("Password reset email failed", error);
+    audit(user, "PASSWORD_RESET_EMAIL_FAILED", "user", user.id, String(error.message || error).slice(0,300));
+    return res.status(502).json({ ok:false, message:"تعذر إرسال البريد حاليًا. تحقق من إعدادات البريد وحاول مرة أخرى" });
+  }
+  res.json({ ok:true, message:genericMessage });
+});
+
+app.post("/api/auth/reset-password", (req, res) => {
+  const identifier = String(req.body?.identifier || "").trim();
+  const code = String(req.body?.code || "").trim();
+  const newPassword = String(req.body?.new_password || "");
+  if (!identifier || !/^\d{6}$/.test(code)) return res.status(400).json({ ok:false, message:"أدخل رمز التحقق المكون من 6 أرقام" });
+  if (newPassword.length < 8) return res.status(400).json({ ok:false, message:"كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل" });
+
+  const user = db.prepare(`SELECT * FROM users WHERE is_active=1 AND (username=? OR (trim(email)<>'' AND lower(email)=lower(?))) LIMIT 1`).get(identifier, identifier);
+  if (!user) return res.status(400).json({ ok:false, message:"رمز التحقق غير صحيح أو انتهت صلاحيته" });
+
+  const row = db.prepare(`SELECT * FROM password_reset_codes WHERE user_id=? AND used_at IS NULL ORDER BY id DESC LIMIT 1`).get(user.id);
+  if (!row || row.attempts >= 5 || new Date(row.expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ ok:false, message:"رمز التحقق غير صحيح أو انتهت صلاحيته" });
+  }
+  const supplied = resetCodeHash(user, code);
+  const valid = safeHashEqual(supplied, row.code_hash);
+  if (!valid) {
+    db.prepare(`UPDATE password_reset_codes SET attempts=attempts+1 WHERE id=?`).run(row.id);
+    audit(user, "PASSWORD_RESET_CODE_FAILED", "user", user.id, `Invalid reset code from ${getClientIp(req)}`);
+    return res.status(400).json({ ok:false, message:"رمز التحقق غير صحيح أو انتهت صلاحيته" });
+  }
+
+  const salt = newSalt();
+  db.transaction(() => {
+    db.prepare(`UPDATE users SET password_hash=?,salt=? WHERE id=?`).run(hashPassword(newPassword, salt), salt, user.id);
+    db.prepare(`UPDATE password_reset_codes SET used_at=? WHERE user_id=? AND used_at IS NULL`).run(new Date().toISOString(), user.id);
+    db.prepare(`DELETE FROM sessions WHERE user_id=?`).run(user.id);
+    db.prepare(`DELETE FROM login_attempts WHERE username=?`).run(user.username);
+  })();
+  audit(user, "PASSWORD_RESET", "user", user.id, `Password reset completed from ${getClientIp(req)}`);
+  res.json({ ok:true, message:"تم تغيير كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن" });
+});
+
 app.post("/api/auth/logout", requireAuth, (req,res)=>{
   const token = parseCookies(req).minya_session;
   if (token) db.prepare(`DELETE FROM sessions WHERE token_hash=?`).run(tokenHash(token));
