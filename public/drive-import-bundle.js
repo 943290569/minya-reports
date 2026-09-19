@@ -322,9 +322,9 @@
     {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
     {label:"إدارة المعدات الوقائية", href:"/equipment-management", icon:"⚙"},
     {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
-    {label:"المركبات والسائقين", href:"/drivers-licenses.html", icon:"▣"},
+    {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
-    {label:"مركبات حركة المكب والسائقون", href:"/fleet", icon:"▣"},
+    {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
     {label:"الصيانة والحوادث", href:"/maintenance-incidents", icon:"⚒"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
@@ -359,7 +359,7 @@
       if(item.hideFor && item.hideFor.includes(role)) return false;
       return true;
     }).map(item=>{
-      const active=(path===item.href || (item.href!=="/" && path.startsWith(item.href))) ? " active" : "";
+      const active=(path===item.href) ? " active" : "";
       return `<a class="minya-menu-item${active}" href="${item.href}"><span class="minya-menu-label"><i class="minya-menu-symbol" aria-hidden="true">${item.icon}</i><span>${item.label}</span></span><b aria-hidden="true">‹</b></a>`;
     }).join("");
   }
@@ -557,8 +557,9 @@
       }
       if(link.tagName==="A"){
         link.textContent=item.label;
-        const active=normalizeHref(path)===key || (key!=="/" && normalizeHref(path).startsWith(key));
+        const active=normalizeHref(path)===key;
         link.classList.toggle("active",active);
+        if(active)link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");
       }
       if(primaryHrefs.includes(key)) nav.appendChild(link);
       else morePanel.appendChild(link);

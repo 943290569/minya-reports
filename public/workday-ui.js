@@ -70,6 +70,8 @@
   }
 
   function periodFilter(rows){
+    const annualYear=$('annualYearFilter')?.value;
+    if(location.pathname.replace(/\/+$/,'')==='/annual')return /^\d{4}$/.test(annualYear||'')?rows.filter(x=>String(x.report_date).startsWith(`${annualYear}-`)):[];
     const date=$('archiveDateFilter')?.value||'';if(date)return rows.filter(x=>x.report_date===date);
     const month=$('archiveMonthFilter')?.value||'';if(month)return rows.filter(x=>String(x.report_date).startsWith(month));
     const yearEl=document.querySelector('#annualYear,[id*="annualYear"],[id*="YearFilter"],[id*="yearFilter"]');const year=String(yearEl?.value||'').trim();
@@ -114,7 +116,8 @@
     return response;
   };
 
-  function bindFilters(){['archiveDateFilter','archiveMonthFilter','annualYear'].forEach(id=>$(id)?.addEventListener('change',()=>{renderPeriodSummary();setTimeout(decorateDates,50);}));}
+  function bindFilters(){['archiveDateFilter','archiveMonthFilter','annualYear','annualYearFilter'].forEach(id=>$(id)?.addEventListener('change',()=>{renderPeriodSummary();setTimeout(decorateDates,50);}));}
+  document.addEventListener('minya:annual-loaded',()=>{renderPeriodSummary();decorateDates();});
   function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{ensureReportField();renderPeriodSummary();decorateDates();},120);}
   async function init(){installStyle();ensureReportField();bindFilters();await loadWorkdays();renderPeriodSummary();decorateDates();
     const observer=new MutationObserver(scheduleRefresh);observer.observe(document.body,{childList:true,subtree:true});

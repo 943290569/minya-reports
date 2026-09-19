@@ -75,10 +75,14 @@
     let lastMonth=0;const html=[];
     rows.forEach(r=>{
       const month=Number(String(r.entry_date).slice(5,7));
-      if(month!==lastMonth){html.push(`<tr class="ss-month-row"><td colspan="4">${months[month-1]||month}</td></tr>`);lastMonth=month;}
-      html.push(`<tr><td>${r.entry_date}</td><td>${fmt(r.record_count)}</td><td>${fmt(r.quantity_tons)}</td><td>${r.included_in_station_total?'ضمن إجمالي يطا':'مستقل'}</td></tr>`);
+      if(month!==lastMonth){html.push(`<tr class="ss-month-row"><td colspan="4"><button type="button" class="secondary" data-month-toggle="${month}" aria-expanded="false">${months[month-1]||month} — عرض الأيام</button></td></tr>`);lastMonth=month;}
+      html.push(`<tr data-daily-month="${month}" hidden><td>${r.entry_date}</td><td>${fmt(r.record_count)}</td><td>${fmt(r.quantity_tons)}</td><td>${r.included_in_station_total?'ضمن إجمالي يطا':'مستقل'}</td></tr>`);
     });
     $('dailyBody').innerHTML=html.join('');
+    $('dailyBody').querySelectorAll('[data-month-toggle]').forEach(button=>button.onclick=()=>{
+      const open=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(open));
+      $('dailyBody').querySelectorAll(`[data-daily-month="${button.dataset.monthToggle}"]`).forEach(row=>row.hidden=!open);
+    });
   }
 
   async function load(){

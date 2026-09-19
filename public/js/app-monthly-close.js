@@ -40,11 +40,13 @@
     style();
     const main=document.querySelector('main.container,main,.container');
     if(!main||document.getElementById('monthlyClosePanel'))return;
-    const panel=document.createElement('section');
+    const panel=document.createElement('details');
     panel.id='monthlyClosePanel';
-    panel.innerHTML=`<div class="mc-head"><div><h3>إغلاق واعتماد الشهر</h3><small>تمييز الشهر الجاري عن الشهر المكتمل والمعتمد.</small></div><div class="mc-controls"><input id="mcMonth" type="month" value="${thisMonth()}"><span id="mcStatus" class="mc-badge">...</span></div></div><div id="mcBody"></div>`;
-    main.prepend(panel);
-    document.getElementById('mcMonth').addEventListener('change',load);
+    panel.innerHTML=`<summary>إغلاق واعتماد الشهر</summary><div class="mc-head"><div><h3>إغلاق واعتماد الشهر</h3><small>تمييز الشهر الجاري عن الشهر المكتمل والمعتمد.</small></div><div class="mc-controls"><input id="mcMonth" type="month" value="${thisMonth()}"><span id="mcStatus" class="mc-badge">...</span></div></div><div id="mcBody"></div>`;
+    main.append(panel);
+    const filter=document.getElementById('archiveMonthFilter');if(filter?.value)document.getElementById('mcMonth').value=filter.value;
+    filter?.addEventListener('change',()=>{document.getElementById('mcMonth').value=filter.value;load();});
+    document.getElementById('mcMonth').addEventListener('change',()=>{if(filter){filter.value=document.getElementById('mcMonth').value;filter.dispatchEvent(new Event('change',{bubbles:true}));}else load();});
     await load();
   }
 
@@ -55,6 +57,7 @@
     body.innerHTML='<div class="mc-msg">جاري تحميل حالة الشهر...</div>';
     try{
       const d=await api(`/api/monthly-close/${encodeURIComponent(month)}`),m=d.month||{};
+      if(document.getElementById('mcMonth').value!==month)return;
       badge.textContent=m.status_label||m.status||'';
       badge.className=`mc-badge ${m.status||''}`;
       const r=role();
@@ -65,7 +68,7 @@
           <div class="mc-kpi"><span>التقارير المعتمدة</span><strong>${Number(m.approved_reports_count||0)}</strong></div>
           <div class="mc-kpi"><span>صفوف الإدخال الشهري</span><strong>${Number(m.staged_rows_count||0)}</strong></div>
         </div>
-        <label><b>ملاحظات الإغلاق</b></label>
+        <p class="review-note">صفوف الإدخال مسودات مستقلة؛ لا تُحتسب كتقارير محفوظة حتى إنشاء التقارير في الأرشيف.</p><label for="mcNotes"><b>ملاحظات الإغلاق</b></label>
         <textarea id="mcNotes" placeholder="مثال: تم استلام ملفات الشهر ومراجعة المجاميع">${esc(m.notes||'')}</textarea>
         ${m.locked?'<div class="danger-note">هذا الشهر معتمد ومقفل. التعديل متاح للمدير فقط.</div>':''}
         <div class="mc-actions">

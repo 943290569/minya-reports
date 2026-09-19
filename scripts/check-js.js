@@ -2,11 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
-const roots = [
-  "server.js",
-  "public/app.js",
-  "public/js",
-];
+const roots = fs.readdirSync(process.cwd()).filter(name=>name.endsWith(".js")).concat(["public", "scripts"]);
 
 function collect(target) {
   const full = path.join(process.cwd(), target);
@@ -15,7 +11,7 @@ function collect(target) {
   if (stat.isFile()) return target.endsWith(".js") ? [target] : [];
   return fs.readdirSync(full, { withFileTypes: true }).flatMap((entry) => {
     const child = path.join(target, entry.name);
-    if (entry.isDirectory()) return collect(child);
+    if (entry.isDirectory()) return ["node_modules","npm-cache",".git"].includes(entry.name)?[]:collect(child);
     return entry.isFile() && entry.name.endsWith(".js") ? [child] : [];
   });
 }

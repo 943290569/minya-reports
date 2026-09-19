@@ -88,6 +88,7 @@ async function loadAnnualArchiveData(year = "") {
       select.value = requestedYear;
     }
 
+    document.dispatchEvent(new CustomEvent('minya:annual-loaded',{detail:{year:requestedYear}}));
     await refreshAnnualCompanions();
     document.getElementById("archiveSection")?.classList.remove("hidden");
 

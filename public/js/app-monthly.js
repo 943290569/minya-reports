@@ -254,7 +254,7 @@ async function updateMonthlySummary() {
   const monthly = calculateMonthlyReport();
   const setValue = (id, value) => {
     const element = document.getElementById(id);
-    if (element) element.textContent = value;
+    if (element) element.textContent = monthly.reports.length || id === "monthlyDaysCount" ? value : "—";
   };
 
   setValue("monthlyDaysCount", formatNumber(monthly.days));

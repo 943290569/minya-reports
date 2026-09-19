@@ -124,10 +124,16 @@ async function renderAnnualComparison() {
   empty.style.display = "block";
   empty.textContent = "جاري تحميل المقارنة...";
 
+  const previousReports = await getAnnualReportsForYear(String(previousYear));
+  const currentDates = new Set(filterAnnualPeriod(currentReports,String(year),cutoff).map(r=>r.report_date.slice(5)));
+  const previousDates = new Set(filterAnnualPeriod(previousReports,String(previousYear),cutoff).map(r=>r.report_date.slice(5)));
+  const matchedCurrent = currentReports.filter(r=>previousDates.has(r.report_date.slice(5)));
+  const matchedPrevious = previousReports.filter(r=>currentDates.has(r.report_date.slice(5)));
   const [current, previous] = await Promise.all([
-    calculateAnnualTotals(String(year), cutoff, currentReports),
-    calculateAnnualTotals(String(previousYear), cutoff),
+    calculateAnnualTotals(String(year), cutoff, matchedCurrent),
+    calculateAnnualTotals(String(previousYear), cutoff, matchedPrevious),
   ]);
+  if(Number(select.value)!==year)return;
 
   if (!current || !previous) {
     grid.style.display = "none";
@@ -143,7 +149,8 @@ async function renderAnnualComparison() {
     <div style="${cardStyle}"><span style="display:block;color:#6b7280;">السولار</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.diesel, previous.diesel)}</strong><small style="display:block;color:#6b7280;">${year}: ${formatNumber(current.diesel)} لتر · ${previousYear}: ${formatNumber(previous.diesel)} لتر</small></div>
   `;
 
-  empty.style.display = "none";
+  empty.style.display = "block";
+  empty.textContent = `المقارنة بين ${current.days} يومًا لها سجلات في السنتين فقط. التغطية المتاحة للفترة: ${currentDates.size} يوم في ${year} و${previousDates.size} في ${previousYear}. استُبعدت الأيام غير المتقابلة حتى لا تُفسَّر السجلات الناقصة كانخفاض في الأداء.`;
   grid.style.display = "grid";
 }
 

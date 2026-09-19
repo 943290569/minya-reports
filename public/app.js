@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919b";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -86,7 +86,9 @@ window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
 const MINYA_RESOLVED_THEME = window.MINYA_APPEARANCE_SETTINGS.theme === "auto"
   ? (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "night" : "day")
   : window.MINYA_APPEARANCE_SETTINGS.theme;
-const MINYA_LOADING_MIN_MS = Math.min(
+let minyaSeenWelcome=false;
+try{minyaSeenWelcome=sessionStorage.getItem('minya_welcome_seen')==='1';sessionStorage.setItem('minya_welcome_seen','1');}catch{}
+const MINYA_LOADING_MIN_MS = minyaSeenWelcome ? 0 : Math.min(
   5000,
   Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 1) * 1000)
 );
@@ -117,6 +119,7 @@ document.documentElement.style.setProperty("--appearance-small-font-size", `${wi
 document.documentElement.style.setProperty("--appearance-line-height", String(window.MINYA_APPEARANCE_SETTINGS.lineHeight));
 
 (function mountMinyaLoadingScreen(){
+  if(minyaSeenWelcome)return;
   const messages = [
     "لا تنسَ ذكر الله",
     "صلِّ على النبي ﷺ",

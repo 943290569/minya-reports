@@ -10,7 +10,7 @@
   // sectionId -> which layer body it belongs in
   const layerMap = {
     todayOperationsSection: "layer1",
-    adminTodayOps: "layer1",
+    adminTodayOps: "layer2",
     adminWorkflowSummary: "layer2",
     adminSystemHealth: "layer2",
     freeSmartInsights: "layer3",

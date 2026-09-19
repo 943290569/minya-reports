@@ -10,7 +10,7 @@
     const section=document.createElement('section');
     section.id='todayOperationsSection';
     section.className='today-operations';
-    section.innerHTML=`<div class="today-operations-head"><div><span>TODAY</span><h3>حالة التشغيل اليوم</h3><p id="todayOperationsDate">-</p></div><a href="/report">فتح تقرير اليوم</a></div><div class="today-operations-grid"><div><span>النفايات</span><strong id="todayWaste">0</strong><small>طن</small></div><div><span>الشاحنات</span><strong id="todayTrucks">0</strong></div><div><span>السولار</span><strong id="todayDiesel">0</strong><small>لتر</small></div><div><span>المعدات المتوقفة</span><strong id="todayStopped">0</strong></div><div><span>حالة التقرير</span><strong id="todayReportState">غير محفوظ</strong></div></div><div id="todayStoppedList" class="today-stopped-list"></div>`;
+    section.innerHTML=`<div class="today-operations-head"><div><span>TODAY</span><h3>حالة التشغيل اليوم</h3><p id="todayOperationsDate">-</p></div><a href="/report">فتح تقرير اليوم</a></div><div class="today-operations-grid"><div><span>النفايات</span><strong id="todayWaste">—</strong><small>طن</small></div><div><span>الشاحنات</span><strong id="todayTrucks">—</strong></div><div><span>السولار</span><strong id="todayDiesel">—</strong><small>لتر</small></div><div><span>المعدات المتوقفة</span><strong id="todayStopped">—</strong></div><div><span>حالة التقرير</span><strong id="todayReportState">غير محفوظ</strong></div></div><div id="todayStoppedList" class="today-stopped-list"></div>`;
     const executive=document.getElementById('executiveDashboardSection');
     if(executive) home.insertBefore(section,executive); else home.prepend(section);
     return section;
@@ -21,7 +21,7 @@
     try{
       const r=await fetch('/api/reports',{cache:'no-store'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'load failed');
       const reports=Array.isArray(d.reports)?d.reports:[];const row=reports.find(x=>String(x.report_date||'')===today);
-      if(!row){shell.dataset.state='missing';return;}
+      if(!row){shell.dataset.state='missing';document.getElementById('todayReportState').textContent='غير مسجّل';return;}
       document.getElementById('todayWaste').textContent=fmt(row.total_waste_tons);
       document.getElementById('todayTrucks').textContent=fmt(row.total_trucks);
       document.getElementById('todayDiesel').textContent=fmt(row.total_diesel);
@@ -34,7 +34,7 @@
       const list=document.getElementById('todayStoppedList');
       if(stopped.length){list.innerHTML=`<strong>معدات تحتاج متابعة</strong><div>${stopped.map(x=>`<span>${esc(x.equipment_name||x.name||'معدة')} — ${esc(x.operating_status||x.status||'')}</span>`).join('')}</div>`;}
       else list.innerHTML='<span>لا توجد معدات متوقفة في تقرير اليوم.</span>';
-    }catch(e){shell.dataset.state='error';console.error('Today dashboard failed',e);}
+    }catch(e){shell.dataset.state='error';document.getElementById('todayReportState').textContent='تعذر التحميل';console.error('Today dashboard failed',e);}
   }
   document.addEventListener('DOMContentLoaded',()=>setTimeout(load,180));
   window.addEventListener('minya-notifications-updated',()=>{const shell=document.getElementById('todayOperationsSection');if(shell&&!shell.dataset.refreshed){shell.dataset.refreshed='1';setTimeout(load,80);}});
