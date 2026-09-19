@@ -3,7 +3,7 @@ const LOCAL_REPORT_DRAFT_KEY = "minya_daily_report_draft_v2";
 let localReportDraftTimer = 0;
 
 function scheduleLocalReportDraft() {
-  if ((location.pathname.replace(/\/+$/, "") || "/") !== "/report" || editingId !== null) return;
+  if ((location.pathname.replace(/\/+$/, "") || "/") !== "/report" || editingId !== null || new URLSearchParams(location.search).has("edit")) return;
   clearTimeout(localReportDraftTimer);
   localReportDraftTimer = setTimeout(() => {
     try {
@@ -48,7 +48,7 @@ async function getReportInputWarnings(payload) {
 }
 
 function restoreLocalReportDraft() {
-  if ((location.pathname.replace(/\/+$/, "") || "/") !== "/report" || editingId !== null || document.getElementById("reportDate")?.value) return;
+  if ((location.pathname.replace(/\/+$/, "") || "/") !== "/report" || editingId !== null || new URLSearchParams(location.search).has("edit") || document.getElementById("reportDate")?.value) return;
   try {
     const stored = JSON.parse(localStorage.getItem(LOCAL_REPORT_DRAFT_KEY) || "null");
     if (!stored?.payload || Date.now() - Number(stored.saved_at || 0) > 48 * 3600000) return;
