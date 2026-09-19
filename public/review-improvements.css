@@ -117,3 +117,12 @@
   .review-disclosure:not([open])>*:not(summary) { display:block!important; }
   a { color:#000!important;text-decoration:none!important; }
 }
+
+
+@media screen {
+  .today-comparisons { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0; }
+  .today-comparisons>div { border:1px solid var(--review-border);border-radius:10px;padding:10px;background:var(--review-surface);min-width:0; }
+  .today-comparisons span,.today-comparisons small { display:block;color:var(--review-muted); }
+  .today-comparisons strong { display:block;margin:4px 0;font-size:1.15rem; }
+}
+@media screen and (max-width:760px) { .today-comparisons { grid-template-columns:1fr; } }
