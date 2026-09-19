@@ -72,14 +72,14 @@ const annualComparison = read('public/js/app-annual-comparison.js');
 assert(annualComparison.includes('function annualPeriodCutoff(reports, year)'), 'Annual comparison must derive its cutoff from the selected year data');
 assert(annualComparison.includes('dates.at(-1).slice(5)'), 'Annual comparison must use the latest recorded date as its cutoff');
 assert(annualComparison.includes('return !cutoff || date.slice(5) <= cutoff;'), 'Annual comparison must stop both compared years at the same month/day cutoff');
-assert(annualComparison.includes('calculateAnnualTotals(String(previousYear), cutoff)'), 'Annual previous-year totals must use the same elapsed-period cutoff');
+assert(annualComparison.includes('calculateAnnualTotals(String(previousYear), cutoff, matchedPrevious)'), 'Annual previous-year totals must use the same elapsed-period cutoff');
 assert(annualComparison.includes('في السنتين'), 'Annual comparison title must disclose that both years use the same period');
 
 const annualInsights = read('public/js/app-annual-insights.js');
 assert(annualInsights.includes('timeZone: "Asia/Jerusalem"'), 'Annual report insights must resolve the current month in Asia/Jerusalem');
 assert(annualInsights.includes('const isCurrentYear = String(year) === currentPeriod.year;'), 'Annual report insights must distinguish the current year from historical years');
 assert(annualInsights.includes('item.monthValue < currentPeriod.month'), 'Annual report best/low/average indicators must exclude the current partial month');
-assert(annualInsights.includes('للأشهر المكتملة فقط'), 'Annual report monthly average must disclose completed-month basis');
+assert(annualInsights.includes('للأشهر المنتهية ذات السجلات'), 'Annual report monthly average must disclose completed-month basis');
 assert(annualInsights.includes('yearWaste / annualReports.length'), 'Annual daily waste average must divide by recorded report days only');
 assert(annualInsights.includes('const highestDay = annualReports.reduce'), 'Annual report must calculate the highest recorded waste day');
 assert(annualInsights.includes('const lowestDay = annualReports.reduce'), 'Annual report must calculate the lowest recorded waste day');

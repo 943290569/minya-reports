@@ -5,5 +5,5 @@
  */
 (function(){
   const badge=document.querySelector('#sourceFilesPanel .drive-readonly');
-  if(badge) badge.textContent='معاينة مستقرة V33';
+  if(badge) badge.textContent='معاينة البيانات قبل الحفظ';
 })();

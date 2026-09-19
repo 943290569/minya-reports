@@ -38,7 +38,7 @@ assert(startServer.includes('field==="total_trucks"&&!Number.isInteger(n)'), 'ba
 assert(startServer.includes('approved_by_name,returned_reason,returned_at,returned_by,returned_to)'), 'restore insert does not include returned-report fields');
 assert(startServer.includes('r.returned_reason||"",r.returned_at||null,r.returned_by||null,r.returned_to||null'), 'restore does not write returned-report metadata values');
 
-assert(driveImport.includes('معاينة مستقرة V33'),'Drive import stable badge is missing');
+assert(driveImport.includes('معاينة البيانات قبل الحفظ'),'Drive import preview guidance is missing');
 assert(driveImport.includes('drive-import-bundle.js?v='),'Drive JavaScript bundle is missing');
 assert(driveBundle.includes('js/app-source-stable-v16.js'),'canonical stable source parser is missing');
 assert(driveBundle.includes('js/app-source-pivot-raw-v30.js'),'pivot compatibility parser is missing');

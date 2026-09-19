@@ -7,7 +7,7 @@ const serverPath = path.join(root, "server.js");
 const pkg = require(path.join(root, "package.json"));
 const version = String(pkg.version || "3.5.0");
 
-let source = fs.readFileSync(serverPath, "utf8");
+let source = fs.readFileSync(serverPath, "utf8").replace(/\r\n/g, "\n");
 
 const replacements = [
   [

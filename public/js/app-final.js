@@ -423,11 +423,11 @@ async function renderAnnualSummary() {
 
   body.innerHTML = months.map((item) => `
     <tr>
-      <td>${getMonthName(item.monthValue)}</td>
-      <td>${formatNumber(item.days)}</td>
-      <td>${formatNumber(item.waste)}</td>
-      <td>${formatNumber(item.trucks)}</td>
-      <td>${formatNumber(item.diesel)}</td>
+      <td>${getMonthName(item.monthValue)}${!item.days ? `<small class="review-empty-period">${item.monthValue > new Date().toISOString().slice(0,7) ? 'فترة قادمة' : 'غير مسجّل'}</small>` : ''}</td>
+      <td>${item.days ? formatNumber(item.days) : '—'}</td>
+      <td>${item.days ? formatNumber(item.waste) : '—'}</td>
+      <td>${item.days ? formatNumber(item.trucks) : '—'}</td>
+      <td>${item.days ? formatNumber(item.diesel) : '—'}</td>
     </tr>
   `).join("") + `
     <tr>

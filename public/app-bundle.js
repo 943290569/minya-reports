@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919c";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -86,7 +86,9 @@ window.MINYA_APPEARANCE_SETTINGS = readMinyaAppearanceSettings();
 const MINYA_RESOLVED_THEME = window.MINYA_APPEARANCE_SETTINGS.theme === "auto"
   ? (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "night" : "day")
   : window.MINYA_APPEARANCE_SETTINGS.theme;
-const MINYA_LOADING_MIN_MS = Math.min(
+let minyaSeenWelcome=false;
+try{minyaSeenWelcome=sessionStorage.getItem('minya_welcome_seen')==='1';sessionStorage.setItem('minya_welcome_seen','1');}catch{}
+const MINYA_LOADING_MIN_MS = minyaSeenWelcome ? 0 : Math.min(
   5000,
   Math.max(1000, Number(window.MINYA_APPEARANCE_SETTINGS.loadingSeconds || 1) * 1000)
 );
@@ -117,6 +119,7 @@ document.documentElement.style.setProperty("--appearance-small-font-size", `${wi
 document.documentElement.style.setProperty("--appearance-line-height", String(window.MINYA_APPEARANCE_SETTINGS.lineHeight));
 
 (function mountMinyaLoadingScreen(){
+  if(minyaSeenWelcome)return;
   const messages = [
     "لا تنسَ ذكر الله",
     "صلِّ على النبي ﷺ",
@@ -1115,7 +1118,7 @@ async function updateMonthlySummary() {
   const monthly = calculateMonthlyReport();
   const setValue = (id, value) => {
     const element = document.getElementById(id);
-    if (element) element.textContent = value;
+    if (element) element.textContent = monthly.reports.length || id === "monthlyDaysCount" ? value : "—";
   };
 
   setValue("monthlyDaysCount", formatNumber(monthly.days));
@@ -2449,11 +2452,11 @@ async function renderAnnualSummary() {
 
   body.innerHTML = months.map((item) => `
     <tr>
-      <td>${getMonthName(item.monthValue)}</td>
-      <td>${formatNumber(item.days)}</td>
-      <td>${formatNumber(item.waste)}</td>
-      <td>${formatNumber(item.trucks)}</td>
-      <td>${formatNumber(item.diesel)}</td>
+      <td>${getMonthName(item.monthValue)}${!item.days ? `<small class="review-empty-period">${item.monthValue > new Date().toISOString().slice(0,7) ? 'فترة قادمة' : 'غير مسجّل'}</small>` : ''}</td>
+      <td>${item.days ? formatNumber(item.days) : '—'}</td>
+      <td>${item.days ? formatNumber(item.waste) : '—'}</td>
+      <td>${item.days ? formatNumber(item.trucks) : '—'}</td>
+      <td>${item.days ? formatNumber(item.diesel) : '—'}</td>
     </tr>
   `).join("") + `
     <tr>
@@ -3357,10 +3360,16 @@ async function renderAnnualComparison() {
   empty.style.display = "block";
   empty.textContent = "جاري تحميل المقارنة...";
 
+  const previousReports = await getAnnualReportsForYear(String(previousYear));
+  const currentDates = new Set(filterAnnualPeriod(currentReports,String(year),cutoff).map(r=>r.report_date.slice(5)));
+  const previousDates = new Set(filterAnnualPeriod(previousReports,String(previousYear),cutoff).map(r=>r.report_date.slice(5)));
+  const matchedCurrent = currentReports.filter(r=>previousDates.has(r.report_date.slice(5)));
+  const matchedPrevious = previousReports.filter(r=>currentDates.has(r.report_date.slice(5)));
   const [current, previous] = await Promise.all([
-    calculateAnnualTotals(String(year), cutoff, currentReports),
-    calculateAnnualTotals(String(previousYear), cutoff),
+    calculateAnnualTotals(String(year), cutoff, matchedCurrent),
+    calculateAnnualTotals(String(previousYear), cutoff, matchedPrevious),
   ]);
+  if(Number(select.value)!==year)return;
 
   if (!current || !previous) {
     grid.style.display = "none";
@@ -3376,7 +3385,8 @@ async function renderAnnualComparison() {
     <div style="${cardStyle}"><span style="display:block;color:#6b7280;">السولار</span><strong style="display:block;margin:6px 0;font-size:18px;">${formatAnnualChange(current.diesel, previous.diesel)}</strong><small style="display:block;color:#6b7280;">${year}: ${formatNumber(current.diesel)} لتر · ${previousYear}: ${formatNumber(previous.diesel)} لتر</small></div>
   `;
 
-  empty.style.display = "none";
+  empty.style.display = "block";
+  empty.textContent = `المقارنة بين ${current.days} يومًا لها سجلات في السنتين فقط. التغطية المتاحة للفترة: ${currentDates.size} يوم في ${year} و${previousDates.size} في ${previousYear}. استُبعدت الأيام غير المتقابلة حتى لا تُفسَّر السجلات الناقصة كانخفاض في الأداء.`;
   grid.style.display = "grid";
 }
 
@@ -3477,7 +3487,7 @@ function renderAnnualInsights() {
   if (!months.length) {
     bestMonth.textContent = worstMonth.textContent = "-";
     bestValue.textContent = worstValue.textContent = isCurrentYear ? "لا توجد أشهر مكتملة" : "لا توجد بيانات";
-    averageValue.textContent = "0 طن";
+    averageValue.textContent = "—";
     if (averageNote) averageNote.textContent = isCurrentYear ? "يُحسب بعد اكتمال أول شهر" : "للأشهر التي تحتوي بيانات";
   } else {
     const highest = months.reduce((max, item) => item.waste > max.waste ? item : max);
@@ -3489,7 +3499,7 @@ function renderAnnualInsights() {
     worstValue.textContent = `${formatNumber(lowest.waste)} طن`;
     averageValue.textContent = `${formatNumber(totalWaste / months.length)} طن`;
     if (averageNote) averageNote.textContent = isCurrentYear
-      ? `للأشهر المكتملة فقط — ${months.length} شهر`
+      ? `للأشهر المنتهية ذات السجلات — ${months.length} شهر؛ قد تكون بياناتها غير مكتملة`
       : `للأشهر التي تحتوي بيانات — ${months.length} شهر`;
   }
 
@@ -3611,6 +3621,7 @@ async function loadAnnualArchiveData(year = "") {
       select.value = requestedYear;
     }
 
+    document.dispatchEvent(new CustomEvent('minya:annual-loaded',{detail:{year:requestedYear}}));
     await refreshAnnualCompanions();
     document.getElementById("archiveSection")?.classList.remove("hidden");
 
@@ -5429,7 +5440,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const section=document.createElement('section');
     section.id='todayOperationsSection';
     section.className='today-operations';
-    section.innerHTML=`<div class="today-operations-head"><div><span>TODAY</span><h3>حالة التشغيل اليوم</h3><p id="todayOperationsDate">-</p></div><a href="/report">فتح تقرير اليوم</a></div><div class="today-operations-grid"><div><span>النفايات</span><strong id="todayWaste">0</strong><small>طن</small></div><div><span>الشاحنات</span><strong id="todayTrucks">0</strong></div><div><span>السولار</span><strong id="todayDiesel">0</strong><small>لتر</small></div><div><span>المعدات المتوقفة</span><strong id="todayStopped">0</strong></div><div><span>حالة التقرير</span><strong id="todayReportState">غير محفوظ</strong></div></div><div id="todayStoppedList" class="today-stopped-list"></div>`;
+    section.innerHTML=`<div class="today-operations-head"><div><span>TODAY</span><h3>حالة التشغيل اليوم</h3><p id="todayOperationsDate">-</p></div><a href="/report">فتح تقرير اليوم</a></div><div class="today-operations-grid"><div><span>النفايات</span><strong id="todayWaste">—</strong><small>طن</small></div><div><span>الشاحنات</span><strong id="todayTrucks">—</strong></div><div><span>السولار</span><strong id="todayDiesel">—</strong><small>لتر</small></div><div><span>المعدات المتوقفة</span><strong id="todayStopped">—</strong></div><div><span>حالة التقرير</span><strong id="todayReportState">غير محفوظ</strong></div></div><div id="todayStoppedList" class="today-stopped-list"></div>`;
     const executive=document.getElementById('executiveDashboardSection');
     if(executive) home.insertBefore(section,executive); else home.prepend(section);
     return section;
@@ -5440,7 +5451,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     try{
       const r=await fetch('/api/reports',{cache:'no-store'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'load failed');
       const reports=Array.isArray(d.reports)?d.reports:[];const row=reports.find(x=>String(x.report_date||'')===today);
-      if(!row){shell.dataset.state='missing';return;}
+      if(!row){shell.dataset.state='missing';document.getElementById('todayReportState').textContent='غير مسجّل';return;}
       document.getElementById('todayWaste').textContent=fmt(row.total_waste_tons);
       document.getElementById('todayTrucks').textContent=fmt(row.total_trucks);
       document.getElementById('todayDiesel').textContent=fmt(row.total_diesel);
@@ -5453,7 +5464,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
       const list=document.getElementById('todayStoppedList');
       if(stopped.length){list.innerHTML=`<strong>معدات تحتاج متابعة</strong><div>${stopped.map(x=>`<span>${esc(x.equipment_name||x.name||'معدة')} — ${esc(x.operating_status||x.status||'')}</span>`).join('')}</div>`;}
       else list.innerHTML='<span>لا توجد معدات متوقفة في تقرير اليوم.</span>';
-    }catch(e){shell.dataset.state='error';console.error('Today dashboard failed',e);}
+    }catch(e){shell.dataset.state='error';document.getElementById('todayReportState').textContent='تعذر التحميل';console.error('Today dashboard failed',e);}
   }
   document.addEventListener('DOMContentLoaded',()=>setTimeout(load,180));
   window.addEventListener('minya-notifications-updated',()=>{const shell=document.getElementById('todayOperationsSection');if(shell&&!shell.dataset.refreshed){shell.dataset.refreshed='1';setTimeout(load,80);}});
@@ -5884,7 +5895,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   async function contractsPage(){
     const main=document.querySelector('main.container');if(!main)return;main.innerHTML=shell('CONTRACTS','المقاولون والعقود','متابعة مدة العقد وقيمته والدفعات ونسبة الإنجاز وحالة التنفيذ.');
     const first=await api('/api/ops/contracts').catch(()=>({contracts:[],permission:{}}));const editable=Boolean(first.permission?.can_edit);let rows=first.contracts||[],editing=0;
-    el('managementContent').innerHTML=`<div id="managementEditor" class="v3-panel"><h3>إضافة أو تعديل عقد</h3><div class="v3-form-grid">${field('اسم المقاول','contractorName')}${field('رقم العقد','contractNumber')}${field('موضوع العقد','contractTitle')}${field('مسؤول المتابعة','contractOwner')}${field('تاريخ البداية','contractStart','date')}${field('تاريخ النهاية','contractEnd','date')}${field('قيمة العقد','contractValue','number','min="0" step="0.01"')}${field('المدفوع','contractPaid','number','min="0" step="0.01"')}${field('نسبة الإنجاز','contractProgress','number','min="0" max="100"')}${select('الحالة','contractStatus',['فعال','مسودة','متوقف','منتهي','مستلم'])}${field('مستند أو مرفق حتى 5MB','contractFile','file','accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"')}</div><label>ملاحظات<textarea id="contractNotes" rows="3"></textarea></label><div class="management-actions"><button id="managementSave" class="v3-primary">حفظ</button><button id="managementCancel">إلغاء التعديل</button><span id="managementMsg"></span></div></div><div class="v3-panel"><div class="v3-filter"><input id="managementSearch" placeholder="بحث بالمقاول أو العقد"><select id="managementFilter"><option value="">كل الحالات</option><option>فعال</option><option>مسودة</option><option>متوقف</option><option>منتهي</option><option>مستلم</option></select><button id="managementLoad">تحديث</button><button id="managementPrint">طباعة</button></div><div id="managementKpis" class="v3-kpis"></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>المقاول</th><th>العقد</th><th>المدة</th><th>القيمة</th><th>المدفوع</th><th>المتبقي</th><th>الإنجاز</th><th>الحالة</th><th>المرفقات</th><th>إجراء</th></tr></thead><tbody id="managementBody"></tbody></table></div><div id="managementFiles"></div></div>`;
+    el('managementContent').innerHTML=`<div id="managementEditor" class="v3-panel"><h3>إضافة أو تعديل عقد</h3><div class="v3-form-grid">${field('اسم المقاول','contractorName')}${field('رقم العقد','contractNumber')}${field('موضوع العقد','contractTitle')}${field('مسؤول المتابعة','contractOwner')}${field('تاريخ البداية','contractStart','date')}${field('تاريخ النهاية','contractEnd','date')}${field('قيمة العقد — بعملة العقد','contractValue','number','min="0" step="0.01"')}${field('المدفوع — بعملة العقد','contractPaid','number','min="0" step="0.01"')}${field('نسبة الإنجاز','contractProgress','number','min="0" max="100"')}${select('الحالة','contractStatus',['فعال','مسودة','متوقف','منتهي','مستلم'])}${field('مستند أو مرفق حتى 5MB','contractFile','file','accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"')}</div><label>ملاحظات<textarea id="contractNotes" rows="3"></textarea></label><div class="management-actions"><button id="managementSave" class="v3-primary">حفظ</button><button id="managementCancel">إلغاء التعديل</button><span id="managementMsg"></span></div></div><div class="v3-panel"><div class="v3-filter"><input id="managementSearch" placeholder="بحث بالمقاول أو العقد"><select id="managementFilter"><option value="">كل الحالات</option><option>فعال</option><option>مسودة</option><option>متوقف</option><option>منتهي</option><option>مستلم</option></select><button id="managementLoad">تحديث</button><button id="managementPrint">طباعة</button></div><div id="managementKpis" class="v3-kpis"></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>المقاول</th><th>العقد</th><th>المدة</th><th>القيمة</th><th>المدفوع</th><th>المتبقي</th><th>الإنجاز</th><th>الحالة</th><th>المرفقات</th><th>إجراء</th></tr></thead><tbody id="managementBody"></tbody></table></div><div id="managementFiles"></div></div>`;
     if(!editable)el('managementEditor').hidden=true;
     const ids=['contractorName','contractNumber','contractTitle','contractOwner','contractStart','contractEnd','contractValue','contractPaid','contractProgress','contractNotes'];const clear=()=>{ids.forEach(id=>el(id).value='');el('contractStatus').value='فعال';editing=0;el('managementSave').textContent='حفظ';};
     const draw=()=>{const total=rows.reduce((s,x)=>s+Number(x.contract_value||0),0),paid=rows.reduce((s,x)=>s+Number(x.paid_value||0),0),active=rows.filter(x=>x.status==='فعال').length,ending=rows.filter(x=>x.expiry_state==='قريب'||x.expiry_state==='منتهي').length;el('managementKpis').innerHTML=[['عقود فعالة',active,'عقد'],['قريبة أو منتهية',ending,'عقد'],['إجمالي القيم',fmt(total),'شيكل'],['إجمالي المدفوع',fmt(paid),'شيكل']].map(x=>`<div><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></div>`).join('');el('managementBody').innerHTML=rows.length?rows.map(x=>`<tr class="${x.expiry_state==='منتهي'?'management-overdue':''}"><td>${esc(x.contractor_name)}</td><td><strong>${esc(x.contract_title)}</strong><small>${esc(x.contract_number||'-')}</small></td><td>${esc(x.start_date||'-')}<small>حتى ${esc(x.end_date||'-')}</small></td><td>${fmt(x.contract_value)}</td><td>${fmt(x.paid_value)}</td><td>${fmt(x.remaining_value)}</td><td>${fmt(x.progress)}%</td><td>${esc(x.status)}<small>${esc(x.expiry_state)}</small></td><td><button data-files="${x.id}">${Number(x.attachment_count||0)} مرفق</button></td><td>${editable?`<button data-edit="${x.id}">تعديل</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="10">لا توجد عقود</td></tr>';document.querySelectorAll('[data-files]').forEach(button=>button.onclick=()=>showFiles('contract',button.dataset.files));document.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>{const x=rows.find(row=>String(row.id)===button.dataset.edit);editing=x.id;el('contractorName').value=x.contractor_name||'';el('contractNumber').value=x.contract_number||'';el('contractTitle').value=x.contract_title||'';el('contractOwner').value=x.responsible_person||'';el('contractStart').value=x.start_date||'';el('contractEnd').value=x.end_date||'';el('contractValue').value=x.contract_value||0;el('contractPaid').value=x.paid_value||0;el('contractProgress').value=x.progress||0;el('contractStatus').value=x.status||'فعال';el('contractNotes').value=x.notes||'';el('managementSave').textContent='حفظ التعديل';scrollTo({top:0,behavior:'smooth'});});};
@@ -5895,7 +5906,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   async function cellsPage(){
     const main=document.querySelector('main.container');if(!main)return;main.innerHTML=shell('LANDFILL CELLS','الخلايا والسعة المتبقية','حساب السعة المستخدمة والمتبقية والعمر التشغيلي وفق الكثافة والمتوسط اليومي.');
     const first=await api('/api/ops/cells').catch(()=>({cells:[],permission:{}}));const editable=Boolean(first.permission?.can_edit);let rows=first.cells||[],editing=0;
-    el('managementContent').innerHTML=`<div id="managementEditor" class="v3-panel"><h3>إضافة أو تحديث خلية</h3><div class="v3-form-grid">${field('اسم الخلية','cellName')}${select('الحالة','cellStatus',['قيد التشغيل','تحت التجهيز','مخططة','مغلقة'])}${field('السعة التصميمية م³','cellCapacityM3','number','min="0" step="0.01"')}${field('السعة التصميمية طن','cellCapacityTons','number','min="0" step="0.01"')}${field('الحجم المستخدم م³','cellUsedM3','number','min="0" step="0.01"')}${field('النفايات المستقبلة طن','cellReceivedTons','number','min="0" step="0.01"')}${field('المتوسط اليومي طن','cellDailyAverage','number','min="0" step="0.01"')}${field('كثافة الدمك طن/م³','cellDensity','number','min="0" step="0.01"')}${field('المنسوب الحالي','cellLevel','number','step="0.01"')}${field('تاريخ القياس','cellDate','date')}</div><label>ملاحظات<textarea id="cellNotes" rows="3"></textarea></label><div class="management-actions"><button id="managementSave" class="v3-primary">حفظ</button><button id="managementCancel">إلغاء التعديل</button><span id="managementMsg"></span></div></div><div class="v3-panel"><button id="managementPrint">طباعة</button><div id="cellCards" class="cell-capacity-grid"></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>الخلية</th><th>السعة طن</th><th>المستخدم طن</th><th>المتبقي طن</th><th>نسبة الاستخدام</th><th>العمر المتبقي</th><th>القياس</th><th>إجراء</th></tr></thead><tbody id="managementBody"></tbody></table></div></div>`;
+    el('managementContent').innerHTML=`<div id="managementEditor" class="v3-panel"><h3>إضافة أو تحديث خلية</h3><div class="v3-form-grid">${field('اسم الخلية','cellName')}${select('الحالة','cellStatus',['قيد التشغيل','تحت التجهيز','مخططة','مغلقة'])}${field('السعة التصميمية م³','cellCapacityM3','number','min="0" step="0.01"')}${field('السعة التصميمية طن','cellCapacityTons','number','min="0" step="0.01"')}${field('الحجم المستخدم م³','cellUsedM3','number','min="0" step="0.01"')}${field('النفايات المستقبلة طن','cellReceivedTons','number','min="0" step="0.01"')}${field('المتوسط اليومي طن','cellDailyAverage','number','min="0" step="0.01"')}${field('كثافة الدمك طن/م³','cellDensity','number','min="0" step="0.01"')}${field('المنسوب الحالي — متر','cellLevel','number','step="0.01"')}${field('تاريخ القياس','cellDate','date')}</div><label>ملاحظات<textarea id="cellNotes" rows="3"></textarea></label><div class="management-actions"><button id="managementSave" class="v3-primary">حفظ</button><button id="managementCancel">إلغاء التعديل</button><span id="managementMsg"></span></div></div><div class="v3-panel"><button id="managementPrint">طباعة</button><div id="cellCards" class="cell-capacity-grid"></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>الخلية</th><th>السعة طن</th><th>المستخدم طن</th><th>المتبقي طن</th><th>نسبة الاستخدام</th><th>العمر المتبقي</th><th>القياس</th><th>إجراء</th></tr></thead><tbody id="managementBody"></tbody></table></div></div>`;
     if(!editable)el('managementEditor').hidden=true;el('cellDensity').value='0.92';
     const ids=['cellName','cellCapacityM3','cellCapacityTons','cellUsedM3','cellReceivedTons','cellDailyAverage','cellLevel','cellDate','cellNotes'];const clear=()=>{ids.forEach(id=>el(id).value='');el('cellDensity').value='0.92';el('cellStatus').value='قيد التشغيل';editing=0;el('managementSave').textContent='حفظ';};
     const draw=()=>{el('cellCards').innerHTML=rows.map(x=>`<article class="cell-capacity-card"><h3>${esc(x.cell_name)}</h3><strong>${fmt(x.used_percent)}%</strong><div class="cell-progress"><i style="width:${Math.min(100,x.used_percent)}%"></i></div><p>المتبقي ${fmt(x.remaining_tons)} طن</p><p>${x.remaining_years==null?'العمر غير محسوب':`${fmt(x.remaining_years)} سنة تقريبًا`}</p></article>`).join('')||'<p>لا توجد خلايا مسجلة</p>';el('managementBody').innerHTML=rows.length?rows.map(x=>`<tr class="${x.used_percent>=95?'management-overdue':''}"><td><strong>${esc(x.cell_name)}</strong><small>${esc(x.status)}</small></td><td>${fmt(x.calculated_capacity_tons)}</td><td>${fmt(x.calculated_used_tons)}</td><td>${fmt(x.remaining_tons)}</td><td>${fmt(x.used_percent)}%</td><td>${x.remaining_days==null?'-':`${Math.ceil(x.remaining_days)} يوم`}<small>${x.remaining_years==null?'':`${fmt(x.remaining_years)} سنة`}</small></td><td>${esc(x.measurement_date||'-')}</td><td>${editable?`<button data-edit="${x.id}">تعديل</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="8">لا توجد خلايا مسجلة</td></tr>';document.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>{const x=rows.find(row=>String(row.id)===button.dataset.edit);editing=x.id;el('cellName').value=x.cell_name||'';el('cellStatus').value=x.status||'قيد التشغيل';el('cellCapacityM3').value=x.design_capacity_m3||0;el('cellCapacityTons').value=x.design_capacity_tons||0;el('cellUsedM3').value=x.used_volume_m3||0;el('cellReceivedTons').value=x.received_tons||0;el('cellDailyAverage').value=x.average_daily_tons||0;el('cellDensity').value=x.compaction_density||0.92;el('cellLevel').value=x.current_level??'';el('cellDate').value=x.measurement_date||'';el('cellNotes').value=x.notes||'';el('managementSave').textContent='حفظ التعديل';scrollTo({top:0,behavior:'smooth'});});};
@@ -5924,12 +5935,12 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     el('eqmOrdersBody').innerHTML=orders.length?orders.map(x=>`<tr><td>${esc(x.order_number)}</td><td>${esc(x.asset_name)}</td><td>${esc(x.reported_date)}</td><td>${esc(x.order_type)}</td><td>${esc(x.status)}</td><td>${esc(x.description)}</td><td>${fmt(x.total_cost)}</td><td>${editable?`<button data-order="${x.id}">تحديث</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="8">لا توجد أوامر صيانة</td></tr>';
     document.querySelectorAll('[data-asset]').forEach(b=>b.onclick=()=>editAsset(Number(b.dataset.asset)));document.querySelectorAll('[data-readings]').forEach(b=>b.onclick=()=>showReadings(Number(b.dataset.readings)));document.querySelectorAll('[data-service]').forEach(b=>b.onclick=()=>completeService(Number(b.dataset.service),Number(b.dataset.meter)));document.querySelectorAll('[data-order]').forEach(b=>b.onclick=()=>editOrder(Number(b.dataset.order)));if(!editable)document.querySelectorAll('.eqm-editor').forEach(x=>x.hidden=true);
   }
-  function editAsset(id){const x=assets.find(a=>a.id===id);if(!x)return;editingAsset=id;['Name','Type','Model','Serial','Year','Driver','Initial','Current','Start','Notes'].forEach(k=>el('asset'+k).value=x[{Name:'name',Type:'equipment_type',Model:'model',Serial:'serial_number',Year:'manufacture_year',Driver:'current_driver',Initial:'initial_meter',Current:'current_meter',Start:'service_start_date',Notes:'notes'}[k]]??'');el('assetStatus').value=x.status;el('assetSave').textContent='حفظ التعديل';scrollTo({top:0,behavior:'smooth'});}
+  function editAsset(id){const x=assets.find(a=>a.id===id);if(!x)return;editingAsset=id;el('assetName').closest('details').open=true;['Name','Type','Model','Serial','Year','Driver','Initial','Current','Start','Notes'].forEach(k=>el('asset'+k).value=x[{Name:'name',Type:'equipment_type',Model:'model',Serial:'serial_number',Year:'manufacture_year',Driver:'current_driver',Initial:'initial_meter',Current:'current_meter',Start:'service_start_date',Notes:'notes'}[k]]??'');el('assetStatus').value=x.status;el('assetSave').textContent='حفظ التعديل';scrollTo({top:0,behavior:'smooth'});}
   async function showReadings(id){const d=await api(`/api/equipment-management/readings/${id}`);el('eqmReadingHistory').innerHTML=`<h4>سجل ${esc(assets.find(x=>x.id===id)?.name||'المعدة')}</h4><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>الساعات</th><th>السولار</th><th>التوقف</th><th>المصدر</th></tr></thead><tbody>${d.rows.map(x=>`<tr><td>${esc(x.day)}</td><td>${fmt(x.working_hours)}</td><td>${fmt(x.diesel_liters)}</td><td>${fmt(x.downtime_hours)}</td><td>${x.source==='manual'?'قراءة عداد':'التقرير اليومي'}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد قراءات</td></tr>'}</tbody></table></div>`;}
   async function completeService(id,meter){const value=prompt('قراءة العداد عند تنفيذ الصيانة',String(meter||0));if(value===null)return;await api(`/api/equipment-management/plans/${id}/service`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_meter:value})});load();}
-  function editOrder(id){const x=orders.find(o=>o.id===id);if(!x)return;editingOrder=id;el('orderAsset').value=x.asset_id;el('orderType').value=x.order_type;el('orderStatus').value=x.status;el('orderReported').value=x.reported_date;el('orderStart').value=x.start_date||'';el('orderCompleted').value=x.completed_date||'';el('orderDescription').value=x.description||'';el('orderAction').value=x.action_taken||'';el('orderParts').value=x.parts_cost||0;el('orderLabor').value=x.labor_cost||0;el('orderOther').value=x.other_cost||0;el('orderOwner').value=x.responsible_person||'';el('orderSave').textContent='حفظ التحديث';}
+  function editOrder(id){const x=orders.find(o=>o.id===id);if(!x)return;editingOrder=id;el('orderAsset').closest('details').open=true;el('orderAsset').value=x.asset_id;el('orderType').value=x.order_type;el('orderStatus').value=x.status;el('orderReported').value=x.reported_date;el('orderStart').value=x.start_date||'';el('orderCompleted').value=x.completed_date||'';el('orderDescription').value=x.description||'';el('orderAction').value=x.action_taken||'';el('orderParts').value=x.parts_cost||0;el('orderLabor').value=x.labor_cost||0;el('orderOther').value=x.other_cost||0;el('orderOwner').value=x.responsible_person||'';el('orderSave').textContent='حفظ التحديث';}
   async function render(){const main=document.querySelector('main.container');if(!main)return;main.innerHTML=`<section class="v3-page eqm-page"><div class="v3-hero"><div><span>EQUIPMENT MANAGEMENT V3.7</span><h2>إدارة المعدات والصيانة الوقائية</h2><p>بطاقات المعدات والعدادات والسولار وخطط الصيانة وأوامر العمل والتكاليف.</p></div></div><div id="eqmKpis" class="v3-kpis"></div><div class="v3-panel"><h3>التنبيهات</h3><div id="eqmAlerts"></div></div>
-    <details class="v3-panel eqm-editor" open><summary>بطاقة معدة</summary><div class="v3-form-grid"><label>اسم المعدة<input id="assetName"></label><label>النوع<input id="assetType"></label><label>الموديل<input id="assetModel"></label><label>الرقم التسلسلي<input id="assetSerial"></label><label>سنة الصنع<input id="assetYear" type="number"></label><label>السائق الحالي<input id="assetDriver"></label><label>العداد الابتدائي<input id="assetInitial" type="number" step="0.1"></label><label>العداد الحالي<input id="assetCurrent" type="number" step="0.1"></label><label>الحالة<select id="assetStatus"><option>تعمل</option><option>متوقفة</option><option>تحت الصيانة</option><option>متعطلة</option></select></label><label>تاريخ دخول الخدمة<input id="assetStart" type="date"></label></div><label>ملاحظات<textarea id="assetNotes"></textarea></label><button id="assetSave" class="v3-primary">حفظ المعدة</button><span id="assetMsg"></span></details>
+    <details class="v3-panel eqm-editor"><summary>بطاقة معدة</summary><div class="v3-form-grid"><label>اسم المعدة<input id="assetName"></label><label>النوع<input id="assetType"></label><label>الموديل<input id="assetModel"></label><label>الرقم التسلسلي<input id="assetSerial"></label><label>سنة الصنع<input id="assetYear" type="number"></label><label>السائق الحالي<input id="assetDriver"></label><label>العداد الابتدائي<input id="assetInitial" type="number" step="0.1"></label><label>العداد الحالي<input id="assetCurrent" type="number" step="0.1"></label><label>الحالة<select id="assetStatus"><option>تعمل</option><option>متوقفة</option><option>تحت الصيانة</option><option>متعطلة</option></select></label><label>تاريخ دخول الخدمة<input id="assetStart" type="date"></label></div><label>ملاحظات<textarea id="assetNotes"></textarea></label><button id="assetSave" class="v3-primary">حفظ المعدة</button><span id="assetMsg"></span></details>
     <details class="v3-panel eqm-editor"><summary>إدخال قراءة عداد يومية</summary><div class="v3-form-grid"><label>المعدة<select id="readingAsset" class="eqm-asset-select"></select></label><label>التاريخ<input id="readingDate" type="date" value="${today()}"></label><label>قراءة البداية<input id="readingStart" type="number" step="0.1"></label><label>قراءة النهاية<input id="readingEnd" type="number" step="0.1"></label><label>ساعات التوقف<input id="readingDown" type="number" step="0.1"></label><label>السولار لتر<input id="readingDiesel" type="number" step="0.1"></label><label>السائق<input id="readingDriver"></label><label>سبب التوقف<input id="readingReason"></label></div><button id="readingSave" class="v3-primary">حفظ القراءة</button><span id="readingMsg"></span></details>
     <details class="v3-panel eqm-editor"><summary>خطة صيانة وقائية</summary><div class="v3-form-grid"><label>المعدة<select id="planAsset" class="eqm-asset-select"></select></label><label>بند الصيانة<input id="planTitle" placeholder="تغيير زيت المحرك"></label><label>كل عدد ساعات<input id="planInterval" type="number"></label><label>آخر صيانة عند<input id="planLast" type="number"></label><label>تنبيه قبل ساعات<input id="planWarning" type="number" value="20"></label></div><button id="planSave" class="v3-primary">حفظ الخطة</button><span id="planMsg"></span></details>
     <details class="v3-panel eqm-editor"><summary>أمر صيانة</summary><div class="v3-form-grid"><label>المعدة<select id="orderAsset" class="eqm-asset-select"></select></label><label>النوع<select id="orderType"><option>صيانة طارئة</option><option>صيانة دورية</option><option>عطل</option><option>إصلاح</option><option>فحص</option></select></label><label>الحالة<select id="orderStatus"><option>مفتوح</option><option>قيد التنفيذ</option><option>بانتظار قطع</option><option>مغلق</option></select></label><label>تاريخ التبليغ<input id="orderReported" type="date" value="${today()}"></label><label>بدء الإصلاح<input id="orderStart" type="date"></label><label>الإنجاز<input id="orderCompleted" type="date"></label><label>قطع الغيار<input id="orderParts" type="number" step="0.01"></label><label>أجور الصيانة<input id="orderLabor" type="number" step="0.01"></label><label>تكاليف أخرى<input id="orderOther" type="number" step="0.01"></label><label>المسؤول<input id="orderOwner"></label></div><label>وصف العطل<textarea id="orderDescription"></textarea></label><label>الإجراء المتخذ<textarea id="orderAction"></textarea></label><button id="orderSave" class="v3-primary">حفظ أمر الصيانة</button><span id="orderMsg"></span></details>
@@ -5953,10 +5964,10 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   const fmt=n=>{const units=['B','KB','MB','GB'];let x=Number(n||0),i=0;while(x>=1024&&i<3){x/=1024;i++;}return `${x.toFixed(i?1:0)} ${units[i]}`;};
   let folderId=null,trail=[],editable=false,isAdmin=false;
   async function load(){const [status,list]=await Promise.all([api('/api/cloud-files/status'),api(`/api/cloud-files/list${folderId?`?folder_id=${folderId}`:''}`)]);editable=['admin','editor'].includes(window.MINYA_USER?.role);isAdmin=window.MINYA_USER?.role==='admin';drawStatus(status);draw(list);}
-  function drawStatus(s){el('cloudStatus').className=`cloud-status ${s.configured?'ready':'waiting'}`;el('cloudStatus').innerHTML=s.configured?`<strong>R2 متصل</strong><span>${esc(s.bucket)} · ${fmt(s.total_bytes)} · ${Number(s.file_count||0)} ملف</span>`:'<strong>بانتظار ربط R2</strong><span>الواجهة جاهزة، ويلزم إضافة مفاتيح التخزين إلى الخادم.</span>';el('cloudActions').hidden=!editable||!s.configured;}
+  function drawStatus(s){el('cloudStatus').className=`cloud-status ${s.configured?'ready':'waiting'}`;el('cloudStatus').innerHTML=s.configured?`<strong>التخزين متصل</strong><span>${fmt(s.total_bytes)} · ${Number(s.file_count||0)} ملف · الحد لكل ملف ${fmt(s.max_file_bytes)}</span>${isAdmin?`<details><summary>تفاصيل الاتصال</summary><span>R2: ${esc(s.bucket)}</span></details>`:""}`:'<strong>بانتظار ربط R2</strong><span>الواجهة جاهزة، ويلزم إضافة مفاتيح التخزين إلى الخادم.</span>';el('cloudActions').hidden=!editable||!s.configured;}
   function draw(d){if(d.current&&!trail.some(x=>x.id===d.current.id))trail.push({id:d.current.id,name:d.current.name});if(!d.current)trail=[];el('cloudBreadcrumbs').innerHTML=`<button data-root>ملفات الموقع</button>${trail.map((x,i)=>`<span>‹</span><button data-crumb="${i}">${esc(x.name)}</button>`).join('')}`;el('cloudGrid').innerHTML=[...d.folders.map(x=>`<button class="cloud-card folder" data-folder="${x.id}" data-name="${esc(x.name)}"><span>مجلد</span><strong>${esc(x.name)}</strong></button>`),...d.files.map(x=>`<article class="cloud-card file"><span>${fmt(x.size_bytes)}</span><strong>${esc(x.original_name)}</strong><small>${esc(String(x.created_at||'').slice(0,10))}</small><div><a href="/api/cloud-files/${x.id}/download" target="_blank" rel="noopener">فتح</a>${isAdmin?`<button data-delete="${x.id}">حذف</button>`:''}</div></article>`)].join('')||'<p class="minya-empty-state">هذا المجلد فارغ</p>';document.querySelector('[data-root]').onclick=()=>{folderId=null;trail=[];load();};document.querySelectorAll('[data-crumb]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.crumb);folderId=trail[i].id;trail=trail.slice(0,i+1);load();});document.querySelectorAll('[data-folder]').forEach(b=>b.onclick=()=>{folderId=Number(b.dataset.folder);trail.push({id:folderId,name:b.dataset.name});load();});document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('حذف الملف نهائيًا؟'))return;await api(`/api/cloud-files/${b.dataset.delete}`,{method:'DELETE'});load();});}
   async function uploadFiles(files){const progress=el('cloudProgress');for(let i=0;i<files.length;i++){const file=files[i];progress.textContent=`رفع ${i+1} من ${files.length}: ${file.name}`;const ticket=await api('/api/cloud-files/upload-url',json({folder_id:folderId,name:file.name,mime_type:file.type||'application/octet-stream',size_bytes:file.size}));const put=await fetch(ticket.upload_url,{method:'PUT',body:file,headers:{'Content-Type':file.type||'application/octet-stream'}});if(!put.ok)throw new Error(`فشل رفع ${file.name}. تحقق من إعداد CORS في R2`);await api(`/api/cloud-files/${ticket.id}/complete`,json({}));}progress.textContent='اكتمل رفع الملفات';await load();}
-  async function render(){const main=document.querySelector('main.container');if(!main)return;main.innerHTML=`<section class="v3-page cloud-page"><div class="v3-hero"><div><span>CLOUD FILES V3.8</span><h2>ملفات ومرفقات الموقع</h2><p>تخزين خاص على Cloudflare R2 مع مجلدات وروابط فتح مؤقتة.</p></div></div><div id="cloudStatus"></div><div id="cloudActions" class="v3-panel cloud-actions"><label>إنشاء مجلد<div><input id="cloudFolderName" maxlength="220" placeholder="اسم المجلد"><button id="cloudFolderAdd" class="v3-primary">إنشاء</button></div></label><label>رفع ملفات<input id="cloudUpload" type="file" multiple></label><span id="cloudProgress"></span></div><div class="v3-panel"><nav id="cloudBreadcrumbs" class="cloud-breadcrumbs"></nav><div id="cloudGrid" class="cloud-grid"></div></div></section>`;el('cloudFolderAdd').onclick=async()=>{try{await api('/api/cloud-files/folders',json({parent_id:folderId,name:el('cloudFolderName').value}));el('cloudFolderName').value='';load();}catch(e){el('cloudProgress').textContent=e.message;}};el('cloudUpload').onchange=async e=>{try{await uploadFiles([...e.target.files]);e.target.value='';}catch(error){el('cloudProgress').textContent=error.message;}};try{await load();}catch(e){el('cloudStatus').textContent=e.message;}}
+  async function render(){const main=document.querySelector('main.container');if(!main)return;main.innerHTML=`<section class="v3-page cloud-page"><div class="v3-hero"><div><span>CLOUD FILES V3.8</span><h2>ملفات ومرفقات الموقع</h2><p>تنظيم ملفات الموقع داخل مجلدات، مع روابط فتح مؤقتة وحماية الوصول.</p></div></div><div id="cloudStatus"></div><div id="cloudActions" class="v3-panel cloud-actions"><label>إنشاء مجلد<div><input id="cloudFolderName" maxlength="220" placeholder="اسم المجلد"><button id="cloudFolderAdd" class="v3-primary">إنشاء</button></div></label><label>رفع ملفات<input id="cloudUpload" type="file" multiple></label><span id="cloudProgress"></span></div><div class="v3-panel"><nav id="cloudBreadcrumbs" class="cloud-breadcrumbs"></nav><div id="cloudGrid" class="cloud-grid"></div></div></section>`;el('cloudFolderAdd').onclick=async()=>{try{await api('/api/cloud-files/folders',json({parent_id:folderId,name:el('cloudFolderName').value}));el('cloudFolderName').value='';load();}catch(e){el('cloudProgress').textContent=e.message;}};el('cloudUpload').onchange=async e=>{try{await uploadFiles([...e.target.files]);e.target.value='';}catch(error){el('cloudProgress').textContent=error.message;}};try{await load();}catch(e){el('cloudStatus').textContent=e.message;}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
 })();
 
@@ -5986,34 +5997,55 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
   }
   async function api(url,options){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"فشل الطلب");return d;}
 
+  const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  function reportAge(date){const days=Math.floor((new Date(localDate(new Date()))-new Date(String(date).slice(0,10)))/86400000);return Number.isFinite(days)?`آخر تحديث منذ ${Math.max(0,days)} يوم`:'تاريخ التحديث غير متاح';}
+  async function allSearch(params){
+    const reports=[];let offset=0;
+    for(;;){params.set('offset',offset);params.set('limit','500');const d=await api(`/api/search?${params}`);reports.push(...d.reports);if(!d.has_more)return {reports};if(!d.reports.length)throw new Error('تعذر تحميل جميع النتائج');offset+=d.reports.length;}
+  }
   async function renderEquipment(){
     activeNav("/equipment","المعدات"); const c=shell("المعدات والصيانة","متابعة حالة الآليات وساعات العمل والسولار وسجل الأعطال والصيانة."); if(!c)return;
     c.innerHTML=`<div class="v3-filter"><label>من<input id="eqFrom" type="date"></label><label>إلى<input id="eqTo" type="date"></label><button id="eqLoad">تحديث</button></div><div class="v3-panel"><h3>ملخص المعدات</h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>الآلية</th><th>الحالة الأخيرة</th><th>ساعات العمل</th><th>السولار</th><th>أيام التسجيل</th><th>سجلات الصيانة</th></tr></thead><tbody id="eqBody"></tbody></table></div></div><div class="v3-panel"><h3>إضافة سجل صيانة / عطل</h3><div class="v3-form-grid"><label>اسم الآلية<input id="maintName"></label><label>التاريخ<input id="maintDate" type="date"></label><label>الحالة<select id="maintStatus"><option>ملاحظة</option><option>صيانة</option><option>عطل</option><option>إصلاح</option></select></label><label>التكلفة<input id="maintCost" type="number" step="0.01"></label></div><label>الوصف<textarea id="maintDesc" rows="3"></textarea></label><label>الإجراء المتخذ<textarea id="maintAction" rows="2"></textarea></label><button id="maintSave" class="v3-primary">حفظ سجل الصيانة</button><p id="maintMsg"></p></div><div class="v3-panel"><h3>سجل الصيانة</h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>الآلية</th><th>الحالة</th><th>الوصف</th><th>الإجراء</th><th>التكلفة</th></tr></thead><tbody id="maintBody"></tbody></table></div></div>`;
-    const now=new Date(), start=new Date(now.getFullYear(),now.getMonth(),1); eqFrom.value=start.toISOString().slice(0,10); eqTo.value=now.toISOString().slice(0,10); maintDate.value=eqTo.value;
-    async function load(){try{const [s,m]=await Promise.all([api(`/api/equipment/summary?from=${eqFrom.value}&to=${eqTo.value}`),api(`/api/maintenance?from=${eqFrom.value}&to=${eqTo.value}`)]);eqBody.innerHTML=s.rows.length?s.rows.map(r=>`<tr><td>${esc(r.equipment_name)}</td><td><span class="status-pill status-${encodeURIComponent(r.latest_status||"")}">${esc(r.latest_status||"-")}</span><small>${esc(r.latest_date||"")}</small></td><td>${fmt(r.working_hours)}</td><td>${fmt(r.diesel_liters)} لتر</td><td>${fmt(r.report_days)}</td><td>${fmt(r.maintenance_count)}</td></tr>`).join(""):`<tr><td colspan="6">لا توجد بيانات</td></tr>`;maintBody.innerHTML=m.logs.length?m.logs.map(x=>`<tr><td>${esc(x.log_date)}</td><td>${esc(x.equipment_name)}</td><td>${esc(x.status)}</td><td>${esc(x.description)}</td><td>${esc(x.action_taken)}</td><td>${fmt(x.cost)}</td></tr>`).join(""):`<tr><td colspan="6">لا توجد سجلات صيانة</td></tr>`;}catch(e){eqBody.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;}}
+    const now=new Date(), start=new Date(now.getFullYear(),now.getMonth(),1); eqFrom.value=localDate(start); eqTo.value=localDate(now); maintDate.value=eqTo.value;
+    async function load(){try{const [s,m]=await Promise.all([api(`/api/equipment/summary?from=${eqFrom.value}&to=${eqTo.value}`),api(`/api/maintenance?from=${eqFrom.value}&to=${eqTo.value}`)]);eqBody.innerHTML=s.rows.length?s.rows.map(r=>`<tr><td>${esc(r.equipment_name)}</td><td><span class="status-pill status-${encodeURIComponent(r.latest_status||"")}">${esc(r.latest_status||"-")}</span><small>${esc(r.latest_date||"")} · ${esc(reportAge(r.latest_date))}</small></td><td>${fmt(r.working_hours)}</td><td>${fmt(r.diesel_liters)} لتر</td><td>${fmt(r.report_days)}</td><td>${fmt(r.maintenance_count)}</td></tr>`).join(""):`<tr><td colspan="6">لا توجد بيانات</td></tr>`;maintBody.innerHTML=m.logs.length?m.logs.map(x=>`<tr><td>${esc(x.log_date)}</td><td>${esc(x.equipment_name)}</td><td>${esc(x.status)}</td><td>${esc(x.description)}</td><td>${esc(x.action_taken)}</td><td>${fmt(x.cost)}</td></tr>`).join(""):`<tr><td colspan="6">لا توجد سجلات صيانة</td></tr>`;}catch(e){eqBody.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;}}
     eqLoad.onclick=load; maintSave.onclick=async()=>{try{await api("/api/maintenance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({equipment_name:maintName.value,log_date:maintDate.value,status:maintStatus.value,description:maintDesc.value,action_taken:maintAction.value,cost:maintCost.value})});maintMsg.textContent="تم حفظ سجل الصيانة";maintDesc.value="";maintAction.value="";load();}catch(e){maintMsg.textContent=e.message;}}; load();
   }
 
   async function renderWeekly(){
     activeNav("/weekly","الأسبوعي"); const c=shell("التقرير الأسبوعي","ملخص سبعة أيام للنفايات والشاحنات والسولار مع التفاصيل اليومية."); if(!c)return;
-    c.innerHTML=`<div class="v3-filter"><label>بداية الأسبوع<input id="weekStart" type="date"></label><button id="weekLoad">عرض الأسبوع</button></div><div id="weekCards" class="v3-kpis"></div><div class="v3-panel"><h3 id="weekTitle">تفاصيل الأسبوع</h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>رقم التقرير</th><th>النفايات طن</th><th>الشاحنات</th><th>السولار لتر</th></tr></thead><tbody id="weekBody"></tbody></table></div></div>`;
-    const d=new Date();d.setDate(d.getDate()-6);weekStart.value=d.toISOString().slice(0,10);
-    async function load(){try{const x=await api(`/api/weekly?start=${weekStart.value}`);weekTitle.textContent=`${x.start} — ${x.end}`;weekCards.innerHTML=[['أيام مسجلة',x.summary.days,'يوم'],['إجمالي النفايات',x.summary.waste,'طن'],['إجمالي الشاحنات',x.summary.trucks,'شاحنة'],['إجمالي السولار',x.summary.diesel,'لتر'],['متوسط النفايات',x.summary.waste_avg,'طن/يوم'],['متوسط الشاحنات',x.summary.trucks_avg,'شاحنة/يوم']].map(v=>`<div><span>${v[0]}</span><strong>${fmt(v[1])}</strong><small>${v[2]}</small></div>`).join("");weekBody.innerHTML=x.reports.length?x.reports.map(r=>`<tr><td>${r.report_date}</td><td>${r.report_no}</td><td>${fmt(r.total_waste_tons)}</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)}</td></tr>`).join(""):`<tr><td colspan="5">لا توجد تقارير في هذه الفترة</td></tr>`;}catch(e){weekBody.innerHTML=`<tr><td colspan="5">${esc(e.message)}</td></tr>`;}}
-    weekLoad.onclick=load;load();
+    c.innerHTML=`<div class="v3-filter"><label>بداية الأسبوع<input id="weekStart" type="date"></label><button id="weekPrevious" class="secondary">الأسبوع السابق</button><button id="weekLoad">عرض الأسبوع</button><button id="weekNext" class="secondary">الأسبوع التالي</button></div><div id="weekCards" class="v3-kpis"></div><div class="v3-panel"><h3 id="weekTitle">تفاصيل الأسبوع</h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>رقم التقرير</th><th>النفايات طن</th><th>الشاحنات</th><th>السولار لتر</th></tr></thead><tbody id="weekBody"></tbody></table></div></div>`;
+    const d=new Date();d.setDate(d.getDate()-6);weekStart.value=localDate(d);
+    async function load(){try{const x=await api(`/api/weekly?start=${weekStart.value}`);weekTitle.textContent=`${x.start} — ${x.end}`;weekCards.innerHTML=[['أيام مسجلة من 7',x.summary.days,'يوم؛ الأيام غير المسجلة لا تُحسب أصفارًا'],['إجمالي النفايات',x.summary.waste,'طن'],['إجمالي الشاحنات',x.summary.trucks,'شاحنة'],['إجمالي السولار',x.summary.diesel,'لتر'],['متوسط النفايات',x.summary.waste_avg,'طن/يوم'],['متوسط الشاحنات',x.summary.trucks_avg,'شاحنة/يوم']].map(v=>`<div><span>${v[0]}</span><strong>${fmt(v[1])}</strong><small>${v[2]}</small></div>`).join("");weekBody.innerHTML=x.reports.length?x.reports.map(r=>`<tr><td>${r.report_date}</td><td>${r.report_no}</td><td>${fmt(r.total_waste_tons)}</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)}</td></tr>`).join(""):`<tr><td colspan="5">لا توجد تقارير في هذه الفترة</td></tr>`;}catch(e){weekBody.innerHTML=`<tr><td colspan="5">${esc(e.message)}</td></tr>`;}}
+    weekPrevious.onclick=()=>move(-7);weekNext.onclick=()=>move(7);function move(days){const date=new Date(weekStart.value+'T12:00:00');date.setDate(date.getDate()+days);weekStart.value=localDate(date);load();}weekLoad.onclick=load;load();
   }
 
   async function renderSearch(){
     activeNav("/search","بحث متقدم"); const c=shell("البحث المتقدم","البحث داخل التقارير والملاحظات والمعدات مع فلاتر التاريخ والحالة والكميات."); if(!c)return;
-    c.innerHTML=`<div class="v3-panel"><div class="v3-search-grid"><label>كلمة البحث<input id="sQ" placeholder="رقم تقرير، ملاحظة، آلية..."></label><label>من<input id="sFrom" type="date"></label><label>إلى<input id="sTo" type="date"></label><label>حالة المعدات<select id="sStatus"><option value="">الكل</option><option>يعمل</option><option>جاهز</option><option>تحت الصيانة</option><option>متعطل</option></select></label><label>أقل نفايات<input id="sMin" type="number"></label><label>أعلى نفايات<input id="sMax" type="number"></label></div><button id="sGo" class="v3-primary">بحث</button></div><div class="v3-panel"><h3>النتائج <small id="sCount"></small></h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>رقم التقرير</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th><th>إجراء</th></tr></thead><tbody id="sBody"></tbody></table></div></div>`;
-    async function run(){try{const p=new URLSearchParams({q:sQ.value,from:sFrom.value,to:sTo.value,equipment_status:sStatus.value,min_waste:sMin.value,max_waste:sMax.value});const d=await api(`/api/search?${p}`);sCount.textContent=`(${d.reports.length})`;sBody.innerHTML=d.reports.length?d.reports.map(r=>`<tr><td>${r.report_date}</td><td>${r.report_no}</td><td>${fmt(r.total_waste_tons)}</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)}</td><td><button onclick="printReport(${r.id})">طباعة</button></td></tr>`).join(""):`<tr><td colspan="6">لا توجد نتائج</td></tr>`;}catch(e){sBody.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;}}
-    sGo.onclick=run;sQ.addEventListener("keydown",e=>{if(e.key==="Enter")run();});run();
+    c.innerHTML=`<div class="v3-panel"><div class="v3-search-grid"><label>كلمة البحث<input id="sQ" placeholder="رقم تقرير، ملاحظة، آلية..."></label><label>من<input id="sFrom" type="date"></label><label>إلى<input id="sTo" type="date"></label><label>حالة المعدات<select id="sStatus"><option value="">الكل</option><option>يعمل</option><option>جاهز</option><option>تحت الصيانة</option><option>متعطل</option></select></label><label>أقل نفايات<input id="sMin" type="number"></label><label>أعلى نفايات<input id="sMax" type="number"></label></div><button id="sGo" class="v3-primary">بحث</button></div><div class="v3-panel"><h3>النتائج <small id="sCount"></small></h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>رقم التقرير</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th><th>إجراء</th></tr></thead><tbody id="sBody"></tbody></table></div><div class="review-pagination"><button id="sPrev" class="secondary">السابق</button><span id="sPage" role="status" aria-live="polite"></span><button id="sNext" class="secondary">التالي</button></div></div>`;
+    sQ.value=new URLSearchParams(location.search).get('q')||'';
+    let offset=0, request=0, filters=null;const pageSize=100;
+    async function run(reset=true){
+      if(reset){offset=0;filters={q:sQ.value,from:sFrom.value,to:sTo.value,equipment_status:sStatus.value,min_waste:sMin.value,max_waste:sMax.value};}
+      const token=++request;sGo.disabled=sPrev.disabled=sNext.disabled=true;sPage.textContent='جاري التحميل…';
+      try{
+        const p=new URLSearchParams({...filters,offset,limit:pageSize});const d=await api(`/api/search?${p}`);if(token!==request)return;
+        sCount.textContent=`(${d.total} تقرير)`;sPage.textContent=d.total?`${offset+1}–${offset+d.reports.length} من ${d.total}`:'لا توجد نتائج';
+        sBody.innerHTML=d.reports.length?d.reports.map(r=>`<tr><td>${esc(r.report_date)}</td><td dir="ltr">${esc(r.report_no)}</td><td>${fmt(r.total_waste_tons)} طن</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)} لتر</td><td><button data-open="${Number(r.id)}" class="secondary">عرض</button> <button data-print="${Number(r.id)}" class="secondary">طباعة</button></td></tr>`).join(''):'<tr><td colspan="6">لا توجد نتائج مطابقة. جرّب توسيع الفترة أو إزالة بعض المرشحات.</td></tr>';
+        sBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openReport(Number(b.dataset.open)));
+        sBody.querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>printReport(Number(b.dataset.print)));
+        sPrev.disabled=offset===0;sNext.disabled=!d.has_more;
+      }catch(e){if(token===request){sPage.textContent='تعذر تحميل النتائج';sBody.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`;}}
+      finally{if(token===request)sGo.disabled=false;}
+    }
+    sPrev.onclick=()=>{offset=Math.max(0,offset-pageSize);run(false);};sNext.onclick=()=>{offset+=pageSize;run(false);};
+    sGo.onclick=()=>run();sQ.addEventListener('keydown',e=>{if(e.key==='Enter')run();});run();
   }
 
   async function renderManagerial(){
     activeNav("/managerial","تقرير إداري"); const c=shell("التقرير الإداري المختصر","تقرير تنفيذي للفترة المحددة، مناسب للطباعة PDF والتصدير إلى Excel/CSV."); if(!c)return;
     c.innerHTML=`<div class="v3-filter no-print"><label>من<input id="mFrom" type="date"></label><label>إلى<input id="mTo" type="date"></label><button id="mLoad">تحديث</button><button id="mPrint">طباعة / PDF</button><a id="mCsv" class="v3-link-btn">Excel / CSV</a></div><section id="managerialReport" class="managerial-report"><div class="managerial-title"><h2>التقرير الإداري التشغيلي</h2><p id="mPeriod"></p></div><div id="mCards" class="v3-kpis"></div><div class="v3-panel flat"><h3>البيانات اليومية</h3><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>النفايات</th><th>الشاحنات</th><th>السولار</th></tr></thead><tbody id="mBody"></tbody></table></div></div><div class="managerial-sign">تصميم قسم المكب — المهندس محمد جبرين</div></section>`;
-    const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1);mFrom.value=start.toISOString().slice(0,10);mTo.value=now.toISOString().slice(0,10);
-    async function load(){try{const p=new URLSearchParams({from:mFrom.value,to:mTo.value});const d=await api(`/api/search?${p}`);const rs=d.reports.sort((a,b)=>a.report_date.localeCompare(b.report_date));const sum=k=>rs.reduce((s,r)=>s+Number(r[k]||0),0);mPeriod.textContent=`الفترة من ${mFrom.value} إلى ${mTo.value}`;mCards.innerHTML=[['عدد التقارير',rs.length,'تقرير'],['النفايات',sum('total_waste_tons'),'طن'],['الشاحنات',sum('total_trucks'),'شاحنة'],['السولار',sum('total_diesel'),'لتر']].map(v=>`<div><span>${v[0]}</span><strong>${fmt(v[1])}</strong><small>${v[2]}</small></div>`).join('');mBody.innerHTML=rs.length?rs.map(r=>`<tr><td>${r.report_date}</td><td>${fmt(r.total_waste_tons)}</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)}</td></tr>`).join(''):`<tr><td colspan="4">لا توجد بيانات</td></tr>`;mCsv.href=`/api/export/managerial.csv?from=${mFrom.value}&to=${mTo.value}`;}catch(e){mBody.innerHTML=`<tr><td colspan="4">${esc(e.message)}</td></tr>`;}}
+    const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1);mFrom.value=localDate(start);mTo.value=localDate(now);
+    async function load(){try{const p=new URLSearchParams({from:mFrom.value,to:mTo.value});const d=await allSearch(p);const rs=d.reports.sort((a,b)=>a.report_date.localeCompare(b.report_date));const sum=k=>rs.reduce((s,r)=>s+Number(r[k]||0),0);mPeriod.textContent=`الفترة من ${mFrom.value} إلى ${mTo.value}`;mCards.innerHTML=[['عدد التقارير',rs.length,'تقرير'],['النفايات',sum('total_waste_tons'),'طن'],['الشاحنات',sum('total_trucks'),'شاحنة'],['السولار',sum('total_diesel'),'لتر']].map(v=>`<div><span>${v[0]}</span><strong>${fmt(v[1])}</strong><small>${v[2]}</small></div>`).join('');mBody.innerHTML=rs.length?rs.map(r=>`<tr><td>${r.report_date}</td><td>${fmt(r.total_waste_tons)}</td><td>${fmt(r.total_trucks)}</td><td>${fmt(r.total_diesel)}</td></tr>`).join(''):`<tr><td colspan="4">لا توجد بيانات</td></tr>`;mCsv.href=`/api/export/managerial.csv?from=${mFrom.value}&to=${mTo.value}`;}catch(e){mBody.innerHTML=`<tr><td colspan="4">${esc(e.message)}</td></tr>`;}}
     mLoad.onclick=load;mPrint.onclick=()=>window.print();load();
   }
 
@@ -6425,6 +6457,20 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
 
   function actionLabel(action) {
     const labels = {
+      UPDATE_MONTHLY_CLOSE: "تحديث إغلاق الشهر",
+      ADD_INCIDENT_FILE: "إضافة مرفق حادث",
+      DELETE_INCIDENT_FILE: "حذف مرفق حادث",
+      UPDATE_APPEARANCE_SETTINGS: "تحديث مظهر الموقع",
+      CREATE_TASK: "إضافة مهمة",
+      UPDATE_TASK: "تحديث مهمة",
+      CREATE_CONTRACT: "إضافة عقد",
+      UPDATE_CONTRACT: "تحديث عقد",
+      CREATE_CELL: "إضافة خلية",
+      UPDATE_CELL: "تحديث خلية",
+      PUSH_SUBSCRIBE: "تفعيل إشعارات المتصفح",
+      PUSH_UNSUBSCRIBE: "إيقاف إشعارات المتصفح",
+      SAVE_MONTHLY_ENTRY: "حفظ مسودات الشهر",
+      COMMIT_MONTHLY_ENTRY: "إنشاء تقارير الشهر",
       LOGIN: "تسجيل دخول",
       LOGOUT: "تسجيل خروج",
       LOGIN_FAILED: "محاولة دخول فاشلة",
@@ -6461,7 +6507,8 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const raw = String(value).includes("T") ? String(value) : String(value).replace(" ", "T") + "Z";
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("ar-EG-u-nu-latn", {
+      timeZone: "Asia/Hebron",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -6569,8 +6616,8 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
         <tr class="audit-row ${isSensitive(x.action) ? "sensitive" : ""}">
           <td>${esc(formatDateTime(x.created_at))}</td>
           <td>${esc(x.username || "system")}</td>
-          <td><span class="audit-action-pill">${esc(actionLabel(x.action))}</span><small>${esc(x.action || "")}</small></td>
-          <td>${esc(x.entity_type || "-")}</td>
+          <td><span class="audit-action-pill">${esc(actionLabel(x.action))}</span><details><summary>الرمز التقني</summary><code>${esc(x.action || "")}</code></details></td>
+          <td>${esc(({report:"تقرير",user:"مستخدم",monthly_close:"إغلاق شهري",incident:"حادث",session:"جلسة",system:"النظام"})[x.entity_type]||x.entity_type||"-")}</td>
           <td>${esc(x.entity_id || "-")}</td>
           <td class="audit-details-cell">${esc(x.details || "-")}</td>
         </tr>
@@ -8399,9 +8446,9 @@ ${payload.sections.join("\n")}
     {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
     {label:"إدارة المعدات الوقائية", href:"/equipment-management", icon:"⚙"},
     {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
-    {label:"المركبات والسائقين", href:"/drivers-licenses.html", icon:"▣"},
+    {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
-    {label:"مركبات حركة المكب والسائقون", href:"/fleet", icon:"▣"},
+    {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
     {label:"الصيانة والحوادث", href:"/maintenance-incidents", icon:"⚒"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
@@ -8436,7 +8483,7 @@ ${payload.sections.join("\n")}
       if(item.hideFor && item.hideFor.includes(role)) return false;
       return true;
     }).map(item=>{
-      const active=(path===item.href || (item.href!=="/" && path.startsWith(item.href))) ? " active" : "";
+      const active=(path===item.href) ? " active" : "";
       return `<a class="minya-menu-item${active}" href="${item.href}"><span class="minya-menu-label"><i class="minya-menu-symbol" aria-hidden="true">${item.icon}</i><span>${item.label}</span></span><b aria-hidden="true">‹</b></a>`;
     }).join("");
   }
@@ -8634,8 +8681,9 @@ ${payload.sections.join("\n")}
       }
       if(link.tagName==="A"){
         link.textContent=item.label;
-        const active=normalizeHref(path)===key || (key!=="/" && normalizeHref(path).startsWith(key));
+        const active=normalizeHref(path)===key;
         link.classList.toggle("active",active);
+        if(active)link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");
       }
       if(primaryHrefs.includes(key)) nav.appendChild(link);
       else morePanel.appendChild(link);
@@ -8702,7 +8750,7 @@ ${payload.sections.join("\n")}
     const pending=(r.reports||[]).filter(x=>x.workflow_status==='pending');
     document.getElementById('opsKpis').innerHTML=[['المركبات',(f.vehicles||[]).length,'مركبة'],['السجلات المفتوحة',open.length,'سجل'],['المهام المفتوحة',m.summary?.open_tasks||0,'مهمة'],['العقود الفعالة',m.summary?.active_contracts||0,'عقد'],['الخلايا العاملة',m.summary?.active_cells||0,'خلية'],['بانتظار الاعتماد',pending.length,'تقرير'],['العصارة هذا الشهر',e.totals?.leachate_m3||0,'م³'],['نقلات الغطاء',e.totals?.cover_trips||0,'نقلة']].map(x=>`<div><span>${x[0]}</span><strong>${fmt(x[1])}</strong><small>${x[2]}</small></div>`).join('');
     const alerts=[];
-    (f.vehicles||[]).forEach(v=>[['رخصة السائق',v.driver_license_days],['رخصة المركبة',v.vehicle_license_days],['التأمين',v.insurance_days]].forEach(([name,d])=>{if(d!==null&&d<=30)alerts.push(`${name} - ${v.vehicle_name}: ${d<0?'منتهية منذ '+Math.abs(d)+' يوم':'متبقي '+d+' يوم'}`);}));
+    (f.vehicles||[]).forEach(v=>[['رخصة السائق',v.driver_license_days],['رخصة المركبة',v.vehicle_license_days],['التأمين',v.insurance_days]].forEach(([name,d])=>{if(d!==null&&d<=30)alerts.push(`${name} - ${v.vehicle_type}: ${d<0?'منتهية منذ '+Math.abs(d)+' يوم':'متبقي '+d+' يوم'}`);}));
     open.slice(0,12).forEach(x=>alerts.push(`${x.incident_type} - ${x.asset_name}: ${x.followup_status}`));
     if(pending.length)alerts.push(`${pending.length} تقرير بانتظار المراجعة أو الاعتماد`);
     if(!(e.rows||[]).some(x=>x.log_date===today))alerts.push(`لم يتم إدخال سجل العصارة والغطاء لليوم ${today}`);
@@ -8713,7 +8761,7 @@ ${payload.sections.join("\n")}
     const c=shell('البحث الشامل','بحث موحد في التقارير والمركبات والسائقين والصيانة والحوادث والمهام والعقود والخلايا.');if(!c)return;
     c.innerHTML=`<div class="v3-panel"><div class="v3-filter"><input id="globalQ" placeholder="اكتب كلمة البحث"><button id="globalGo" class="v3-primary">بحث</button></div></div><div id="globalResults"></div>`;
     const q=document.getElementById('globalQ'),out=document.getElementById('globalResults');
-    async function run(){const text=q.value.trim();if(!text){out.innerHTML='';return;}out.innerHTML='<div class="minya-empty-state">جاري البحث...</div>';const [reports,fleet,incidents,management]=await Promise.all([api(`/api/search?q=${encodeURIComponent(text)}`).catch(()=>({reports:[]})),api(`/api/ops/fleet?q=${encodeURIComponent(text)}`).catch(()=>({vehicles:[]})),api(`/api/incidents?q=${encodeURIComponent(text)}`).catch(()=>({incidents:[]})),api(`/api/ops/management-search?q=${encodeURIComponent(text)}`).catch(()=>({results:[]}))]);const rows=[...(reports.reports||[]).map(x=>['تقرير',x.report_no,x.report_date,x.notes||'','/archive']),...(fleet.vehicles||[]).map(x=>['مركبة/سائق',x.vehicle_name,x.plate_no,x.driver_name||x.driver_license_no||'','/fleet']),...(incidents.incidents||[]).map(x=>['صيانة/حادث',x.asset_name,x.incident_date,x.description||'','/maintenance-incidents']),...(management.results||[]).map(x=>[x.type,x.title,x.reference||'',x.detail||'',x.href])];out.innerHTML=rows.length?`<div class="v3-panel"><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>النوع</th><th>العنوان</th><th>التاريخ/الرقم</th><th>التفصيل</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[3])}</td><td><a href="${x[4]}">فتح</a></td></tr>`).join('')}</tbody></table></div></div>`:'<div class="minya-empty-state">لا توجد نتائج</div>';}
+    async function run(){const text=q.value.trim();if(!text){out.innerHTML='';return;}out.innerHTML='<div class="minya-empty-state">جاري البحث...</div>';const [reports,fleet,incidents,management]=await Promise.all([api(`/api/search?q=${encodeURIComponent(text)}`).catch(()=>({reports:[]})),api(`/api/ops/fleet?q=${encodeURIComponent(text)}`).catch(()=>({vehicles:[]})),api(`/api/incidents?q=${encodeURIComponent(text)}`).catch(()=>({incidents:[]})),api(`/api/ops/management-search?q=${encodeURIComponent(text)}`).catch(()=>({results:[]}))]);const rows=[...(reports.reports||[]).map(x=>['تقرير',x.report_no,x.report_date,x.notes||'','/archive']),...(fleet.vehicles||[]).map(x=>['مركبة/سائق',x.vehicle_type,x.plate_number,x.driver_name||x.driver_license_no||'','/fleet']),...(incidents.incidents||[]).map(x=>['صيانة/حادث',x.asset_name,x.incident_date,x.description||'','/maintenance-incidents']),...(management.results||[]).map(x=>[({task:'مهمة',contract:'عقد',cell:'خلية'}[x.type]||x.type),x.title,x.reference||'',x.detail||'',x.href])];out.innerHTML=(reports.has_more?`<p class="review-note">التقارير المعروضة ${reports.reports.length} من ${reports.total}. <a href="/search?q=${encodeURIComponent(text)}">متابعة جميع نتائج التقارير</a></p>`:'')+(rows.length?`<div class="v3-panel"><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>النوع</th><th>العنوان</th><th>التاريخ/الرقم</th><th>التفصيل</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${esc(x[3])}</td><td><a href="${x[4]}">فتح</a></td></tr>`).join('')}</tbody></table></div></div>`:'<div class="minya-empty-state">لا توجد نتائج</div>');}
     document.getElementById('globalGo').onclick=run;q.onkeydown=e=>{if(e.key==='Enter')run();};
   }
   const render=()=>route==='/ops-dashboard'?dashboard():globalSearch();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
@@ -8788,11 +8836,11 @@ ${payload.sections.join("\n")}
 (function(){
   const shortMonths=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const arabicMonths=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-  function shortMonth(value){const match=String(value||"").match(/^(\d{4})-(\d{2})$/);if(!match)return value;const index=Number(match[2])-1;return `${shortMonths[index]||match[2]} ${match[1]}`;}
+  function shortMonth(value){const match=String(value||"").match(/^(\d{4})-(\d{2})$/);if(!match)return value;const index=Number(match[2])-1;return `${arabicMonths[index]||match[2]} ${match[1]}`;}
   function dateSlash(value){const match=String(value||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return match?`${match[3]}/${match[2]}/${match[1]}`:value;}
   function monthSlash(value){const match=String(value||"").match(/^(\d{4})-(\d{2})$/);return match?`${match[2]}/${match[1]}`:value;}
-  function arabicNameToShort(text){let output=String(text||"");arabicMonths.forEach((name,index)=>{output=output.replace(new RegExp(name,"g"),shortMonths[index]);});return output;}
-  function applyChartMonths(root=document){root.querySelectorAll?.(".modern-chart-eyebrow,#annualBestMonth,#annualWorstMonth").forEach(el=>{el.textContent=arabicNameToShort(el.textContent);});}
+  function arabicNameToShort(text){let output=String(text||"");shortMonths.forEach((name,index)=>{output=output.replace(new RegExp(`\\b${name}\\b`,"g"),arabicMonths[index]);});return output;}
+  function applyChartMonths(root=document){root.querySelectorAll?.(".modern-chart-eyebrow,#annualBestMonth,#annualWorstMonth").forEach(el=>{const next=arabicNameToShort(el.textContent);if(el.textContent!==next)el.textContent=next;});}
   function applyTableDates(root=document){root.querySelectorAll?.(".dashboard-recent-table td,.v3-table td,#archiveTable td").forEach(td=>{if(td.children.length)return;const text=td.textContent.trim();if(/^\d{4}-\d{2}-\d{2}$/.test(text))td.textContent=dateSlash(text);else if(/^\d{4}-\d{2}$/.test(text))td.textContent=monthSlash(text);});}
   function stabilizeDateInputs(root=document){root.querySelectorAll?.('input[type="date"],input[data-minya-date-input="1"]').forEach(input=>{if(input.dataset.minyaDateInput!=="1"){input.dataset.minyaDateInput="1";input.addEventListener("focus",()=>{if(input.type!=="date"){input.type="date";input.removeAttribute("placeholder");input.setAttribute("dir","rtl");requestAnimationFrame(()=>{try{input.showPicker?.();}catch{}});}});input.addEventListener("blur",()=>setDateTextMode(input));input.addEventListener("change",()=>{if(!input.value&&document.activeElement!==input)setDateTextMode(input);});}if(!input.value&&document.activeElement!==input)setDateTextMode(input);});}
   function setDateTextMode(input){if(input.value||document.activeElement===input)return;input.type="text";input.placeholder="YYYY-MM-DD";input.inputMode="numeric";input.setAttribute("dir","ltr");input.setAttribute("aria-label",input.getAttribute("aria-label")||"التاريخ بصيغة سنة-شهر-يوم");}
@@ -9022,6 +9070,7 @@ ${payload.sections.join("\n")}
   }
 
   function apply(settings) {
+    try{const personal=JSON.parse(localStorage.getItem("minya_personal_reading_v1")||"null");if(personal)settings=normalize({...settings,...personal});}catch{}
     const root = document.documentElement;
     root.dataset.theme = settings.theme === "auto" ? (systemTheme?.matches ? "night" : "day") : settings.theme;
     root.dataset.themePreference = settings.theme;
@@ -9380,7 +9429,7 @@ ${payload.sections.join("\n")}
   const pageMap={'/':'home','/report':'report','/archive':'archive','/monthly':'monthly','/annual':'annual','/equipment':'equipment','/equipment-management':'equipment-management','/weekly':'weekly','/search':'search','/managerial':'managerial','/admin':'admin','/reviews':'reviews','/fleet':'fleet','/maintenance-incidents':'incidents','/environment':'environment','/tasks':'tasks','/contracts':'contracts','/cells':'cells','/global-search':'global-search','/ops-dashboard':'ops-dashboard'};
   const page=pageMap[path];if(page)document.body.classList.add(`page-${page}`);
   function displayDate(value){const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:String(value||'');}
-  function replaceIsoText(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const parent=node.parentElement;if(!parent||['INPUT','TEXTAREA','OPTION','SCRIPT','STYLE'].includes(parent.tagName))return;const text=node.nodeValue||'';const next=text.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,(_,y,m,d)=>`${d}/${m}/${y}`);if(next!==text)node.nodeValue=next;});}
+  function replaceIsoText(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const parent=node.parentElement;if(!parent||['INPUT','TEXTAREA','OPTION','SCRIPT','STYLE'].includes(parent.tagName))return;const text=node.nodeValue||'';const next=text.replace(/(?<![\w-])(\d{4})-(\d{2})-(\d{2})(?![\w-])/g,(_,y,m,d)=>`${d}/${m}/${y}`);if(next!==text)node.nodeValue=next;});}
   function polishDynamicText(){if(['/weekly','/equipment','/search'].includes(path))replaceIsoText(document.getElementById('v3Content'));if(path==='/managerial')replaceIsoText(document.getElementById('managerialReport'));if(path==='/admin'){document.querySelectorAll('.v3-panel h3').forEach(h=>{if(h.textContent.trim()==='سجل التعديلات Audit Log'&&!h.querySelector('small'))h.innerHTML='سجل التعديلات <small style="font-size:.62em;color:#7a8794;font-weight:700;">Audit Log</small>';});}}
   document.addEventListener('DOMContentLoaded',()=>{polishDynamicText();const root=document.getElementById('v3Content')||document.body;if(typeof MutationObserver!=='undefined'){let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;polishDynamicText();});}).observe(root,{childList:true,subtree:true,characterData:true});}});
 })();

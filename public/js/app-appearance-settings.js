@@ -194,6 +194,7 @@
   }
 
   function apply(settings) {
+    try{const personal=JSON.parse(localStorage.getItem("minya_personal_reading_v1")||"null");if(personal)settings=normalize({...settings,...personal});}catch{}
     const root = document.documentElement;
     root.dataset.theme = settings.theme === "auto" ? (systemTheme?.matches ? "night" : "day") : settings.theme;
     root.dataset.themePreference = settings.theme;

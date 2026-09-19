@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="monthly-entry.css?v=20260911-1">
   <link rel="stylesheet" href="monthly-entry-bulk-edit.css?v=20260917-3">
   <link rel="stylesheet" href="appearance-settings.css?v=typography-v2">
-</head>
+<link rel="stylesheet" href="/review-improvements.css?v=20260919-4"></head>
 <body>
   <header class="me-header">
     <div><h1>إدخال بيانات الشهر</h1><p>جميع خانات التقرير اليومي ضمن جدول شهري كامل، مع تفاصيل عبد العزيز ضمن محطة يطا</p></div>
@@ -20,12 +20,12 @@
         <label>السنة<select id="yearSelect"></select></label>
         <label>الشهر<select id="monthSelect"></select></label>
         <button id="loadBtn" class="me-btn me-secondary" type="button">تحميل الشهر</button>
-        <button id="saveBtn" class="me-btn me-primary" type="button">تحديث البيانات</button>
-        <button id="refreshPageBtn" class="me-btn me-secondary" type="button" onclick="location.reload()">↻ تحديث الصفحة</button>
+        <button id="saveBtn" class="me-btn me-primary" type="button">حفظ بيانات الجدول</button>
+        <button id="refreshPageBtn" class="me-btn me-secondary" type="button" onclick="location.reload()">إعادة تحميل الصفحة</button>
         <button id="undoBtn" class="me-btn me-secondary" type="button" disabled>↶ تراجع</button>
         <label>إذا كان التقرير موجودًا
           <select id="existingAction">
-            <option value="cancel">إلغاء الاعتماد</option>
+            <option value="cancel">إيقاف العملية عند وجود تقرير</option>
             <option value="ignore">تجاهل الموجود</option>
             <option value="replace">استبدال الموجود</option>
           </select>
@@ -34,9 +34,10 @@
         <button id="commitBtn" class="me-btn me-primary" type="button">اعتماد التقارير</button>
         <span id="status" class="me-status">جاهز</span>
       </div>
-      <p class="me-note">يمكن تعديل قيمة عمود واحد لجميع أيام الشهر مرة واحدة، أو نسخ عمود كامل من Excel ولصقه في مربع «لصق عمود كامل من Excel» بعد اختيار العمود، ثم الضغط على «تحديث البيانات» للحفظ.</p>
+      <p class="me-note">يمكن تعديل قيمة عمود واحد لجميع أيام الشهر مرة واحدة، أو نسخ عمود كامل من Excel ولصقه في مربع «لصق عمود كامل من Excel» بعد اختيار العمود، ثم الضغط على «حفظ بيانات الجدول» للحفظ.</p>
     </section>
 
+    <p class="me-note review-note">صفوف الجدول مسودات وليست تقارير معتمدة. قيم المياه والرش الآلية تقديرات تعتمد على الطقس والحرارة؛ راجعها مقابل التشغيل الفعلي. راجع الأيام المحددة والقيم الافتراضية للمياه قبل إنشاء التقارير، خصوصًا أيام الشهر القادمة. الحفظ يحدّث الجدول؛ إنشاء التقارير ينقل الأيام المختارة إلى الأرشيف.</p>
     <section class="me-panel"><div id="summary" class="me-summary"></div></section>
 
     <section class="me-panel">
@@ -59,6 +60,6 @@
   <script src="monthly-entry-add-new-save.js?v=20260911-2"></script>
   <script src="monthly-entry-horizontal-scroll.js?v=20260910-1"></script>
   <script src="monthly-entry-leave-guard.js?v=20260911-1"></script>
-  <script src="js/app-appearance-settings.js?v=typography-v2"></script>
-</body>
+  <script src="js/app-appearance-settings.js?v=review-20260919"></script>
+<script src="/review-improvements.js?v=20260919-4" defer></script></body>
 </html>

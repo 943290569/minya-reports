@@ -13,6 +13,20 @@
 
   function actionLabel(action) {
     const labels = {
+      UPDATE_MONTHLY_CLOSE: "تحديث إغلاق الشهر",
+      ADD_INCIDENT_FILE: "إضافة مرفق حادث",
+      DELETE_INCIDENT_FILE: "حذف مرفق حادث",
+      UPDATE_APPEARANCE_SETTINGS: "تحديث مظهر الموقع",
+      CREATE_TASK: "إضافة مهمة",
+      UPDATE_TASK: "تحديث مهمة",
+      CREATE_CONTRACT: "إضافة عقد",
+      UPDATE_CONTRACT: "تحديث عقد",
+      CREATE_CELL: "إضافة خلية",
+      UPDATE_CELL: "تحديث خلية",
+      PUSH_SUBSCRIBE: "تفعيل إشعارات المتصفح",
+      PUSH_UNSUBSCRIBE: "إيقاف إشعارات المتصفح",
+      SAVE_MONTHLY_ENTRY: "حفظ مسودات الشهر",
+      COMMIT_MONTHLY_ENTRY: "إنشاء تقارير الشهر",
       LOGIN: "تسجيل دخول",
       LOGOUT: "تسجيل خروج",
       LOGIN_FAILED: "محاولة دخول فاشلة",
@@ -49,7 +63,8 @@
     const raw = String(value).includes("T") ? String(value) : String(value).replace(" ", "T") + "Z";
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("ar-EG-u-nu-latn", {
+      timeZone: "Asia/Hebron",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -157,8 +172,8 @@
         <tr class="audit-row ${isSensitive(x.action) ? "sensitive" : ""}">
           <td>${esc(formatDateTime(x.created_at))}</td>
           <td>${esc(x.username || "system")}</td>
-          <td><span class="audit-action-pill">${esc(actionLabel(x.action))}</span><small>${esc(x.action || "")}</small></td>
-          <td>${esc(x.entity_type || "-")}</td>
+          <td><span class="audit-action-pill">${esc(actionLabel(x.action))}</span><details><summary>الرمز التقني</summary><code>${esc(x.action || "")}</code></details></td>
+          <td>${esc(({report:"تقرير",user:"مستخدم",monthly_close:"إغلاق شهري",incident:"حادث",session:"جلسة",system:"النظام"})[x.entity_type]||x.entity_type||"-")}</td>
           <td>${esc(x.entity_id || "-")}</td>
           <td class="audit-details-cell">${esc(x.details || "-")}</td>
         </tr>

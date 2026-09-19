@@ -15,6 +15,13 @@ module.exports = function installMonthlyEntry(app, { db, requireAuth, audit }) {
       res.status(403).json({ok:false,message:'لا توجد صلاحية للتعديل'});
       return false;
     }
+    // Enforce at the write handler as this module is also mounted by workday-classification.
+    const month=normalizeMonth(req.body?.month);
+    const hasClosures=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='monthly_closures'").get();
+    if(req.user.role!=='admin'&&month&&hasClosures&&db.prepare("SELECT 1 FROM monthly_closures WHERE month_key=? AND status='approved'").get(month)){
+      res.status(423).json({ok:false,message:`شهر ${month} معتمد ومقفل. التعديل متاح للمدير فقط.`});
+      return false;
+    }
     return true;
   };
   const defaultCrews = () => [

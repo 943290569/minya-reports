@@ -29,7 +29,7 @@ module.exports=function installMonthlyClose(app,{db,requireRole,audit}){
     if(['GET','HEAD','OPTIONS'].includes(req.method)||req.user?.role==='admin')return next();
     let m=String(req.body?.report_date||'').slice(0,7);
     const hit=String(req.originalUrl||'').match(/^\/api\/reports\/(\d+)/);
-    if(!valid(m)&&hit){const row=db.prepare('SELECT report_date FROM daily_reports WHERE id=?').get(Number(hit[1]));m=String(row?.report_date||'').slice(0,7)}
+    if(hit){const row=db.prepare('SELECT report_date FROM daily_reports WHERE id=?').get(Number(hit[1]));const originalMonth=String(row?.report_date||'').slice(0,7);if(valid(originalMonth)&&locked(originalMonth))return res.status(423).json({ok:false,message:`شهر ${originalMonth} معتمد ومقفل. التعديل متاح للمدير فقط.`});}
     if(valid(m)&&locked(m))return res.status(423).json({ok:false,message:`شهر ${m} معتمد ومقفل. التعديل متاح للمدير فقط.`});
     next();
   });
@@ -49,6 +49,7 @@ module.exports=function installMonthlyClose(app,{db,requireRole,audit}){
     if(status==='open'&&req.user?.role!=='admin')return res.status(403).json({ok:false,message:'إعادة فتح الشهر متاحة للمدير فقط'});
     if(status==='completed'&&!['admin','editor'].includes(req.user?.role))return res.status(403).json({ok:false,message:'لا توجد صلاحية لإكمال الشهر'});
     const old=db.prepare('SELECT * FROM monthly_closures WHERE month_key=?').get(m)||{};
+    if(old.status==='approved'&&req.user?.role!=='admin')return res.status(403).json({ok:false,message:'تعديل شهر معتمد أو إعادة فتحه متاح للمدير فقط'});
     const completedAt=status==='open'?null:(old.completed_at||new Date().toISOString());
     const completedBy=status==='open'?null:(old.completed_by||req.user.id);
     const approvedAt=status==='approved'?new Date().toISOString():null;

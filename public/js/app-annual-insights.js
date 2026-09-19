@@ -84,7 +84,7 @@ function renderAnnualInsights() {
   if (!months.length) {
     bestMonth.textContent = worstMonth.textContent = "-";
     bestValue.textContent = worstValue.textContent = isCurrentYear ? "لا توجد أشهر مكتملة" : "لا توجد بيانات";
-    averageValue.textContent = "0 طن";
+    averageValue.textContent = "—";
     if (averageNote) averageNote.textContent = isCurrentYear ? "يُحسب بعد اكتمال أول شهر" : "للأشهر التي تحتوي بيانات";
   } else {
     const highest = months.reduce((max, item) => item.waste > max.waste ? item : max);
@@ -96,7 +96,7 @@ function renderAnnualInsights() {
     worstValue.textContent = `${formatNumber(lowest.waste)} طن`;
     averageValue.textContent = `${formatNumber(totalWaste / months.length)} طن`;
     if (averageNote) averageNote.textContent = isCurrentYear
-      ? `للأشهر المكتملة فقط — ${months.length} شهر`
+      ? `للأشهر المنتهية ذات السجلات — ${months.length} شهر؛ قد تكون بياناتها غير مكتملة`
       : `للأشهر التي تحتوي بيانات — ${months.length} شهر`;
   }
 
