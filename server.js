@@ -323,6 +323,7 @@ app.use(express.static(path.join(__dirname, "public"), {
 require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
 require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomaticBackup});
 require("./cloud-files")(app,{db,requireAuth,requireRole,audit});
+require("./employee-complaints")(app,{db,requireRole,audit,uploadsDir});
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
