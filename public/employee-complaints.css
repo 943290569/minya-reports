@@ -1,0 +1,14 @@
+:root{font-family:Tahoma,Arial,sans-serif;color:#1d2a22;background:#f3f6f4}
+*{box-sizing:border-box}body{margin:0;background:#f3f6f4}.complaint-shell{width:min(760px,100%);margin:auto;padding:24px 14px 48px}
+.complaint-card{background:#fff;border:1px solid #dfe7e2;border-radius:16px;padding:24px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,.05)}
+.brand{font-size:13px;color:#557064;margin-bottom:10px}h1,h2{margin:0 0 10px}.lead{color:#52635a;line-height:1.8;margin:0 0 20px}
+label{display:block;font-weight:700;margin:16px 0 0}label span{font-size:12px;font-weight:400;color:#6f7d75}
+input,select,textarea{width:100%;margin-top:7px;border:1px solid #cdd8d1;border-radius:10px;padding:12px 13px;font:inherit;background:#fff;color:#172019}
+textarea{resize:vertical;line-height:1.7}button{border:0;border-radius:10px;padding:12px 18px;font:inherit;font-weight:700;cursor:pointer;background:#215f43;color:#fff;margin-top:18px}
+button:disabled{opacity:.6;cursor:wait}.secondary{background:#e7ece9;color:#23372d;margin-right:8px}.message{min-height:24px;margin-top:12px;color:#9b2c2c}
+audio{width:100%;margin-top:10px}.compact{padding:20px}.tracking-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.tracking-grid div,.receipt{background:#f5f8f6;border-radius:10px;padding:12px}small{display:block;color:#66766d;margin-bottom:5px}
+#trackResponseWrap{margin-top:16px;border-top:1px solid #e2e8e4;padding-top:14px}#trackResponse{white-space:pre-wrap;line-height:1.8}
+dialog{border:0;border-radius:16px;width:min(520px,calc(100% - 28px));padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.48)}dialog p{line-height:1.8}.receipt strong{font-size:22px;direction:ltr;display:inline-block}
+@media(max-width:560px){.complaint-shell{padding:12px 10px 32px}.complaint-card{padding:18px;border-radius:12px}.tracking-grid{grid-template-columns:1fr}.complaint-card h1{font-size:22px}}
