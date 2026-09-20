@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>شكاوى الموظفين</title>
+  <link rel="stylesheet" href="/employee-complaints.css?v=1">
+</head>
+<body>
+  <main class="complaint-shell">
+    <section class="complaint-card">
+      <div class="brand">المجلس المشترك لإدارة النفايات الصلبة</div>
+      <h1>تقديم شكوى موظف</h1>
+      <p class="lead">يمكنك تقديم الشكوى باسمك أو بدون اسم. اكتب التفاصيل أو أرفق تسجيلًا صوتيًا.</p>
+      <form id="complaintForm">
+        <label>الاسم <span>اختياري</span>
+          <input id="employeeName" maxlength="120" autocomplete="name" placeholder="اتركه فارغًا إذا رغبت">
+        </label>
+        <label>طبيعة الشكوى
+          <select id="complaintType" required>
+            <option value="">اختر</option>
+            <option>إدارية</option><option>مالية</option><option>الدوام</option><option>المواصلات</option>
+            <option>بيئة العمل</option><option>السلامة</option><option>المعدات والأدوات</option>
+            <option>معاملة وظيفية</option><option>أخرى</option>
+          </select>
+        </label>
+        <label>تفاصيل الشكوى
+          <textarea id="complaintText" rows="6" maxlength="5000" placeholder="اكتب تفاصيل الشكوى"></textarea>
+        </label>
+        <label>تسجيل صوتي <span>اختياري، حتى 8 MB</span>
+          <input id="complaintAudio" type="file" accept="audio/*">
+        </label>
+        <audio id="audioPreview" controls hidden></audio>
+        <button id="submitBtn" type="submit">إرسال الشكوى</button>
+        <div id="formMessage" class="message" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section class="complaint-card compact">
+      <h2>متابعة شكوى</h2>
+      <p>استخدم رابط المتابعة الذي يظهر لك بعد الإرسال.</p>
+      <div id="trackingBox" hidden>
+        <div class="tracking-grid">
+          <div><small>رقم الشكوى</small><strong id="trackNo"></strong></div>
+          <div><small>الحالة</small><strong id="trackStatus"></strong></div>
+          <div><small>تاريخ الاستحقاق</small><strong id="trackDue"></strong></div>
+        </div>
+        <div id="trackResponseWrap" hidden>
+          <small>الرد</small>
+          <p id="trackResponse"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="successDialog">
+    <h2>تم استلام الشكوى الخاصة بك</h2>
+    <p>سيتم مراجعة الشكوى والرد عليها خلال مدة أقصاها 5 أيام عمل.</p>
+    <div class="receipt"><small>رقم الشكوى</small><strong id="receiptNo"></strong></div>
+    <p>احتفظ برقم الشكوى ورابط المتابعة.</p>
+    <button id="copyLink" type="button">نسخ رابط المتابعة</button>
+    <button id="closeDialog" class="secondary" type="button">إغلاق</button>
+  </dialog>
+  <script src="/employee-complaints.js?v=1" defer></script>
+</body>
+</html>
