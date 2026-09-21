@@ -85,6 +85,10 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     CREATE INDEX IF NOT EXISTS idx_external_diesel_entry_links_expires ON external_diesel_entry_links(expires_at);
   `);
 
+  const externalEntryColumns = new Set(db.pragma("table_info(external_diesel_entries)").map((column) => column.name));
+  if (!externalEntryColumns.has("entry_link_id")) db.exec(`ALTER TABLE external_diesel_entries ADD COLUMN entry_link_id INTEGER`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_external_diesel_entry_link ON external_diesel_entries(entry_link_id, entry_date)`);
+
   const cleanText = (value, maximum) => String(value ?? "").trim().slice(0, maximum);
   const tokenHash = (value) => crypto.createHash("sha256").update(String(value || "")).digest("hex");
   const newEntryToken = () => crypto.randomBytes(32).toString("hex");
@@ -193,6 +197,50 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     res.json({ ok:true, label:link.label, expires_at:link.expires_at });
   });
 
+  app.get("/api/external-diesel-entry/data", (req, res) => {
+    try {
+      const link = getActiveEntryLink(req);
+      if (!link) return res.status(401).json({ ok:false, message:"رابط تعبئة السولار غير صالح أو انتهت صلاحيته" });
+      const source = cleanText(req.query?.source, 120);
+      const month = cleanText(req.query?.month, 7);
+      if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+        return res.status(400).json({ ok:false, message:"الشهر والسنة غير صالحين" });
+      }
+      let sql = `
+        SELECT id,source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_at
+        FROM external_diesel_entries
+        WHERE 1=1
+      `;
+      const params = [];
+      if (source) { sql += ` AND source_name=?`; params.push(source); }
+      if (month) { sql += ` AND entry_date LIKE ?`; params.push(`${month}-%`); }
+      sql += ` ORDER BY entry_date DESC,id DESC LIMIT 1000`;
+      const entries = db.prepare(sql).all(...params);
+      const total = entries.reduce((sum, entry) => sum + Number(entry.quantity_liters || 0), 0);
+      const days = new Set(entries.map((entry) => entry.entry_date));
+      const sources = db.prepare(`
+        SELECT source_name, COUNT(*) AS entries_count, COALESCE(SUM(quantity_liters),0) AS total_liters, MAX(entry_date) AS latest_date
+        FROM external_diesel_entries
+        GROUP BY source_name
+        ORDER BY MAX(entry_date) DESC, source_name
+      `).all();
+      res.setHeader("Cache-Control", "no-store");
+      res.json({
+        ok:true,
+        entries,
+        sources,
+        summary:{
+          entries_count:entries.length,
+          days_count:days.size,
+          total_liters:Number(total.toFixed(2)),
+          daily_average:days.size ? Number((total / days.size).toFixed(2)) : 0
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ ok:false, message:"تعذر تحميل بيانات السولار الخارجي", error:error.message });
+    }
+  });
+
   app.post("/api/external-diesel-entry", (req, res) => {
     try {
       const link = getActiveEntryLink(req);
@@ -202,9 +250,9 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       if (duplicateReceipt(entry)) return res.status(409).json({ ok:false, message:"رقم الوصل مسجل مسبقاً لهذه الشركة" });
       const result = db.prepare(`
         INSERT INTO external_diesel_entries
-          (source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_by)
-        VALUES (?,?,?,?,?,?,?,NULL)
-      `).run(entry.source_name, entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number, entry.notes);
+          (source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_by,entry_link_id)
+        VALUES (?,?,?,?,?,?,?,NULL,?)
+      `).run(entry.source_name, entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number, entry.notes, link.id);
       db.prepare(`
         UPDATE external_diesel_entry_links
         SET last_used_at=CURRENT_TIMESTAMP,last_used_ip=?
