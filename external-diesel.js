@@ -282,6 +282,51 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     }
   });
 
+  app.put("/api/external-diesel-entry/:id", (req, res) => {
+    try {
+      const link = getActiveEntryLink(req);
+      if (!link) return res.status(401).json({ ok:false, message:"رابط تعبئة السولار غير صالح أو انتهت صلاحيته" });
+      const id = Number(req.params.id);
+      const current = db.prepare(`SELECT * FROM external_diesel_entries WHERE id=?`).get(id);
+      if (!current) return res.status(404).json({ ok:false, message:"سجل السولار غير موجود" });
+      const { entry, errors } = normalizeEntry(req.body);
+      if (errors.length) return res.status(400).json({ ok:false, message:errors[0], errors });
+      if (duplicateReceipt(entry, id)) return res.status(409).json({ ok:false, message:"رقم الوصل مسجل مسبقاً لهذه الشركة" });
+      db.prepare(`
+        UPDATE external_diesel_entries
+        SET source_name=?,entry_date=?,driver_name=?,vehicle_number=?,quantity_liters=?,receipt_number=?,notes=?,updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `).run(entry.source_name, entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number, entry.notes, id);
+      db.prepare(`
+        UPDATE external_diesel_entry_links SET last_used_at=CURRENT_TIMESTAMP,last_used_ip=? WHERE id=?
+      `).run(clientIp(req), link.id);
+      audit(null, "UPDATE_EXTERNAL_DIESEL_BY_LINK", "external_diesel", id, `${link.label} | ${entry.source_name} | ${entry.entry_date}`);
+      writeAutomaticBackup("external-diesel-link-update");
+      res.json({ ok:true, message:"تم تعديل سجل السولار" });
+    } catch (error) {
+      res.status(500).json({ ok:false, message:"فشل تعديل سجل السولار", error:error.message });
+    }
+  });
+
+  app.delete("/api/external-diesel-entry/:id", (req, res) => {
+    try {
+      const link = getActiveEntryLink(req);
+      if (!link) return res.status(401).json({ ok:false, message:"رابط تعبئة السولار غير صالح أو انتهت صلاحيته" });
+      const id = Number(req.params.id);
+      const current = db.prepare(`SELECT * FROM external_diesel_entries WHERE id=?`).get(id);
+      if (!current) return res.status(404).json({ ok:false, message:"سجل السولار غير موجود" });
+      writeAutomaticBackup("pre-external-diesel-link-delete", true);
+      db.prepare(`DELETE FROM external_diesel_entries WHERE id=?`).run(id);
+      db.prepare(`
+        UPDATE external_diesel_entry_links SET last_used_at=CURRENT_TIMESTAMP,last_used_ip=? WHERE id=?
+      `).run(clientIp(req), link.id);
+      audit(null, "DELETE_EXTERNAL_DIESEL_BY_LINK", "external_diesel", id, `${link.label} | ${current.source_name} | ${current.entry_date}`);
+      res.json({ ok:true, message:"تم حذف سجل السولار" });
+    } catch (error) {
+      res.status(500).json({ ok:false, message:"فشل حذف سجل السولار", error:error.message });
+    }
+  });
+
   app.get("/api/external-diesel/sources", requireAuth, (req, res) => {
     const sources = db.prepare(`
       SELECT source_name, COUNT(*) AS entries_count, COALESCE(SUM(quantity_liters),0) AS total_liters, MAX(entry_date) AS latest_date
