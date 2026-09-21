@@ -43,6 +43,10 @@
     .fuel-table th,.fuel-table td{padding:9px;border-bottom:1px solid #e5ece8;text-align:center;font-size:13px}
     .fuel-table th{background:#eef5f1}
     .fuel-history-empty{text-align:center;padding:14px;color:#6d7d77}
+    .fuel-day-total td{background:#eef6f2;color:#17593f;font-weight:900}
+    .fuel-history-actions{display:flex;gap:8px;align-items:end}
+    .fuel-history-actions button{min-height:43px;padding:9px 14px;border-radius:9px;font:inherit;font-weight:800}
+    #fuelPrintBtn{background:#173f31;color:#fff;border:1px solid #173f31}
     @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}.fuel-history-filters{grid-template-columns:1fr}.fuel-history-summary{grid-template-columns:1fr 1fr}}
   </style>
 </head>
@@ -58,16 +62,16 @@
       <form id="fuelForm" hidden>
         <div class="fuel-entry-grid">
           <label class="wide">الشركة
-            <input id="fuelCompany" maxlength="120" autocomplete="organization" required placeholder="اسم الشركة">
+            <input id="fuelCompany" list="fuelCompanyList" maxlength="120" autocomplete="organization" required placeholder="اكتب أول حرف من اسم الشركة">
           </label>
           <label>التاريخ
             <input id="fuelDate" type="date" required>
           </label>
           <label>اسم السائق
-            <input id="fuelDriver" maxlength="120" autocomplete="off" required>
+            <input id="fuelDriver" list="fuelDriverList" maxlength="120" autocomplete="off" required placeholder="اكتب أول حرف من الاسم">
           </label>
           <label>رقم المركبة
-            <input id="fuelVehicle" maxlength="40" autocomplete="off" required>
+            <input id="fuelVehicle" list="fuelVehicleList" maxlength="40" autocomplete="off" required placeholder="اكتب أول رقم">
           </label>
           <label>الكمية باللتر
             <input id="fuelQuantity" type="number" min="0.01" max="50000" step="0.01" inputmode="decimal" required>
@@ -79,6 +83,8 @@
             <input id="fuelNotes" maxlength="500">
           </label>
         </div>
+        <datalist id="fuelDriverList"></datalist>
+        <datalist id="fuelVehicleList"></datalist>
         <div class="fuel-entry-actions">
           <button id="fuelSaveBtn" type="submit">حفظ التعبئة</button>
           <button id="fuelResetBtn" type="button">تفريغ الحقول</button>
@@ -94,7 +100,10 @@
           <label>الشهر والسنة
             <input id="fuelHistoryMonth" type="month">
           </label>
-          <button id="fuelHistoryLoadBtn" type="button">عرض</button>
+          <div class="fuel-history-actions">
+            <button id="fuelHistoryLoadBtn" type="button">عرض</button>
+            <button id="fuelPrintBtn" type="button">طباعة التقرير</button>
+          </div>
         </div>
         <datalist id="fuelCompanyList"></datalist>
         <div class="fuel-history-summary">
@@ -125,6 +134,9 @@
       const historyBody = document.getElementById("fuelHistoryBody");
       const historyCompany = document.getElementById("fuelHistoryCompany");
       const historyMonth = document.getElementById("fuelHistoryMonth");
+      let currentEntries = [];
+      let currentSummary = {};
+      let currentSuggestions = [];
       const fields = {
         company: document.getElementById("fuelCompany"),
         date: document.getElementById("fuelDate"),
@@ -154,6 +166,53 @@
         const p=String(value||"").split("-");
         return p.length===3 ? p[2]+"/"+p[1]+"/"+p[0] : String(value||"-");
       }
+      function lookupKey(value) {
+        return String(value||"").trim().toLowerCase().replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/\s+/g," ");
+      }
+      function renderSuggestions() {
+        const drivers=new Map();
+        const vehicles=new Map();
+        currentSuggestions.forEach(pair=>{
+          if(pair.driver_name && !drivers.has(pair.driver_name)) drivers.set(pair.driver_name,pair.vehicle_number||"");
+          if(pair.vehicle_number && !vehicles.has(pair.vehicle_number)) vehicles.set(pair.vehicle_number,pair.driver_name||"");
+        });
+        document.getElementById("fuelDriverList").innerHTML=[...drivers].map(([driver,vehicle])=>'<option value="'+esc(driver)+'">'+esc(vehicle ? "المركبة "+vehicle : "")+'</option>').join("");
+        document.getElementById("fuelVehicleList").innerHTML=[...vehicles].map(([vehicle,driver])=>'<option value="'+esc(vehicle)+'">'+esc(driver||"")+'</option>').join("");
+      }
+      function applyDriverPair() {
+        const key=lookupKey(fields.driver.value);
+        const pair=currentSuggestions.find(item=>lookupKey(item.driver_name)===key);
+        if(pair && (!fields.vehicle.value.trim() || fields.vehicle.dataset.suggested==="1")) {
+          fields.vehicle.value=pair.vehicle_number||"";
+          fields.vehicle.dataset.suggested="1";
+        }
+      }
+      function applyVehiclePair() {
+        const key=lookupKey(fields.vehicle.value);
+        const pair=currentSuggestions.find(item=>lookupKey(item.vehicle_number)===key);
+        if(pair && (!fields.driver.value.trim() || fields.driver.dataset.suggested==="1")) {
+          fields.driver.value=pair.driver_name||"";
+          fields.driver.dataset.suggested="1";
+        }
+      }
+      function renderHistoryRows(rows) {
+        if(!rows.length) {
+          historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">لا توجد سجلات للفترة المحددة</td></tr>';
+          return;
+        }
+        const groups=new Map();
+        rows.forEach(entry=>{
+          if(!groups.has(entry.entry_date)) groups.set(entry.entry_date,[]);
+          groups.get(entry.entry_date).push(entry);
+        });
+        const html=[];
+        groups.forEach((entries,date)=>{
+          entries.forEach(e=>html.push('<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td></tr>'));
+          const total=entries.reduce((sum,e)=>sum+Number(e.quantity_liters||0),0);
+          html.push('<tr class="fuel-day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+' لتر</td><td colspan="2">'+fmt(entries.length)+' تعبئة</td></tr>');
+        });
+        historyBody.innerHTML=html.join("");
+      }
       async function loadHistory() {
         const q = new URLSearchParams();
         if (historyCompany.value.trim()) q.set("source", historyCompany.value.trim());
@@ -161,17 +220,48 @@
         historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">جاري التحميل...</td></tr>';
         try {
           const data = await api("/api/external-diesel-entry/data?"+q.toString());
-          const s=data.summary||{};
+          currentEntries=data.entries||[];
+          currentSummary=data.summary||{};
+          currentSuggestions=data.suggestions||currentSuggestions;
+          const s=currentSummary;
           document.getElementById("fuelHistoryTotal").textContent=fmt(s.total_liters)+" لتر";
           document.getElementById("fuelHistoryCount").textContent=fmt(s.entries_count);
           document.getElementById("fuelHistoryDays").textContent=fmt(s.days_count);
           document.getElementById("fuelHistoryAverage").textContent=fmt(s.daily_average)+" لتر";
           document.getElementById("fuelCompanyList").innerHTML=(data.sources||[]).map(x=>'<option value="'+esc(x.source_name)+'"></option>').join("");
-          const rows=data.entries||[];
-          historyBody.innerHTML=rows.length ? rows.map(e=>'<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td></tr>').join("") : '<tr><td colspan="7" class="fuel-history-empty">لا توجد سجلات للفترة المحددة</td></tr>';
+          renderSuggestions();
+          renderHistoryRows(currentEntries);
         } catch (error) {
           historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">'+esc(error.message)+'</td></tr>';
         }
+      }
+      function printReport() {
+        if(!currentEntries.length) {
+          alert("لا توجد بيانات لطباعتها في الفترة المحددة");
+          return;
+        }
+        const company=historyCompany.value.trim();
+        const month=historyMonth.value;
+        const popup=window.open("","_blank");
+        if(!popup) {
+          alert("المتصفح منع نافذة الطباعة");
+          return;
+        }
+        const groups=new Map();
+        currentEntries.forEach(entry=>{
+          if(!groups.has(entry.entry_date)) groups.set(entry.entry_date,[]);
+          groups.get(entry.entry_date).push(entry);
+        });
+        const body=[];
+        groups.forEach((entries,date)=>{
+          entries.forEach(e=>body.push('<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"")+'</td><td>'+esc(e.notes||"")+'</td></tr>'));
+          const total=entries.reduce((sum,e)=>sum+Number(e.quantity_liters||0),0);
+          body.push('<tr class="day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+'</td><td colspan="2">'+fmt(entries.length)+' تعبئة</td></tr>');
+        });
+        const period=month ? ("شهر "+Number(month.split("-")[1])+"/"+month.split("-")[0]) : "جميع الفترات";
+        const title=company ? ("كشف تعبئة السولار الخارجي - "+company) : "كشف تعبئة السولار الخارجي";
+        popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,Tahoma,sans-serif;color:#111;direction:rtl}.page{width:210mm;min-height:297mm;padding:0 4mm 24mm;position:relative}.header{width:210mm;height:30mm;margin:0 -4mm;overflow:hidden}.header img{width:210mm;height:30mm;object-fit:fill}.footer{position:absolute;bottom:0;right:-4mm;width:210mm;height:22mm;overflow:hidden}.footer img{width:210mm;height:22mm;object-fit:fill}.title{text-align:center;margin:2mm 0}.title h1{font-size:17px;margin:0}.title p{font-size:12px;margin:1mm 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm;margin:2mm 0}.summary div{border:1px solid #777;padding:1.5mm;text-align:center}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #555;padding:1.2mm .7mm;text-align:center;font-size:9.5px;overflow-wrap:anywhere}th{background:#e9efec}.day-total td{background:#eef6f2;font-weight:800}.grand-total td{background:#173f31;color:#fff;font-weight:800}</style></head><body><section class="page"><div class="header"><img src="/assets/header.png"></div><div class="title"><h1>'+esc(title)+'</h1><p>'+esc(period)+'</p></div><section class="summary"><div><span>إجمالي السولار</span><strong>'+fmt(currentSummary.total_liters)+' لتر</strong></div><div><span>عدد التعبئات</span><strong>'+fmt(currentSummary.entries_count)+'</strong></div><div><span>أيام التعبئة</span><strong>'+fmt(currentSummary.days_count)+'</strong></div><div><span>المتوسط اليومي</span><strong>'+fmt(currentSummary.daily_average)+' لتر</strong></div></section><table><thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th></tr></thead><tbody>'+body.join("")+'</tbody><tfoot><tr class="grand-total"><td colspan="4">المجموع الكلي</td><td>'+fmt(currentSummary.total_liters)+'</td><td colspan="2">'+fmt(currentSummary.entries_count)+' تعبئة</td></tr></tfoot></table><div class="footer"><img src="/assets/footer.png"></div></section><script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script></body></html>');
+        popup.document.close();
       }
       function resetForm(keepCompany=true) {
         const company = keepCompany ? fields.company.value : "";
@@ -245,7 +335,10 @@
         }
       });
       document.getElementById("fuelResetBtn").addEventListener("click", () => resetForm(true));
+      fields.driver.addEventListener("input",()=>{fields.driver.dataset.suggested="";applyDriverPair();});
+      fields.vehicle.addEventListener("input",()=>{fields.vehicle.dataset.suggested="";applyVehiclePair();});
       document.getElementById("fuelHistoryLoadBtn").addEventListener("click", loadHistory);
+      document.getElementById("fuelPrintBtn").addEventListener("click", printReport);
       historyCompany.addEventListener("change", loadHistory);
       historyMonth.addEventListener("change", loadHistory);
       verify();
