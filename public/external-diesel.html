@@ -83,6 +83,33 @@
       <p id="edFormMessage" class="ed-message" aria-live="polite"></p>
     </section>
 
+    <section class="panel hidden" id="edClerkLinksPanel">
+      <div class="ed-section-head">
+        <div>
+          <h2>رابط موظف تعبئة السولار</h2>
+          <p>رابط مستقل يسمح بالحفظ فقط في سجل السولار الخارجي دون الدخول إلى بقية النظام.</p>
+        </div>
+      </div>
+      <div class="ed-filter-grid">
+        <label>اسم الرابط<input id="edClerkLinkLabel" value="موظف تعبئة السولار" maxlength="80"></label>
+        <label>مدة الصلاحية بالأيام<input id="edClerkLinkDays" type="number" min="1" max="3650" value="365"></label>
+        <div class="ed-filter-actions">
+          <button id="edCreateClerkLinkBtn" type="button" class="v3-primary">إنشاء رابط</button>
+        </div>
+      </div>
+      <div id="edClerkLinkResult" class="hidden" style="margin-top:12px">
+        <label>الرابط الجديد<input id="edClerkLinkUrl" readonly></label>
+        <div class="ed-actions"><button id="edCopyClerkLinkBtn" type="button">نسخ الرابط</button></div>
+      </div>
+      <p id="edClerkLinkMessage" class="ed-message" aria-live="polite"></p>
+      <div class="v3-table-wrap" style="margin-top:12px">
+        <table class="v3-table">
+          <thead><tr><th>الاسم</th><th>الصلاحية حتى</th><th>آخر استخدام</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <tbody id="edClerkLinksBody"><tr><td colspan="5">لا توجد روابط</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="panel" id="edImportPanel">
       <div class="ed-section-head"><div><h2>استيراد كشف إكسل أو وورد</h2><p>يقرأ النظام ملفات DOC وDOCX وExcel ويستبعد أسطر المجاميع والتواقيع.</p></div><button id="edTemplateBtn" type="button">تنزيل نموذج Excel</button></div>
       <div class="ed-import-row">

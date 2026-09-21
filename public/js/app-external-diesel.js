@@ -468,13 +468,85 @@
       @page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Tahoma,sans-serif;direction:rtl}.print-page{width:210mm;height:297mm;padding:0 4mm 4mm;display:flex;flex-direction:column;overflow:hidden;break-after:page;page-break-after:always}.print-page:last-child{break-after:auto;page-break-after:auto}.official-header{width:210mm;height:30mm;margin:0 -4mm;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}.official-header img{display:block;width:210mm;height:30mm;object-fit:fill}main{width:202mm;flex:1;min-height:0}.page-number{height:5mm;line-height:5mm;text-align:center;font-size:11px;font-weight:800;direction:ltr;flex-shrink:0}.official-footer{width:210mm;height:22mm;margin:0 -4mm;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex-shrink:0}.official-footer img{display:block;width:210mm;height:22mm;object-fit:fill}.title{text-align:center;border-top:1px solid #444;border-bottom:1px solid #444;padding:2.2mm 1mm;margin:0 0 2mm}.title h1{font-size:17px;margin:0}.title p{font-size:12px;font-weight:700;margin:1mm 0 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm;margin-bottom:2mm}.summary div{border:1px solid #777;text-align:center;padding:1.5mm}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #555;padding:1.35mm .9mm;text-align:center;vertical-align:middle;font-size:10.5px;line-height:1.25;overflow-wrap:anywhere}th{background:#e9efec;font-weight:800}.day-group{break-inside:avoid}.day-total td{background:#f0f5f2;font-weight:800}.grand-total td{background:#173f31;color:#fff;font-weight:800}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30mm;margin-top:8mm;text-align:center;font-size:12px;font-weight:800;break-inside:avoid}.signatures div{padding-top:8mm;border-top:1px solid #555}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pageHtml}<script>window.onload=()=>Promise.all(Array.from(document.images).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve}))).then(()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);
     popup.document.close();
   }
+  function formatDateTime(value) {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat("ar-PS", { dateStyle:"medium", timeStyle:"short", timeZone:"Asia/Jerusalem" }).format(date);
+  }
+  async function loadClerkLinks() {
+    if (!state.isAdmin || !$("edClerkLinksPanel")) return;
+    try {
+      const data = await api("/api/external-diesel-entry-links");
+      const links = data.links || [];
+      $("edClerkLinksBody").innerHTML = links.length ? links.map((link) => `<tr>
+        <td>${esc(link.label || "موظف تعبئة السولار")}</td>
+        <td>${esc(formatDateTime(link.expires_at))}</td>
+        <td>${esc(formatDateTime(link.last_used_at))}</td>
+        <td>${link.is_active ? "فعال" : "ملغى"}</td>
+        <td>${link.is_active ? `<button type="button" data-revoke-clerk-link="${link.id}">إلغاء الرابط</button>` : "-"}</td>
+      </tr>`).join("") : '<tr><td colspan="5">لا توجد روابط</td></tr>';
+      $("edClerkLinksBody").querySelectorAll("[data-revoke-clerk-link]").forEach((button) => {
+        button.addEventListener("click", () => revokeClerkLink(Number(button.dataset.revokeClerkLink)));
+      });
+    } catch (error) {
+      message("edClerkLinkMessage", error.message, "error");
+    }
+  }
+  async function createClerkLink() {
+    const label = clean($("edClerkLinkLabel").value) || "موظف تعبئة السولار";
+    const days = Number($("edClerkLinkDays").value || 365);
+    $("edCreateClerkLinkBtn").disabled = true;
+    message("edClerkLinkMessage", "جاري إنشاء الرابط...");
+    try {
+      const data = await api("/api/external-diesel-entry-links", {
+        method:"POST",
+        body:JSON.stringify({ label, days })
+      });
+      $("edClerkLinkUrl").value = data.url || "";
+      $("edClerkLinkResult").classList.remove("hidden");
+      message("edClerkLinkMessage", "تم إنشاء الرابط. أرسله لموظف تعبئة السولار فقط.", "success");
+      await loadClerkLinks();
+    } catch (error) {
+      message("edClerkLinkMessage", error.message, "error");
+    } finally {
+      $("edCreateClerkLinkBtn").disabled = false;
+    }
+  }
+  async function revokeClerkLink(id) {
+    if (!confirm("إلغاء هذا الرابط؟ لن يستطيع الموظف استخدامه بعد الإلغاء.")) return;
+    try {
+      await api(`/api/external-diesel-entry-links/${id}`, { method:"DELETE" });
+      $("edClerkLinkResult").classList.add("hidden");
+      $("edClerkLinkUrl").value = "";
+      message("edClerkLinkMessage", "تم إلغاء الرابط.", "success");
+      await loadClerkLinks();
+    } catch (error) {
+      message("edClerkLinkMessage", error.message, "error");
+    }
+  }
+  async function copyClerkLink() {
+    const value = $("edClerkLinkUrl").value;
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      message("edClerkLinkMessage", "تم نسخ الرابط.", "success");
+    } catch (_) {
+      $("edClerkLinkUrl").focus();
+      $("edClerkLinkUrl").select();
+      document.execCommand("copy");
+      message("edClerkLinkMessage", "تم نسخ الرابط.", "success");
+    }
+  }
+
   async function init() {
     $("edReportMonth").value = currentMonth(); $("edDate").value = `${currentMonth()}-01`; syncPeriod();
     try {
       const auth = await api("/api/auth/status");
       state.canEdit = ["admin", "editor"].includes(auth.user?.role); state.isAdmin = auth.user?.role === "admin";
       if (!state.canEdit) { $("edQuickPanel").classList.add("hidden"); $("edEntryPanel").classList.add("hidden"); $("edImportPanel").classList.add("hidden"); }
-      await Promise.all([loadSources(), loadSuggestions()]);
+      if (state.isAdmin && $("edClerkLinksPanel")) $("edClerkLinksPanel").classList.remove("hidden");
+      await Promise.all([loadSources(), loadSuggestions(), state.isAdmin ? loadClerkLinks() : Promise.resolve()]);
       if (!selectedSource() && state.sources[0]) { $("edFilterSource").value = state.sources[0].source_name; $("edSource").value = state.sources[0].source_name; }
       await loadEntries();
       if (state.canEdit && !$("edQuickBody").children.length) addQuickRow();
@@ -489,5 +561,7 @@
   $("edExcelFile").addEventListener("change", (event) => { $("edFileName").textContent = event.target.files[0]?.name || "لم يتم اختيار ملف"; });
   $("edPreviewBtn").addEventListener("click", previewImportFile); $("edImportBtn").addEventListener("click", importPreview);
   $("edTemplateBtn").addEventListener("click", () => writeWorkbook(false)); $("edExportBtn").addEventListener("click", () => writeWorkbook(true)); $("edPrintBtn").addEventListener("click", printReport);
+  if ($("edCreateClerkLinkBtn")) $("edCreateClerkLinkBtn").addEventListener("click", createClerkLink);
+  if ($("edCopyClerkLinkBtn")) $("edCopyClerkLinkBtn").addEventListener("click", copyClerkLink);
   init();
 })();
