@@ -197,10 +197,11 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     res.json({ ok:true, label:link.label, expires_at:link.expires_at });
   });
 
-  app.get("/api/external-diesel-entry/history", (req, res) => {
+  app.get("/api/external-diesel-entry/data", (req, res) => {
     try {
       const link = getActiveEntryLink(req);
       if (!link) return res.status(401).json({ ok:false, message:"رابط تعبئة السولار غير صالح أو انتهت صلاحيته" });
+      const source = cleanText(req.query?.source, 120);
       const month = cleanText(req.query?.month, 7);
       if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
         return res.status(400).json({ ok:false, message:"الشهر والسنة غير صالحين" });
@@ -208,27 +209,35 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
       let sql = `
         SELECT id,source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_at
         FROM external_diesel_entries
-        WHERE entry_link_id=?
+        WHERE 1=1
       `;
-      const params = [link.id];
-      if (month) {
-        sql += ` AND entry_date LIKE ?`;
-        params.push(`${month}-%`);
-      }
-      sql += ` ORDER BY entry_date DESC,id DESC LIMIT 100`;
+      const params = [];
+      if (source) { sql += ` AND source_name=?`; params.push(source); }
+      if (month) { sql += ` AND entry_date LIKE ?`; params.push(`${month}-%`); }
+      sql += ` ORDER BY entry_date DESC,id DESC LIMIT 1000`;
       const entries = db.prepare(sql).all(...params);
       const total = entries.reduce((sum, entry) => sum + Number(entry.quantity_liters || 0), 0);
+      const days = new Set(entries.map((entry) => entry.entry_date));
+      const sources = db.prepare(`
+        SELECT source_name, COUNT(*) AS entries_count, COALESCE(SUM(quantity_liters),0) AS total_liters, MAX(entry_date) AS latest_date
+        FROM external_diesel_entries
+        GROUP BY source_name
+        ORDER BY MAX(entry_date) DESC, source_name
+      `).all();
       res.setHeader("Cache-Control", "no-store");
       res.json({
         ok:true,
         entries,
+        sources,
         summary:{
           entries_count:entries.length,
-          total_liters:Number(total.toFixed(2))
+          days_count:days.size,
+          total_liters:Number(total.toFixed(2)),
+          daily_average:days.size ? Number((total / days.size).toFixed(2)) : 0
         }
       });
     } catch (error) {
-      res.status(500).json({ ok:false, message:"تعذر تحميل تعبئاتك", error:error.message });
+      res.status(500).json({ ok:false, message:"تعذر تحميل بيانات السولار الخارجي", error:error.message });
     }
   });
 
