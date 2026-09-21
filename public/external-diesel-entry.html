@@ -34,7 +34,7 @@
     .fuel-history-filters{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:12px}
     .fuel-history-filters label{display:flex;flex-direction:column;gap:6px;font-weight:800}
     .fuel-history-filters input{min-width:0;padding:10px;border:1px solid #cbd9d2;border-radius:9px;font:inherit;font-size:16px}
-    .fuel-history-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+    .fuel-history-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
     .fuel-history-summary div{padding:10px;border:1px solid #dbe7e1;border-radius:10px;background:#f8fbf9;text-align:center}
     .fuel-history-summary span{display:block;font-size:12px;color:#65766f}
     .fuel-history-summary strong{display:block;margin-top:4px;font-size:18px}
@@ -47,6 +47,10 @@
     .fuel-history-actions{display:flex;gap:8px;align-items:end}
     .fuel-history-actions button{min-height:43px;padding:9px 14px;border-radius:9px;font:inherit;font-weight:800}
     #fuelPrintBtn{background:#173f31;color:#fff;border:1px solid #173f31}
+    .fuel-row-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+    .fuel-row-actions button{padding:6px 9px;min-height:34px;border-radius:8px;font:inherit;font-weight:800}
+    .fuel-edit-btn{background:#eef6f2;color:#17593f;border:1px solid #bed7cb}
+    .fuel-delete-btn{background:#fff1f1;color:#a51d1d;border:1px solid #efc8c8}
     @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}.fuel-history-filters{grid-template-columns:1fr}.fuel-history-summary{grid-template-columns:1fr 1fr}}
   </style>
 </head>
@@ -108,14 +112,13 @@
         <datalist id="fuelCompanyList"></datalist>
         <div class="fuel-history-summary">
           <div><span>إجمالي السولار</span><strong id="fuelHistoryTotal">0</strong></div>
-          <div><span>عدد التعبئات</span><strong id="fuelHistoryCount">0</strong></div>
           <div><span>أيام التعبئة</span><strong id="fuelHistoryDays">0</strong></div>
           <div><span>المتوسط اليومي</span><strong id="fuelHistoryAverage">0</strong></div>
         </div>
         <div class="fuel-table-wrap">
           <table class="fuel-table">
-            <thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th></tr></thead>
-            <tbody id="fuelHistoryBody"><tr><td colspan="7" class="fuel-history-empty">جاري التحميل...</td></tr></tbody>
+            <thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+            <tbody id="fuelHistoryBody"><tr><td colspan="8" class="fuel-history-empty">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -137,6 +140,7 @@
       let currentEntries = [];
       let currentSummary = {};
       let currentSuggestions = [];
+      let editingId = null;
       const fields = {
         company: document.getElementById("fuelCompany"),
         date: document.getElementById("fuelDate"),
@@ -197,7 +201,7 @@
       }
       function renderHistoryRows(rows) {
         if(!rows.length) {
-          historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">لا توجد سجلات للفترة المحددة</td></tr>';
+          historyBody.innerHTML='<tr><td colspan="8" class="fuel-history-empty">لا توجد سجلات للفترة المحددة</td></tr>';
           return;
         }
         const groups=new Map();
@@ -207,17 +211,19 @@
         });
         const html=[];
         groups.forEach((entries,date)=>{
-          entries.forEach(e=>html.push('<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td></tr>'));
+          entries.forEach(e=>html.push('<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td><td><div class="fuel-row-actions"><button type="button" class="fuel-edit-btn" data-edit-id="'+e.id+'">تعديل</button><button type="button" class="fuel-delete-btn" data-delete-id="'+e.id+'">حذف</button></div></td></tr>'));
           const total=entries.reduce((sum,e)=>sum+Number(e.quantity_liters||0),0);
-          html.push('<tr class="fuel-day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+' لتر</td><td colspan="2">'+fmt(entries.length)+' تعبئة</td></tr>');
+          html.push('<tr class="fuel-day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+' لتر</td><td colspan="3"></td></tr>');
         });
         historyBody.innerHTML=html.join("");
+        historyBody.querySelectorAll("[data-edit-id]").forEach(button=>button.addEventListener("click",()=>startEdit(Number(button.dataset.editId))));
+        historyBody.querySelectorAll("[data-delete-id]").forEach(button=>button.addEventListener("click",()=>deleteEntry(Number(button.dataset.deleteId))));
       }
       async function loadHistory() {
         const q = new URLSearchParams();
         if (historyCompany.value.trim()) q.set("source", historyCompany.value.trim());
         if (historyMonth.value) q.set("month", historyMonth.value);
-        historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">جاري التحميل...</td></tr>';
+        historyBody.innerHTML='<tr><td colspan="8" class="fuel-history-empty">جاري التحميل...</td></tr>';
         try {
           const data = await api("/api/external-diesel-entry/data?"+q.toString());
           currentEntries=data.entries||[];
@@ -225,16 +231,45 @@
           currentSuggestions=data.suggestions||currentSuggestions;
           const s=currentSummary;
           document.getElementById("fuelHistoryTotal").textContent=fmt(s.total_liters)+" لتر";
-          document.getElementById("fuelHistoryCount").textContent=fmt(s.entries_count);
           document.getElementById("fuelHistoryDays").textContent=fmt(s.days_count);
           document.getElementById("fuelHistoryAverage").textContent=fmt(s.daily_average)+" لتر";
           document.getElementById("fuelCompanyList").innerHTML=(data.sources||[]).map(x=>'<option value="'+esc(x.source_name)+'"></option>').join("");
           renderSuggestions();
           renderHistoryRows(currentEntries);
         } catch (error) {
-          historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">'+esc(error.message)+'</td></tr>';
+          historyBody.innerHTML='<tr><td colspan="8" class="fuel-history-empty">'+esc(error.message)+'</td></tr>';
         }
       }
+      function startEdit(id) {
+        const entry=currentEntries.find(item=>Number(item.id)===Number(id));
+        if(!entry) return;
+        editingId=entry.id;
+        fields.company.value=entry.source_name;
+        fields.date.value=entry.entry_date;
+        fields.driver.value=entry.driver_name;
+        fields.vehicle.value=entry.vehicle_number;
+        fields.quantity.value=entry.quantity_liters;
+        fields.receipt.value=entry.receipt_number||"";
+        fields.notes.value=entry.notes||"";
+        saveBtn.textContent="حفظ التعديل";
+        document.getElementById("fuelResetBtn").textContent="إلغاء التعديل";
+        form.scrollIntoView({behavior:"smooth",block:"start"});
+        setMessage("تعديل السجل المحدد");
+      }
+      async function deleteEntry(id) {
+        const entry=currentEntries.find(item=>Number(item.id)===Number(id));
+        if(!entry) return;
+        if(!confirm("حذف هذا السجل؟")) return;
+        try {
+          await api("/api/external-diesel-entry/"+id,{method:"DELETE"});
+          if(editingId===id) resetForm(true);
+          await loadHistory();
+          setMessage("تم حذف السجل","success");
+        } catch(error) {
+          setMessage(error.message,"error");
+        }
+      }
+
       function printReport() {
         if(!currentEntries.length) {
           alert("لا توجد بيانات لطباعتها في الفترة المحددة");
@@ -256,18 +291,21 @@
         groups.forEach((entries,date)=>{
           entries.forEach(e=>body.push('<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"")+'</td><td>'+esc(e.notes||"")+'</td></tr>'));
           const total=entries.reduce((sum,e)=>sum+Number(e.quantity_liters||0),0);
-          body.push('<tr class="day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+'</td><td colspan="2">'+fmt(entries.length)+' تعبئة</td></tr>');
+          body.push('<tr class="day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+'</td><td colspan="2"></td></tr>');
         });
         const period=month ? ("شهر "+Number(month.split("-")[1])+"/"+month.split("-")[0]) : "جميع الفترات";
-        const title=company ? ("كشف تعبئة السولار الخارجي - "+company) : "كشف تعبئة السولار الخارجي";
-        popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,Tahoma,sans-serif;color:#111;direction:rtl}.page{width:210mm;min-height:297mm;padding:0 4mm 24mm;position:relative}.header{width:210mm;height:30mm;margin:0 -4mm;overflow:hidden}.header img{width:210mm;height:30mm;object-fit:fill}.footer{position:absolute;bottom:0;right:-4mm;width:210mm;height:22mm;overflow:hidden}.footer img{width:210mm;height:22mm;object-fit:fill}.title{text-align:center;margin:2mm 0}.title h1{font-size:17px;margin:0}.title p{font-size:12px;margin:1mm 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm;margin:2mm 0}.summary div{border:1px solid #777;padding:1.5mm;text-align:center}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #555;padding:1.2mm .7mm;text-align:center;font-size:9.5px;overflow-wrap:anywhere}th{background:#e9efec}.day-total td{background:#eef6f2;font-weight:800}.grand-total td{background:#173f31;color:#fff;font-weight:800}</style></head><body><section class="page"><div class="header"><img src="/assets/header.png"></div><div class="title"><h1>'+esc(title)+'</h1><p>'+esc(period)+'</p></div><section class="summary"><div><span>إجمالي السولار</span><strong>'+fmt(currentSummary.total_liters)+' لتر</strong></div><div><span>عدد التعبئات</span><strong>'+fmt(currentSummary.entries_count)+'</strong></div><div><span>أيام التعبئة</span><strong>'+fmt(currentSummary.days_count)+'</strong></div><div><span>المتوسط اليومي</span><strong>'+fmt(currentSummary.daily_average)+' لتر</strong></div></section><table><thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th></tr></thead><tbody>'+body.join("")+'</tbody><tfoot><tr class="grand-total"><td colspan="4">المجموع الكلي</td><td>'+fmt(currentSummary.total_liters)+'</td><td colspan="2">'+fmt(currentSummary.entries_count)+' تعبئة</td></tr></tfoot></table><div class="footer"><img src="/assets/footer.png"></div></section><script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script></body></html>');
+        const title=company ? ("كشف السولار الخارجي - "+company) : "كشف السولار الخارجي";
+        popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 portrait;margin:34mm 4mm 25mm}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,Tahoma,sans-serif;color:#111;direction:rtl}.print-header{position:fixed;top:-34mm;right:-4mm;width:210mm;height:30mm;overflow:hidden}.print-header img{display:block;width:210mm;height:30mm;object-fit:fill}.print-footer{position:fixed;bottom:-25mm;right:-4mm;width:210mm;height:22mm;overflow:hidden}.print-footer img{display:block;width:210mm;height:22mm;object-fit:fill}.title{text-align:center;margin:0 0 2mm}.title h1{font-size:17px;margin:0}.title p{font-size:12px;margin:1mm 0}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1mm;margin:2mm 0}.summary div{border:1px solid #777;padding:1.5mm;text-align:center}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tfoot{display:table-footer-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #555;padding:1.2mm .7mm;text-align:center;font-size:9.5px;overflow-wrap:anywhere}th{background:#e9efec}.day-total td{background:#eef6f2;font-weight:800}.grand-total td{background:#173f31;color:#fff;font-weight:800}</style></head><body><div class="print-header"><img src="/assets/header.png"></div><div class="print-footer"><img src="/assets/footer.png"></div><div class="title"><h1>'+esc(title)+'</h1><p>'+esc(period)+'</p></div><section class="summary"><div><span>إجمالي السولار</span><strong>'+fmt(currentSummary.total_liters)+' لتر</strong></div><div><span>أيام التعبئة</span><strong>'+fmt(currentSummary.days_count)+'</strong></div><div><span>المتوسط اليومي</span><strong>'+fmt(currentSummary.daily_average)+' لتر</strong></div></section><table><thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th></tr></thead><tbody>'+body.join("")+'</tbody><tfoot><tr class="grand-total"><td colspan="4">المجموع الكلي</td><td>'+fmt(currentSummary.total_liters)+'</td><td colspan="2"></td></tr></tfoot></table><script>window.onload=()=>Promise.all(Array.from(document.images).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve}))).then(()=>setTimeout(()=>window.print(),250));<\/script></body></html>');
         popup.document.close();
       }
       function resetForm(keepCompany=true) {
         const company = keepCompany ? fields.company.value : "";
+        editingId=null;
         form.reset();
         fields.company.value = company;
         fields.date.value = today();
+        saveBtn.textContent="حفظ التعبئة";
+        document.getElementById("fuelResetBtn").textContent="تفريغ الحقول";
         fields.driver.focus();
         setMessage("");
       }
@@ -319,13 +357,16 @@
         saveBtn.disabled = true;
         setMessage("جاري حفظ التعبئة...");
         try {
-          const data = await api("/api/external-diesel-entry", { method:"POST", body:JSON.stringify(payload) });
+          const data = await api(editingId ? "/api/external-diesel-entry/"+editingId : "/api/external-diesel-entry", { method:editingId ? "PUT" : "POST", body:JSON.stringify(payload) });
           setMessage(data.message || "تم حفظ التعبئة بنجاح.", "success");
           const company = fields.company.value;
           const date = fields.date.value;
+          editingId=null;
           form.reset();
           fields.company.value = company;
           fields.date.value = date;
+          saveBtn.textContent="حفظ التعبئة";
+          document.getElementById("fuelResetBtn").textContent="تفريغ الحقول";
           fields.driver.focus();
           await loadHistory();
         } catch (error) {
