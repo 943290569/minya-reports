@@ -29,7 +29,21 @@
     #fuelMessage.success{color:#087443}
     #fuelMessage.error{color:#b42318}
     .fuel-entry-note{margin-top:18px;padding-top:14px;border-top:1px solid #e3ebe7;color:#697a74;font-size:13px;text-align:center}
-    @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}}
+    .fuel-history{margin-top:18px}
+    .fuel-history h2{margin:0 0 10px;font-size:18px}
+    .fuel-history-filters{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:12px}
+    .fuel-history-filters label{display:flex;flex-direction:column;gap:6px;font-weight:800}
+    .fuel-history-filters input{min-width:0;padding:10px;border:1px solid #cbd9d2;border-radius:9px;font:inherit;font-size:16px}
+    .fuel-history-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+    .fuel-history-summary div{padding:10px;border:1px solid #dbe7e1;border-radius:10px;background:#f8fbf9;text-align:center}
+    .fuel-history-summary span{display:block;font-size:12px;color:#65766f}
+    .fuel-history-summary strong{display:block;margin-top:4px;font-size:18px}
+    .fuel-table-wrap{overflow:auto;border:1px solid #dde7e2;border-radius:10px}
+    .fuel-table{width:100%;border-collapse:collapse;min-width:760px}
+    .fuel-table th,.fuel-table td{padding:9px;border-bottom:1px solid #e5ece8;text-align:center;font-size:13px}
+    .fuel-table th{background:#eef5f1}
+    .fuel-history-empty{text-align:center;padding:14px;color:#6d7d77}
+    @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}.fuel-history-filters{grid-template-columns:1fr}.fuel-history-summary{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
@@ -71,7 +85,32 @@
         </div>
         <p id="fuelMessage" aria-live="polite"></p>
       </form>
-      <div class="fuel-entry-note">هذا الرابط مخصص لتعبئة السولار فقط ولا يمنح صلاحية الدخول إلى نظام المكب أو التقارير.</div>
+      <section class="fuel-history" id="fuelHistory" hidden>
+        <h2>سجلات السولار الخارجي</h2>
+        <div class="fuel-history-filters">
+          <label>الشركة
+            <input id="fuelHistoryCompany" list="fuelCompanyList" placeholder="كل الشركات">
+          </label>
+          <label>الشهر والسنة
+            <input id="fuelHistoryMonth" type="month">
+          </label>
+          <button id="fuelHistoryLoadBtn" type="button">عرض</button>
+        </div>
+        <datalist id="fuelCompanyList"></datalist>
+        <div class="fuel-history-summary">
+          <div><span>إجمالي السولار</span><strong id="fuelHistoryTotal">0</strong></div>
+          <div><span>عدد التعبئات</span><strong id="fuelHistoryCount">0</strong></div>
+          <div><span>أيام التعبئة</span><strong id="fuelHistoryDays">0</strong></div>
+          <div><span>المتوسط اليومي</span><strong id="fuelHistoryAverage">0</strong></div>
+        </div>
+        <div class="fuel-table-wrap">
+          <table class="fuel-table">
+            <thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th></tr></thead>
+            <tbody id="fuelHistoryBody"><tr><td colspan="7" class="fuel-history-empty">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <div class="fuel-entry-note">هذا الرابط مخصص للسولار الخارجي فقط ولا يمنح صلاحية الدخول إلى بقية نظام المكب.</div>
     </section>
   </main>
   <script>
@@ -82,6 +121,10 @@
       const form = document.getElementById("fuelForm");
       const message = document.getElementById("fuelMessage");
       const saveBtn = document.getElementById("fuelSaveBtn");
+      const history = document.getElementById("fuelHistory");
+      const historyBody = document.getElementById("fuelHistoryBody");
+      const historyCompany = document.getElementById("fuelHistoryCompany");
+      const historyMonth = document.getElementById("fuelHistoryMonth");
       const fields = {
         company: document.getElementById("fuelCompany"),
         date: document.getElementById("fuelDate"),
@@ -100,6 +143,35 @@
       function setMessage(text, type="") {
         message.textContent = text || "";
         message.className = type;
+      }
+      function esc(value) {
+        return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
+      }
+      function fmt(value) {
+        return Number(value || 0).toLocaleString("en-US",{maximumFractionDigits:2});
+      }
+      function fmtDate(value) {
+        const p=String(value||"").split("-");
+        return p.length===3 ? p[2]+"/"+p[1]+"/"+p[0] : String(value||"-");
+      }
+      async function loadHistory() {
+        const q = new URLSearchParams();
+        if (historyCompany.value.trim()) q.set("source", historyCompany.value.trim());
+        if (historyMonth.value) q.set("month", historyMonth.value);
+        historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">جاري التحميل...</td></tr>';
+        try {
+          const data = await api("/api/external-diesel-entry/data?"+q.toString());
+          const s=data.summary||{};
+          document.getElementById("fuelHistoryTotal").textContent=fmt(s.total_liters)+" لتر";
+          document.getElementById("fuelHistoryCount").textContent=fmt(s.entries_count);
+          document.getElementById("fuelHistoryDays").textContent=fmt(s.days_count);
+          document.getElementById("fuelHistoryAverage").textContent=fmt(s.daily_average)+" لتر";
+          document.getElementById("fuelCompanyList").innerHTML=(data.sources||[]).map(x=>'<option value="'+esc(x.source_name)+'"></option>').join("");
+          const rows=data.entries||[];
+          historyBody.innerHTML=rows.length ? rows.map(e=>'<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td></tr>').join("") : '<tr><td colspan="7" class="fuel-history-empty">لا توجد سجلات للفترة المحددة</td></tr>';
+        } catch (error) {
+          historyBody.innerHTML='<tr><td colspan="7" class="fuel-history-empty">'+esc(error.message)+'</td></tr>';
+        }
       }
       function resetForm(keepCompany=true) {
         const company = keepCompany ? fields.company.value : "";
@@ -129,7 +201,10 @@
           const data = await api("/api/external-diesel-entry/status");
           statusNode.textContent = "الرابط فعال — " + (data.label || "موظف تعبئة السولار");
           form.hidden = false;
+          history.hidden = false;
           fields.date.value = today();
+          historyMonth.value = today().slice(0,7);
+          await loadHistory();
           fields.company.focus();
         } catch (error) {
           statusNode.textContent = error.message;
@@ -162,6 +237,7 @@
           fields.company.value = company;
           fields.date.value = date;
           fields.driver.focus();
+          await loadHistory();
         } catch (error) {
           setMessage(error.message, "error");
         } finally {
@@ -169,6 +245,9 @@
         }
       });
       document.getElementById("fuelResetBtn").addEventListener("click", () => resetForm(true));
+      document.getElementById("fuelHistoryLoadBtn").addEventListener("click", loadHistory);
+      historyCompany.addEventListener("change", loadHistory);
+      historyMonth.addEventListener("change", loadHistory);
       verify();
     })();
   </script>
