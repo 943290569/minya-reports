@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <title>تعبئة السولار</title>
+  <link rel="stylesheet" href="/style.css?v=external-diesel-entry-v1">
+  <style>
+    body{margin:0;background:#f4f7f5;color:#17382d;font-family:Tahoma,Arial,sans-serif}
+    .fuel-entry-shell{width:min(760px,calc(100% - 24px));margin:24px auto 48px}
+    .fuel-entry-card{background:#fff;border:1px solid #d8e5df;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(20,70,52,.07)}
+    .fuel-entry-brand{text-align:center;margin-bottom:18px}
+    .fuel-entry-brand img{width:92px;height:92px;object-fit:contain;border-radius:18px}
+    .fuel-entry-brand h1{margin:10px 0 4px;font-size:22px}
+    .fuel-entry-brand p{margin:0;color:#60736c}
+    .fuel-entry-status{margin:0 0 16px;padding:10px 12px;border-radius:10px;background:#eef6f2;color:#315d4c;font-weight:700}
+    .fuel-entry-status.error{background:#fff1f1;color:#a51d1d}
+    .fuel-entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .fuel-entry-grid label{display:flex;flex-direction:column;gap:7px;font-weight:800;color:#29453b}
+    .fuel-entry-grid .wide{grid-column:1/-1}
+    .fuel-entry-grid input{width:100%;min-width:0;box-sizing:border-box;padding:12px;border:1px solid #cbd9d2;border-radius:10px;background:#fff;color:#17382d;font:inherit;font-size:16px}
+    .fuel-entry-grid input:focus{outline:3px solid rgba(23,107,79,.14);border-color:#176b4f}
+    .fuel-entry-actions{display:flex;gap:10px;margin-top:16px}
+    .fuel-entry-actions button{flex:1;min-height:46px;border-radius:10px;font:inherit;font-weight:800;cursor:pointer}
+    #fuelSaveBtn{background:#176b4f;color:#fff;border:1px solid #176b4f}
+    #fuelResetBtn{background:#fff;color:#315d4c;border:1px solid #b9ccc3}
+    #fuelMessage{min-height:22px;margin:12px 0 0;font-weight:800}
+    #fuelMessage.success{color:#087443}
+    #fuelMessage.error{color:#b42318}
+    .fuel-entry-note{margin-top:18px;padding-top:14px;border-top:1px solid #e3ebe7;color:#697a74;font-size:13px;text-align:center}
+    @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}}
+  </style>
+</head>
+<body>
+  <main class="fuel-entry-shell">
+    <section class="fuel-entry-card">
+      <div class="fuel-entry-brand">
+        <img src="/assets/brand-recycle-truck-jsc-512.png" alt="JSC_H&B">
+        <h1>تعبئة السولار</h1>
+        <p>إدخال تعبئة السولار للشركات</p>
+      </div>
+      <p id="fuelLinkStatus" class="fuel-entry-status">جاري التحقق من صلاحية الرابط...</p>
+      <form id="fuelForm" hidden>
+        <div class="fuel-entry-grid">
+          <label class="wide">الشركة
+            <input id="fuelCompany" maxlength="120" autocomplete="organization" required placeholder="اسم الشركة">
+          </label>
+          <label>التاريخ
+            <input id="fuelDate" type="date" required>
+          </label>
+          <label>اسم السائق
+            <input id="fuelDriver" maxlength="120" autocomplete="off" required>
+          </label>
+          <label>رقم المركبة
+            <input id="fuelVehicle" maxlength="40" autocomplete="off" required>
+          </label>
+          <label>الكمية باللتر
+            <input id="fuelQuantity" type="number" min="0.01" max="50000" step="0.01" inputmode="decimal" required>
+          </label>
+          <label>رقم الوصل
+            <input id="fuelReceipt" maxlength="50" inputmode="numeric">
+          </label>
+          <label class="wide">ملاحظات
+            <input id="fuelNotes" maxlength="500">
+          </label>
+        </div>
+        <div class="fuel-entry-actions">
+          <button id="fuelSaveBtn" type="submit">حفظ التعبئة</button>
+          <button id="fuelResetBtn" type="button">تفريغ الحقول</button>
+        </div>
+        <p id="fuelMessage" aria-live="polite"></p>
+      </form>
+      <div class="fuel-entry-note">هذا الرابط مخصص لتعبئة السولار فقط ولا يمنح صلاحية الدخول إلى نظام المكب أو التقارير.</div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const token = String(params.get("token") || "").trim();
+      const statusNode = document.getElementById("fuelLinkStatus");
+      const form = document.getElementById("fuelForm");
+      const message = document.getElementById("fuelMessage");
+      const saveBtn = document.getElementById("fuelSaveBtn");
+      const fields = {
+        company: document.getElementById("fuelCompany"),
+        date: document.getElementById("fuelDate"),
+        driver: document.getElementById("fuelDriver"),
+        vehicle: document.getElementById("fuelVehicle"),
+        quantity: document.getElementById("fuelQuantity"),
+        receipt: document.getElementById("fuelReceipt"),
+        notes: document.getElementById("fuelNotes")
+      };
+
+      function today() {
+        const parts = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Jerusalem", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(new Date());
+        const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return map.year + "-" + map.month + "-" + map.day;
+      }
+      function setMessage(text, type="") {
+        message.textContent = text || "";
+        message.className = type;
+      }
+      function resetForm(keepCompany=true) {
+        const company = keepCompany ? fields.company.value : "";
+        form.reset();
+        fields.company.value = company;
+        fields.date.value = today();
+        fields.driver.focus();
+        setMessage("");
+      }
+      async function api(url, options={}) {
+        const response = await fetch(url, {
+          cache:"no-store",
+          headers:{ "Content-Type":"application/json", "X-Entry-Token":token, ...(options.headers || {}) },
+          ...options
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.ok === false) throw new Error(data.message || "تعذر تنفيذ العملية");
+        return data;
+      }
+      async function verify() {
+        if (!/^[a-f0-9]{64}$/i.test(token)) {
+          statusNode.textContent = "رابط تعبئة السولار غير صالح.";
+          statusNode.classList.add("error");
+          return;
+        }
+        try {
+          const data = await api("/api/external-diesel-entry/status");
+          statusNode.textContent = "الرابط فعال — " + (data.label || "موظف تعبئة السولار");
+          form.hidden = false;
+          fields.date.value = today();
+          fields.company.focus();
+        } catch (error) {
+          statusNode.textContent = error.message;
+          statusNode.classList.add("error");
+        }
+      }
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const payload = {
+          source_name: fields.company.value.trim(),
+          entry_date: fields.date.value,
+          driver_name: fields.driver.value.trim(),
+          vehicle_number: fields.vehicle.value.trim(),
+          quantity_liters: Number(fields.quantity.value),
+          receipt_number: fields.receipt.value.trim(),
+          notes: fields.notes.value.trim()
+        };
+        if (!payload.source_name || !payload.entry_date || !payload.driver_name || !payload.vehicle_number || !(payload.quantity_liters > 0)) {
+          setMessage("أكمل الشركة والتاريخ والسائق والمركبة والكمية.", "error");
+          return;
+        }
+        saveBtn.disabled = true;
+        setMessage("جاري حفظ التعبئة...");
+        try {
+          const data = await api("/api/external-diesel-entry", { method:"POST", body:JSON.stringify(payload) });
+          setMessage(data.message || "تم حفظ التعبئة بنجاح.", "success");
+          const company = fields.company.value;
+          const date = fields.date.value;
+          form.reset();
+          fields.company.value = company;
+          fields.date.value = date;
+          fields.driver.focus();
+        } catch (error) {
+          setMessage(error.message, "error");
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+      document.getElementById("fuelResetBtn").addEventListener("click", () => resetForm(true));
+      verify();
+    })();
+  </script>
+</body>
+</html>
