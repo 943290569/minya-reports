@@ -1,4 +1,5 @@
 const path = require("path");
+const crypto = require("crypto");
 const WordExtractor = require("word-extractor");
 
 const wordExtractor = new WordExtractor();
@@ -69,9 +70,38 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
     CREATE INDEX IF NOT EXISTS idx_external_diesel_date ON external_diesel_entries(entry_date);
     CREATE INDEX IF NOT EXISTS idx_external_diesel_driver_date ON external_diesel_entries(driver_name, entry_date);
     CREATE INDEX IF NOT EXISTS idx_external_diesel_vehicle_date ON external_diesel_entries(vehicle_number, entry_date);
+
+    CREATE TABLE IF NOT EXISTS external_diesel_entry_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT NOT NULL DEFAULT 'موظف تعبئة السولار',
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      last_used_at TEXT,
+      last_used_ip TEXT DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_external_diesel_entry_links_expires ON external_diesel_entry_links(expires_at);
   `);
 
   const cleanText = (value, maximum) => String(value ?? "").trim().slice(0, maximum);
+  const tokenHash = (value) => crypto.createHash("sha256").update(String(value || "")).digest("hex");
+  const newEntryToken = () => crypto.randomBytes(32).toString("hex");
+  const clientIp = (req) => String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim().slice(0, 120);
+  const publicBaseUrl = (req) => {
+    const configured = String(process.env.PUBLIC_BASE_URL || "").trim().replace(/\/$/, "");
+    if (configured) return configured;
+    const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
+    return `${proto}://${req.get("host")}`;
+  };
+  function getActiveEntryLink(req) {
+    const token = cleanText(req.headers["x-entry-token"] || req.query?.token || req.body?.token, 128);
+    if (!/^[a-f0-9]{64}$/i.test(token)) return null;
+    const row = db.prepare(`SELECT * FROM external_diesel_entry_links WHERE token_hash=? LIMIT 1`).get(tokenHash(token));
+    if (!row || !row.is_active || new Date(row.expires_at).getTime() <= Date.now()) return null;
+    return row;
+  }
   const validDate = (value) => {
     const text = String(value || "");
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
@@ -114,6 +144,78 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
 
   app.get("/external-diesel", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "external-diesel.html"));
+  });
+
+  app.get("/external-diesel-entry", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.sendFile(path.join(__dirname, "public", "external-diesel-entry.html"));
+  });
+
+  app.get("/api/external-diesel-entry-links", requireRole("admin"), (req, res) => {
+    db.prepare(`UPDATE external_diesel_entry_links SET is_active=0 WHERE is_active=1 AND expires_at<=?`).run(new Date().toISOString());
+    const links = db.prepare(`
+      SELECT id,label,expires_at,is_active,created_at,last_used_at,last_used_ip
+      FROM external_diesel_entry_links
+      ORDER BY id DESC
+      LIMIT 50
+    `).all();
+    res.json({ ok:true, links });
+  });
+
+  app.post("/api/external-diesel-entry-links", requireRole("admin"), (req, res) => {
+    const days = Math.min(3650, Math.max(1, Number.parseInt(req.body?.days, 10) || 365));
+    const label = cleanText(req.body?.label || "موظف تعبئة السولار", 80) || "موظف تعبئة السولار";
+    const token = newEntryToken();
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const result = db.prepare(`
+      INSERT INTO external_diesel_entry_links (label,token_hash,expires_at,created_by)
+      VALUES (?,?,?,?)
+    `).run(label, tokenHash(token), expiresAt, req.user.id);
+    const url = `${publicBaseUrl(req)}/external-diesel-entry?token=${token}`;
+    audit(req.user, "CREATE_EXTERNAL_DIESEL_ENTRY_LINK", "external_diesel_entry_link", result.lastInsertRowid, `${label} | ${days}d`);
+    res.json({ ok:true, id:result.lastInsertRowid, url, expires_at:expiresAt });
+  });
+
+  app.delete("/api/external-diesel-entry-links/:id", requireRole("admin"), (req, res) => {
+    const id = Number(req.params.id);
+    const row = db.prepare(`SELECT id,label FROM external_diesel_entry_links WHERE id=?`).get(id);
+    if (!row) return res.status(404).json({ ok:false, message:"الرابط غير موجود" });
+    db.prepare(`UPDATE external_diesel_entry_links SET is_active=0 WHERE id=?`).run(id);
+    audit(req.user, "REVOKE_EXTERNAL_DIESEL_ENTRY_LINK", "external_diesel_entry_link", id, row.label || "");
+    res.json({ ok:true, message:"تم إلغاء رابط موظف التعبئة" });
+  });
+
+  app.get("/api/external-diesel-entry/status", (req, res) => {
+    const link = getActiveEntryLink(req);
+    if (!link) return res.status(401).json({ ok:false, message:"رابط تعبئة السولار غير صالح أو انتهت صلاحيته" });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ ok:true, label:link.label, expires_at:link.expires_at });
+  });
+
+  app.post("/api/external-diesel-entry", (req, res) => {
+    try {
+      const link = getActiveEntryLink(req);
+      if (!link) return res.status(401).json({ ok:false, message:"رابط تعبئة السولار غير صالح أو انتهت صلاحيته" });
+      const { entry, errors } = normalizeEntry(req.body);
+      if (errors.length) return res.status(400).json({ ok:false, message:errors[0], errors });
+      if (duplicateReceipt(entry)) return res.status(409).json({ ok:false, message:"رقم الوصل مسجل مسبقاً لهذه الشركة" });
+      const result = db.prepare(`
+        INSERT INTO external_diesel_entries
+          (source_name,entry_date,driver_name,vehicle_number,quantity_liters,receipt_number,notes,created_by)
+        VALUES (?,?,?,?,?,?,?,NULL)
+      `).run(entry.source_name, entry.entry_date, entry.driver_name, entry.vehicle_number, entry.quantity_liters, entry.receipt_number, entry.notes);
+      db.prepare(`
+        UPDATE external_diesel_entry_links
+        SET last_used_at=CURRENT_TIMESTAMP,last_used_ip=?
+        WHERE id=?
+      `).run(clientIp(req), link.id);
+      audit(null, "CREATE_EXTERNAL_DIESEL_BY_LINK", "external_diesel", result.lastInsertRowid, `${link.label} | ${entry.source_name} | ${entry.entry_date} | ${entry.quantity_liters} لتر`);
+      writeAutomaticBackup("external-diesel-link-create");
+      res.json({ ok:true, id:result.lastInsertRowid, message:"تم حفظ تعبئة السولار بنجاح" });
+    } catch (error) {
+      res.status(500).json({ ok:false, message:"فشل حفظ تعبئة السولار", error:error.message });
+    }
   });
 
   app.get("/api/external-diesel/sources", requireAuth, (req, res) => {
