@@ -224,11 +224,27 @@ function installExternalDiesel(app, { db, requireAuth, requireRole, audit, write
         GROUP BY source_name
         ORDER BY MAX(entry_date) DESC, source_name
       `).all();
+      const suggestions = db.prepare(`
+        SELECT source_name,driver_name,vehicle_number,COUNT(*) AS usage_count,MAX(entry_date) AS latest_date,MAX(id) AS latest_id
+        FROM external_diesel_entries
+        WHERE TRIM(driver_name)<>'' AND TRIM(vehicle_number)<>''
+        GROUP BY source_name,driver_name,vehicle_number
+        ORDER BY latest_date DESC,latest_id DESC,usage_count DESC
+        LIMIT 1000
+      `).all();
+      const dailyMap = new Map();
+      entries.forEach((entry) => dailyMap.set(entry.entry_date, Number(dailyMap.get(entry.entry_date) || 0) + Number(entry.quantity_liters || 0)));
+      const daily_totals = [...dailyMap].map(([entry_date, quantity_liters]) => ({
+        entry_date,
+        quantity_liters:Number(quantity_liters.toFixed(2))
+      })).sort((a,b) => String(b.entry_date).localeCompare(String(a.entry_date)));
       res.setHeader("Cache-Control", "no-store");
       res.json({
         ok:true,
         entries,
         sources,
+        suggestions,
+        daily_totals,
         summary:{
           entries_count:entries.length,
           days_count:days.size,
