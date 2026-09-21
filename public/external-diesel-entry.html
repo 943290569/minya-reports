@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/style.css?v=external-diesel-entry-v1">
   <style>
     body{margin:0;background:#f4f7f5;color:#17382d;font-family:Tahoma,Arial,sans-serif}
-    .fuel-entry-shell{width:min(760px,calc(100% - 24px));margin:24px auto 48px}
+    .fuel-entry-shell{width:min(1180px,calc(100% - 24px));margin:24px auto 48px}
     .fuel-entry-card{background:#fff;border:1px solid #d8e5df;border-radius:16px;padding:20px;box-shadow:0 8px 28px rgba(20,70,52,.07)}
     .fuel-entry-brand{text-align:center;margin-bottom:18px}
     .fuel-entry-brand img{width:92px;height:92px;object-fit:contain;border-radius:18px}
@@ -39,7 +39,7 @@
     .fuel-history-summary span{display:block;font-size:12px;color:#65766f}
     .fuel-history-summary strong{display:block;margin-top:4px;font-size:18px}
     .fuel-table-wrap{overflow:auto;border:1px solid #dde7e2;border-radius:10px}
-    .fuel-table{width:100%;border-collapse:separate;border-spacing:0;min-width:920px}
+    .fuel-table{width:100%;border-collapse:separate;border-spacing:0;min-width:980px}
     .fuel-table th,.fuel-table td{padding:9px;border-bottom:1px solid #e5ece8;text-align:center;font-size:13px}
     .fuel-table th{background:#eef5f1}
     .fuel-history-empty{text-align:center;padding:14px;color:#6d7d77}
@@ -51,10 +51,10 @@
     .fuel-row-actions button{flex:0 0 auto;min-width:68px;padding:7px 10px;min-height:36px;border-radius:8px;font:inherit;font-weight:800;white-space:nowrap}
     .fuel-edit-btn{background:#eef6f2;color:#17593f;border:1px solid #bed7cb}
     .fuel-delete-btn{background:#fff1f1;color:#a51d1d;border:1px solid #efc8c8}
-    .fuel-table th:last-child,.fuel-table td:last-child{min-width:160px;width:160px;white-space:nowrap;position:sticky;left:0;z-index:3;background:#fff;box-shadow:-6px 0 10px rgba(20,70,52,.08)}
-    .fuel-table th:last-child{z-index:5;background:#eef5f1}
-    .fuel-day-total td:last-child{background:#eef6f2}
-    @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}.fuel-history-filters{grid-template-columns:1fr}.fuel-history-summary{grid-template-columns:1fr 1fr}.fuel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.fuel-table{min-width:900px}.fuel-table th:last-child,.fuel-table td:last-child{min-width:140px;width:140px}.fuel-row-actions{min-width:132px}.fuel-row-actions button{min-width:62px;padding:8px 7px}}
+    .fuel-table th:first-child,.fuel-table td:first-child{min-width:160px;width:160px;white-space:nowrap;position:sticky;right:0;z-index:3;background:#fff;box-shadow:6px 0 10px rgba(20,70,52,.08)}
+    .fuel-table th:first-child{z-index:5;background:#eef5f1}
+    .fuel-day-total td:first-child{background:#eef6f2}
+    @media(max-width:600px){.fuel-entry-shell{width:calc(100% - 14px);margin-top:8px}.fuel-entry-card{padding:14px}.fuel-entry-grid{grid-template-columns:1fr}.fuel-entry-grid .wide{grid-column:auto}.fuel-entry-actions{flex-direction:column}.fuel-entry-brand h1{font-size:20px}.fuel-history-filters{grid-template-columns:1fr}.fuel-history-summary{grid-template-columns:1fr 1fr}.fuel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.fuel-table{min-width:900px}.fuel-table th:first-child,.fuel-table td:first-child{min-width:140px;width:140px}.fuel-row-actions{min-width:132px}.fuel-row-actions button{min-width:62px;padding:8px 7px}}
   </style>
 </head>
 <body>
@@ -120,7 +120,7 @@
         </div>
         <div class="fuel-table-wrap">
           <table class="fuel-table">
-            <thead><tr><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+            <thead><tr><th>إجراء</th><th>التاريخ</th><th>الشركة</th><th>السائق</th><th>المركبة</th><th>الكمية</th><th>الوصل</th><th>ملاحظات</th></tr></thead>
             <tbody id="fuelHistoryBody"><tr><td colspan="8" class="fuel-history-empty">جاري التحميل...</td></tr></tbody>
           </table>
         </div>
@@ -214,9 +214,9 @@
         });
         const html=[];
         groups.forEach((entries,date)=>{
-          entries.forEach(e=>html.push('<tr><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td><td><div class="fuel-row-actions"><button type="button" class="fuel-edit-btn" data-edit-id="'+e.id+'">تعديل</button><button type="button" class="fuel-delete-btn" data-delete-id="'+e.id+'">حذف</button></div></td></tr>'));
+          entries.forEach(e=>html.push('<tr><td><div class="fuel-row-actions"><button type="button" class="fuel-edit-btn" data-edit-id="'+e.id+'">تعديل</button><button type="button" class="fuel-delete-btn" data-delete-id="'+e.id+'">حذف</button></div></td><td>'+esc(fmtDate(e.entry_date))+'</td><td>'+esc(e.source_name)+'</td><td>'+esc(e.driver_name)+'</td><td>'+esc(e.vehicle_number)+'</td><td>'+fmt(e.quantity_liters)+'</td><td>'+esc(e.receipt_number||"-")+'</td><td>'+esc(e.notes||"-")+'</td></tr>'));
           const total=entries.reduce((sum,e)=>sum+Number(e.quantity_liters||0),0);
-          html.push('<tr class="fuel-day-total"><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+' لتر</td><td colspan="3"></td></tr>');
+          html.push('<tr class="fuel-day-total"><td></td><td colspan="4">مجموع يوم '+esc(fmtDate(date))+'</td><td>'+fmt(total)+' لتر</td><td colspan="2"></td></tr>');
         });
         historyBody.innerHTML=html.join("");
         historyBody.querySelectorAll("[data-edit-id]").forEach(button=>button.addEventListener("click",()=>startEdit(Number(button.dataset.editId))));
