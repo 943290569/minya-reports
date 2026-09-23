@@ -312,7 +312,12 @@ app.use((req, res, next) => {
   res.setHeader("Cache-Control", versioned ? "public, max-age=31536000, immutable" : "public, max-age=0");
   return res.sendFile(encodedPath);
 });
-app.use(express.static(path.join(__dirname, "public"), {
+  app.get("/more", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "more.html"));
+  });
+
+  app.use(express.static(path.join(__dirname, "public"), {
+
   setHeaders(res, filePath) {
     const versioned = /(?:\?|&)v=/.test(res.req?.originalUrl || "");
     if (versioned && /\.(?:css|js)$/i.test(filePath)) {
