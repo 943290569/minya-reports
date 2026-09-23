@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "framework": null,
+  "framework": "other",
   "buildCommand": "npm run build:app",
   "installCommand": "npm install",
   "outputDirectory": "public",
