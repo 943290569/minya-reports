@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919d";
+const MINYA_ASSET_VERSION = "3.8.0-20260923-reference-layout-v3";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -265,7 +265,8 @@ document.documentElement.style.setProperty("--appearance-line-height", String(wi
   "js/app-english-digits.js",
   "js/app-date-display.js",
   "js/app-appearance-settings.js",
-  "js/app-review-polish.js"
+  "js/app-review-polish.js",
+  "js/app-reference-layout-v3.js"
 ].forEach((src) => {
   const versionedSrc = `${src}?v=${MINYA_ASSET_VERSION}`;
   document.write(`<script defer src="${versionedSrc}"><\/script>`);
@@ -313,7 +314,8 @@ document.documentElement.style.setProperty("--appearance-line-height", String(wi
   "period-linked-summary.css",
   "management-suite.css",
   "equipment-management.css",
-  "cloud-files.css"
+  "cloud-files.css",
+  "reference-layout-v3.css"
 ].forEach((href) => {
   if (!document.querySelector(`link[href^="${href}"]`)) {
     const link = document.createElement("link");
