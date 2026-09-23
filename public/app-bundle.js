@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919c";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919d";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -588,6 +588,76 @@ function updateDailySummary() {
 ;
 
 /* ===== js/app-form.js ===== */
+/* Full local draft + input validation for the daily report. */
+const LOCAL_REPORT_DRAFT_KEY = "minya_daily_report_draft_v2";
+let localReportDraftTimer = 0;
+
+function scheduleLocalReportDraft() {
+  if ((location.pathname.replace(/\/+$/, "") || "/") !== "/report" || editingId !== null || new URLSearchParams(location.search).has("edit")) return;
+  clearTimeout(localReportDraftTimer);
+  localReportDraftTimer = setTimeout(() => {
+    try {
+      const payload = buildPayload();
+      if (!payload.report_date && !payload.notes && !payload.total_waste_tons && !payload.total_trucks && !payload.total_diesel) return;
+      localStorage.setItem(LOCAL_REPORT_DRAFT_KEY, JSON.stringify({ saved_at: Date.now(), payload }));
+    } catch {}
+  }, 450);
+}
+
+function clearLocalReportDraft() {
+  try { localStorage.removeItem(LOCAL_REPORT_DRAFT_KEY); } catch {}
+}
+
+function median(values) {
+  const rows = values.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+  if (!rows.length) return 0;
+  const middle = Math.floor(rows.length / 2);
+  return rows.length % 2 ? rows[middle] : (rows[middle - 1] + rows[middle]) / 2;
+}
+
+async function getReportInputWarnings(payload) {
+  const warnings = [];
+  if (Number(payload.total_waste_tons || 0) === 0) warnings.push("كمية النفايات تساوي صفرًا");
+  if (Number(payload.total_trucks || 0) === 0) warnings.push("عدد الشاحنات يساوي صفرًا");
+  try {
+    const response = await fetch("/api/reports", { cache:"no-store" });
+    const data = await response.json();
+    const prior = (Array.isArray(data.reports) ? data.reports : [])
+      .filter(row => String(row.report_date || "") < payload.report_date)
+      .sort((a,b)=>String(b.report_date||"").localeCompare(String(a.report_date||"")))
+      .slice(0,14);
+    if (prior.length >= 5) {
+      const wasteMedian = median(prior.map(row=>row.total_waste_tons));
+      const truckMedian = median(prior.map(row=>row.total_trucks));
+      const waste = Number(payload.total_waste_tons || 0), trucks = Number(payload.total_trucks || 0);
+      if (wasteMedian > 0 && waste > 0 && Math.abs(waste - wasteMedian) / wasteMedian >= 0.5) warnings.push(`كمية النفايات تختلف ${Math.round(Math.abs(waste-wasteMedian)/wasteMedian*100)}% عن وسيط آخر ${prior.length} تقارير`);
+      if (truckMedian > 0 && trucks > 0 && Math.abs(trucks - truckMedian) / truckMedian >= 0.5) warnings.push(`عدد الشاحنات يختلف ${Math.round(Math.abs(trucks-truckMedian)/truckMedian*100)}% عن وسيط آخر ${prior.length} تقارير`);
+    }
+  } catch {}
+  return warnings;
+}
+
+function restoreLocalReportDraft() {
+  if ((location.pathname.replace(/\/+$/, "") || "/") !== "/report" || editingId !== null || new URLSearchParams(location.search).has("edit") || document.getElementById("reportDate")?.value) return;
+  try {
+    const stored = JSON.parse(localStorage.getItem(LOCAL_REPORT_DRAFT_KEY) || "null");
+    if (!stored?.payload || Date.now() - Number(stored.saved_at || 0) > 48 * 3600000) return;
+    const p = stored.payload;
+    document.getElementById("reportDate").value = p.report_date || "";
+    document.getElementById("weather").value = p.weather || "مشمس";
+    document.getElementById("temperature").value = Number(p.temperature ?? 10);
+    document.getElementById("startTime").value = p.start_time || "04:00";
+    document.getElementById("endTime").value = p.end_time || "19:00";
+    document.getElementById("notes").value = p.notes || "";
+    if (Array.isArray(p.crews) && p.crews.length) crews = p.crews;
+    if (Array.isArray(p.operations) && p.operations.length) operations = p.operations;
+    if (Array.isArray(p.stations) && p.stations.length) stations = p.stations;
+    if (Array.isArray(p.equipment) && p.equipment.length) equipment = p.equipment;
+    renderAll();
+    showMessage("تم استعادة مسودة محلية كاملة محفوظة خلال آخر 48 ساعة");
+  } catch {}
+}
+
 /* =========================================================
    تحديث الحقول
 ========================================================= */
@@ -660,6 +730,7 @@ document.addEventListener(
     }
 
     updateDailySummary();
+    scheduleLocalReportDraft();
   }
 );
 
@@ -692,8 +763,13 @@ document.addEventListener(
     }
 
     updateDailySummary();
+    scheduleLocalReportDraft();
   }
 );
+
+document.addEventListener("input", (event) => { if (["reportDate","weather","temperature","startTime","endTime","notes"].includes(event.target?.id)) scheduleLocalReportDraft(); }, true);
+document.addEventListener("change", (event) => { if (["reportDate","weather","temperature","startTime","endTime","notes"].includes(event.target?.id)) scheduleLocalReportDraft(); }, true);
+document.addEventListener("DOMContentLoaded", () => setTimeout(restoreLocalReportDraft, 180), { once:true });
 
 /* =========================================================
    Payload
@@ -777,6 +853,12 @@ async function saveReport() {
       return;
     }
 
+    const warnings = await getReportInputWarnings(payload);
+    if (warnings.length && !confirm(`راجع القيم قبل الحفظ:\n- ${warnings.join("\n- ")}\n\nهل تريد متابعة الحفظ؟`)) {
+      showMessage("تم إيقاف الحفظ للمراجعة");
+      return;
+    }
+
     const url =
       wasEditing
         ? `${API}/api/reports/${editingId}`
@@ -832,6 +914,7 @@ async function saveReport() {
       "تحديث التقرير";
 
     updateDailySummary();
+    if (!wasEditing) clearLocalReportDraft();
 
     if (wasEditing) {
       await loadArchive(false);
@@ -2058,6 +2141,7 @@ async function deleteReport(id) {
 }
 
 function resetNewReport() {
+  if (typeof clearLocalReportDraft === "function") clearLocalReportDraft();
   editingId = null;
   document.getElementById("reportDate").value = "";
   document.getElementById("weather").value = "مشمس";
@@ -5440,7 +5524,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const section=document.createElement('section');
     section.id='todayOperationsSection';
     section.className='today-operations';
-    section.innerHTML=`<div class="today-operations-head"><div><span>TODAY</span><h3>حالة التشغيل اليوم</h3><p id="todayOperationsDate">-</p></div><a href="/report">فتح تقرير اليوم</a></div><div class="today-operations-grid"><div><span>النفايات</span><strong id="todayWaste">—</strong><small>طن</small></div><div><span>الشاحنات</span><strong id="todayTrucks">—</strong></div><div><span>السولار</span><strong id="todayDiesel">—</strong><small>لتر</small></div><div><span>المعدات المتوقفة</span><strong id="todayStopped">—</strong></div><div><span>حالة التقرير</span><strong id="todayReportState">غير محفوظ</strong></div></div><div id="todayStoppedList" class="today-stopped-list"></div>`;
+    section.innerHTML=`<div class="today-operations-head"><div><span>TODAY</span><h3>حالة التشغيل اليوم</h3><p id="todayOperationsDate">-</p></div><a href="/report">فتح تقرير اليوم</a></div><div class="today-operations-grid"><div><span>النفايات</span><strong id="todayWaste">—</strong><small>طن</small></div><div><span>الشاحنات</span><strong id="todayTrucks">—</strong></div><div><span>السولار</span><strong id="todayDiesel">—</strong><small>لتر</small></div><div><span>المعدات المتوقفة</span><strong id="todayStopped">—</strong></div><div><span>حالة التقرير</span><strong id="todayReportState">غير محفوظ</strong></div></div><div id="todayComparisons" class="today-comparisons"></div><div id="todayStoppedList" class="today-stopped-list"></div>`;
     const executive=document.getElementById('executiveDashboardSection');
     if(executive) home.insertBefore(section,executive); else home.prepend(section);
     return section;
@@ -5451,6 +5535,24 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     try{
       const r=await fetch('/api/reports',{cache:'no-store'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'load failed');
       const reports=Array.isArray(d.reports)?d.reports:[];const row=reports.find(x=>String(x.report_date||'')===today);
+      const reportMap=new Map(reports.map(x=>[String(x.report_date||''),x]));
+      const pct=(current,previous)=>{const a=Number(current||0),b=Number(previous||0);if(!b)return null;return ((a-b)/b)*100;};
+      const pctText=value=>value==null?'—':`${value>=0?'+':''}${value.toFixed(1)}%`;
+      const sum=(items,key)=>items.reduce((s,x)=>s+Number(x[key]||0),0);
+      const comparison=document.getElementById('todayComparisons');
+      const todayDate=new Date(`${today}T00:00:00Z`),yesterday=new Date(todayDate.getTime()-86400000).toISOString().slice(0,10),yRow=reportMap.get(yesterday);
+      const [year,month,day]=today.split('-').map(Number);
+      const prevMonthDate=new Date(Date.UTC(year,month-2,1)),prevMonthKey=`${prevMonthDate.getUTCFullYear()}-${String(prevMonthDate.getUTCMonth()+1).padStart(2,'0')}`;
+      const currentMonthKey=today.slice(0,7),currentMonth=reports.filter(x=>String(x.report_date||'').startsWith(currentMonthKey)&&Number(String(x.report_date).slice(8,10))<=day);
+      const pairedMonth=currentMonth.map(x=>({a:x,b:reportMap.get(`${prevMonthKey}-${String(x.report_date).slice(8,10)}`)})).filter(x=>x.b);
+      const pairedYear=reports.filter(x=>String(x.report_date||'').startsWith(`${year}-`)&&String(x.report_date)<=today).map(x=>({a:x,b:reportMap.get(`${year-1}${String(x.report_date).slice(4)}`)})).filter(x=>x.b);
+      const monthWaste=pct(sum(pairedMonth.map(x=>x.a),'total_waste_tons'),sum(pairedMonth.map(x=>x.b),'total_waste_tons'));
+      const yearWaste=pct(sum(pairedYear.map(x=>x.a),'total_waste_tons'),sum(pairedYear.map(x=>x.b),'total_waste_tons'));
+      comparison.innerHTML=`
+        <div><span>اليوم مقابل أمس</span><strong>${yRow?pctText(pct(row?.total_waste_tons,yRow.total_waste_tons)):'لا توجد بيانات أمس'}</strong><small>النفايات${yRow?' · يوم مقابل يوم':''}</small></div>
+        <div><span>الشهر مقابل السابق</span><strong>${pctText(monthWaste)}</strong><small>النفايات · ${pairedMonth.length} يومًا متقابلًا</small></div>
+        <div><span>السنة مقابل السابقة</span><strong>${pctText(yearWaste)}</strong><small>النفايات · ${pairedYear.length} يومًا متقابلًا</small></div>
+      `;
       if(!row){shell.dataset.state='missing';document.getElementById('todayReportState').textContent='غير مسجّل';return;}
       document.getElementById('todayWaste').textContent=fmt(row.total_waste_tons);
       document.getElementById('todayTrucks').textContent=fmt(row.total_trucks);
