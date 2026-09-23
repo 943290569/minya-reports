@@ -1,17 +1,8 @@
 {
   "version": 2,
   "framework": null,
-  "builds": [
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
-  ],
+  "buildCommand": "npm run build:app",
+  "installCommand": "npm install",
+  "outputDirectory": "public",
   "cleanUrls": true
 }
