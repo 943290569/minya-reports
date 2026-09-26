@@ -44,42 +44,81 @@ h1, h2, h3, h4, .top-header h1, .panel > h2, .v3-hero h2 {
 
 /* ---------- Header ---------- */
 .top-header {
-  background: linear-gradient(120deg, #063527 0%, #0f8a63 58%, #17a077 100%) !important;
-  border-bottom: none !important;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 12px 32px rgba(6, 40, 30, .22) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 60 !important;
+  background: linear-gradient(125deg, #04241b 0%, #0a5c42 42%, #0f8a63 78%, #17b087 100%) !important;
+  background-size: 140% 140% !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .1) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .1) inset, 0 16px 40px -8px rgba(4, 30, 22, .38) !important;
+  backdrop-filter: saturate(140%) blur(6px);
+}
+
+.header-identity {
+  gap: 14px !important;
 }
 
 .header-brand-logo {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
-  background: rgba(255, 255, 255, .08);
+  border-radius: 14px !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .22), 0 0 0 1px rgba(255, 255, 255, .14) inset;
+  background: rgba(255, 255, 255, .1);
+  padding: 4px;
+}
+
+.top-header h1 {
+  font-weight: 800 !important;
+  letter-spacing: -.3px !important;
+}
+
+.top-header .header-identity-copy p {
+  color: rgba(255, 255, 255, .72) !important;
+  font-weight: 500 !important;
+}
+
+.top-header nav {
+  gap: 8px !important;
 }
 
 .top-header nav button,
 .top-header .app-nav-link {
-  background: rgba(255, 255, 255, .08) !important;
-  border: 1px solid rgba(255, 255, 255, .16) !important;
+  background: rgba(255, 255, 255, .07) !important;
+  border: 1px solid rgba(255, 255, 255, .14) !important;
   border-radius: 999px !important;
   font-weight: 700 !important;
+  font-size: 13.5px !important;
+  letter-spacing: -.1px;
   position: relative;
-  transition: background .18s ease, transform .18s ease, border-color .18s ease !important;
+  backdrop-filter: blur(4px);
+  transition: background .18s ease, transform .18s ease, border-color .18s ease, box-shadow .18s ease !important;
 }
 .top-header nav button:hover,
 .top-header .app-nav-link:hover {
-  background: rgba(255, 255, 255, .18) !important;
-  border-color: rgba(255, 255, 255, .3) !important;
+  background: rgba(255, 255, 255, .16) !important;
+  border-color: rgba(255, 255, 255, .32) !important;
   transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(4, 30, 22, .28) !important;
 }
 .top-header .app-nav-link.active {
   background: #ffffff !important;
   color: var(--primary-dark) !important;
   border-color: #ffffff !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, .18) !important;
+  box-shadow: 0 8px 20px rgba(4, 30, 22, .32) !important;
 }
 
 .minya-desktop-more-button,
 #minyaMenuButton {
   border-radius: 999px !important;
+  background: rgba(255, 255, 255, .07) !important;
+  border: 1px solid rgba(255, 255, 255, .14) !important;
+}
+.minya-desktop-more-button:hover,
+#minyaMenuButton:hover {
+  background: rgba(255, 255, 255, .16) !important;
+}
+.minya-desktop-more-button.active {
+  background: #ffffff !important;
+  color: var(--primary-dark) !important;
+  border-color: #ffffff !important;
 }
 .minya-desktop-more-panel,
 .minya-header-menu {
@@ -87,16 +126,22 @@ h1, h2, h3, h4, .top-header h1, .panel > h2, .v3-hero h2 {
   box-shadow: var(--shadow-lg) !important;
   border: 1px solid var(--border) !important;
   overflow: hidden;
+  animation: minyaMenuIn .16s ease;
+}
+@keyframes minyaMenuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .minya-menu-item {
   border-radius: 0 !important;
-  transition: background .15s ease !important;
+  transition: background .15s ease, padding-right .15s ease !important;
 }
-.minya-menu-item:hover { background: var(--primary-soft) !important; }
+.minya-menu-item:hover { background: var(--primary-soft) !important; padding-right: 18px !important; }
 .minya-menu-item.active {
   background: var(--primary-soft) !important;
   color: var(--primary-dark) !important;
   font-weight: 800 !important;
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 /* ---------- Panels / Cards ---------- */
