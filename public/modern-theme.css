@@ -111,6 +111,60 @@ h1, h2, h3, h4, .top-header h1, .panel > h2, .v3-hero h2 {
   background: rgba(255, 255, 255, .07) !important;
   border: 1px solid rgba(255, 255, 255, .14) !important;
 }
+
+/* ---------- Header — desktop refinement ---------- */
+@media (min-width: 761px) {
+  .top-header {
+    padding: 20px 30px !important;
+    row-gap: 16px !important;
+  }
+
+  .header-identity {
+    gap: 18px !important;
+  }
+
+  .header-brand-logo {
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  .top-header h1 {
+    font-size: 22px !important;
+  }
+
+  .top-header .header-identity-copy p {
+    font-size: 13px !important;
+    margin-top: 2px !important;
+  }
+
+  .top-header nav {
+    background: rgba(255, 255, 255, .06) !important;
+    border: 1px solid rgba(255, 255, 255, .12) !important;
+    border-radius: 999px !important;
+    padding: 6px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06) !important;
+  }
+
+  .top-header nav button,
+  .top-header .app-nav-link {
+    padding: 8px 16px !important;
+  }
+
+  /* Group the logout / user / notification cluster into one tidy pill row
+     instead of the legacy stacked-in-the-corner layout. */
+  .top-header {
+    position: relative !important;
+  }
+  #minyaLogoutBtn,
+  body .minya-user-box,
+  body .top-header > .minya-notification-host {
+    position: absolute !important;
+    top: 20px !important;
+  }
+  #minyaLogoutBtn { left: 30px !important; }
+  body .minya-user-box { left: 100px !important; }
+  body .top-header > .minya-notification-host { left: 240px !important; }
+}
 .minya-desktop-more-button:hover,
 #minyaMenuButton:hover {
   background: rgba(255, 255, 255, .16) !important;
