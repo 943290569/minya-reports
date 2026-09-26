@@ -127,3 +127,73 @@
   .today-comparisons strong { display:block;margin:4px 0;font-size:1.15rem; }
 }
 @media screen and (max-width:760px) { .today-comparisons { grid-template-columns:1fr; } }
+
+/* Unified interaction language for every existing route. Presentation only. */
+@media screen {
+  :root {
+    --ui-green-strong: #0f5c43;
+    --ui-green: #176b4f;
+    --ui-green-soft: #eaf6f0;
+    --ui-line: #dce7e1;
+    --ui-ink: #172a22;
+  }
+
+  .container, main.container { position: relative; }
+  .panel, .v3-panel, .drive-panel, .summary-box {
+    border: 1px solid var(--ui-line) !important;
+    box-shadow: 0 8px 24px rgba(20, 56, 42, .055) !important;
+  }
+
+  :is(.panel, .v3-panel, .drive-panel) > :is(h1, h2, h3) {
+    color: var(--ui-ink);
+    letter-spacing: -.15px;
+  }
+
+  :is(button, .app-nav-link, .minya-menu-item) {
+    min-height: 42px;
+    touch-action: manipulation;
+  }
+  :is(button, .app-nav-link):not(:disabled):hover {
+    filter: brightness(1.035);
+  }
+  :is(input, select, textarea) {
+    border-color: #cbdad2;
+    background-color: #fff;
+  }
+  :is(input, select, textarea):focus {
+    border-color: var(--ui-green) !important;
+    box-shadow: 0 0 0 4px rgba(23, 107, 79, .12) !important;
+  }
+
+  .v3-table-wrap, .report-table-scroll, .me-table-wrap {
+    border: 1px solid var(--ui-line);
+    border-radius: 12px;
+    background: #fff;
+  }
+  :is(.v3-table, .report-table, .me-table) thead th {
+    background: #f2f8f5 !important;
+    color: #28463a !important;
+    border-bottom-color: #cfe0d7 !important;
+  }
+  :is(.v3-table, .report-table, .me-table) tbody tr:nth-child(even) {
+    background: #fbfdfc;
+  }
+
+  .message:not(:empty), .review-note {
+    border-inline-start-color: var(--ui-green) !important;
+    background: var(--ui-green-soft);
+  }
+
+  .minya-menu-item.active, .minya-menu-item:focus-visible {
+    background: var(--ui-green-soft) !important;
+    color: var(--ui-green-strong) !important;
+    border-color: #c8e4d5 !important;
+  }
+}
+
+@media screen and (max-width:760px) {
+  .container { margin-inline: auto; }
+  .panel, .v3-panel, .drive-panel { border-radius: 12px !important; }
+  .actions, .monthly-actions { position: static !important; }
+  :is(.v3-table-wrap, .report-table-scroll, .me-table-wrap) { scrollbar-width: thin; }
+}
