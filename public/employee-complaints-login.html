@@ -1,4 +1,23 @@
 <!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>دخول إدارة الشكاوى</title><link rel="stylesheet" href="/employee-complaints.css?v=2"></head>
-<body><main class="complaint-shell"><section class="complaint-card"><div class="brand">المجلس المشترك لإدارة النفايات الصلبة</div><h1>دخول إدارة الشكاوى</h1><p class="lead">هذه الصفحة مخصصة لموظف تقييم ومتابعة شكاوى الموظفين فقط.</p>
+<body><main class="complaint-shell"><section class="complaint-card"><div class="brand">المجلس المشترك لإدارة النفايات الصلبة</div><h1>دخول إدارة الشكاوى</h1><p class="lead">يمكن الدخول بحساب مسؤول الشكاوى المستقل أو بحساب المدير أو المحرر في النظام.</p>
 <form id="f"><label>اسم المستخدم<input id="u" autocomplete="username" required></label><label>كلمة المرور<input id="p" type="password" autocomplete="current-password" required></label><button id="b">دخول</button><div id="m" class="message"></div></form></section></main>
-<script>f.onsubmit=async e=>{e.preventDefault();b.disabled=true;m.textContent="";try{const r=await fetch("/api/employee-complaints-auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u.value.trim(),password:p.value})});const d=await r.json();if(!r.ok)throw new Error(d.message||"تعذر تسجيل الدخول");location.href="/employee-complaints-admin.html"}catch(x){m.textContent=x.message}finally{b.disabled=false}};</script></body></html>
+<script>
+f.onsubmit=async e=>{
+  e.preventDefault();b.disabled=true;m.textContent="";
+  const credentials={username:u.value.trim(),password:p.value};
+  try{
+    let r=await fetch("/api/employee-complaints-auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(credentials)});
+    let d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok){location.href="/employee-complaints-admin.html";return}
+    r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(credentials)});
+    d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok)throw new Error("اسم المستخدم أو كلمة المرور غير صحيحة.");
+    if(!["admin","editor"].includes(d.user?.role)){
+      await fetch("/api/auth/logout",{method:"POST"}).catch(()=>{});
+      throw new Error("هذا الحساب لا يملك صلاحية إدارة الشكاوى.");
+    }
+    location.href="/employee-complaints-admin.html";
+  }catch(x){m.textContent=x.message||"تعذر تسجيل الدخول."}
+  finally{b.disabled=false}
+};
+</script></body></html>
