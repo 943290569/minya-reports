@@ -1,0 +1,239 @@
+/* =========================================================
+   Modern Theme — site-wide visual refresh
+   Loaded after style.css / v3.css / review-improvements.css.
+   Redefines shared tokens + header/nav/buttons/cards/forms/
+   tables/auth so every page (index, archive, monthly, system,
+   auth, vehicles, maintenance, etc.) inherits one current look.
+========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg: #f3f6f9;
+  --surface: #ffffff;
+  --surface-soft: #f7f9fc;
+  --border: #e3e8ef;
+  --border-strong: #ccd4e0;
+  --text: #151b24;
+  --muted: #64748b;
+  --primary: #0f8a63;
+  --primary-dark: #0a5c42;
+  --primary-soft: #e7f6ef;
+  --blue: #2f6fed;
+  --danger: #d0362c;
+  --warning: #b8790f;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+  --shadow-md: 0 10px 28px rgba(15, 23, 42, .07);
+  --shadow-lg: 0 22px 48px rgba(15, 23, 42, .12);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+}
+
+html, body,
+button, input, select, textarea,
+.minya-menu-item, #minyaMenuButton, #minyaLogoutBtn, .app-nav-link,
+.v3-table, .v3-panel, .auth-card {
+  font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
+}
+
+h1, h2, h3, h4, .top-header h1, .panel > h2, .v3-hero h2 {
+  font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
+  letter-spacing: -.2px;
+}
+
+/* ---------- Header ---------- */
+.top-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 60 !important;
+  background: linear-gradient(125deg, #04241b 0%, #0a5c42 42%, #0f8a63 78%, #17b087 100%) !important;
+  background-size: 140% 140% !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .1) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .1) inset, 0 16px 40px -8px rgba(4, 30, 22, .38) !important;
+  backdrop-filter: saturate(140%) blur(6px);
+}
+
+.header-identity {
+  gap: 14px !important;
+}
+
+.header-brand-logo {
+  border-radius: 14px !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .22), 0 0 0 1px rgba(255, 255, 255, .14) inset;
+  background: rgba(255, 255, 255, .1);
+  padding: 4px;
+}
+
+.top-header h1 {
+  font-weight: 800 !important;
+  letter-spacing: -.3px !important;
+}
+
+.top-header .header-identity-copy p {
+  color: rgba(255, 255, 255, .72) !important;
+  font-weight: 500 !important;
+}
+
+.top-header nav {
+  gap: 8px !important;
+}
+
+.top-header nav button,
+.top-header .app-nav-link {
+  background: rgba(255, 255, 255, .07) !important;
+  border: 1px solid rgba(255, 255, 255, .14) !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  font-size: 13.5px !important;
+  letter-spacing: -.1px;
+  position: relative;
+  backdrop-filter: blur(4px);
+  transition: background .18s ease, transform .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+}
+.top-header nav button:hover,
+.top-header .app-nav-link:hover {
+  background: rgba(255, 255, 255, .16) !important;
+  border-color: rgba(255, 255, 255, .32) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(4, 30, 22, .28) !important;
+}
+.top-header .app-nav-link.active {
+  background: #ffffff !important;
+  color: var(--primary-dark) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(4, 30, 22, .32) !important;
+}
+
+.minya-desktop-more-button,
+#minyaMenuButton {
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .07) !important;
+  border: 1px solid rgba(255, 255, 255, .14) !important;
+}
+.minya-desktop-more-button:hover,
+#minyaMenuButton:hover {
+  background: rgba(255, 255, 255, .16) !important;
+}
+.minya-desktop-more-button.active {
+  background: #ffffff !important;
+  color: var(--primary-dark) !important;
+  border-color: #ffffff !important;
+}
+.minya-desktop-more-panel,
+.minya-header-menu {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--border) !important;
+  overflow: hidden;
+  animation: minyaMenuIn .16s ease;
+}
+@keyframes minyaMenuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.minya-menu-item {
+  border-radius: 0 !important;
+  transition: background .15s ease, padding-right .15s ease !important;
+}
+.minya-menu-item:hover { background: var(--primary-soft) !important; padding-right: 18px !important; }
+.minya-menu-item.active {
+  background: var(--primary-soft) !important;
+  color: var(--primary-dark) !important;
+  font-weight: 800 !important;
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+/* ---------- Panels / Cards ---------- */
+.panel, .v3-panel {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+.panel > h2::before { background: linear-gradient(180deg, var(--primary), #34c491) !important; }
+
+.v3-hero {
+  background: linear-gradient(120deg, #063527 0%, #0f8a63 60%, #1cae82 100%) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Flat, stripe-free summary cards */
+.daily-summary > div, .archive-summary > div, .monthly-summary > div {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-sm) !important;
+  background: var(--surface) !important;
+}
+.daily-summary > div::after, .archive-summary > div::after, .monthly-summary > div::after {
+  content: none !important;
+}
+.daily-summary strong, .archive-summary strong, .monthly-summary strong {
+  color: var(--primary-dark) !important;
+}
+
+.archive-filters { border-radius: var(--radius-md) !important; }
+
+/* ---------- Buttons ---------- */
+button {
+  border-radius: 10px !important;
+}
+#saveBtn, #printMonthlyReportBtn, #exportMonthlyCsvBtn, #exportAnnualCsvBtn,
+#printAnnualReportBtn, .v3-primary, .v3-filter button, .v3-link-btn, .v3-panel button {
+  background: linear-gradient(120deg, var(--primary-dark), var(--primary)) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 20px rgba(15, 138, 99, .22) !important;
+  font-weight: 700 !important;
+}
+button.secondary, #clearArchiveFiltersBtn {
+  background: var(--surface) !important;
+  color: #344054 !important;
+  border: 1px solid var(--border-strong) !important;
+}
+
+/* ---------- Forms ---------- */
+input, select, textarea {
+  border-radius: 10px !important;
+  border-color: var(--border-strong) !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(15, 138, 99, .12) !important;
+}
+
+/* ---------- Tables ---------- */
+table, .v3-table {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+thead th, .v3-table th {
+  background: var(--surface-soft) !important;
+  color: #33415a !important;
+}
+.status-pill { border-radius: 999px !important; font-weight: 700 !important; }
+
+/* ---------- Auth / login ---------- */
+.auth-page {
+  background: linear-gradient(140deg, #052a20 0%, #0f8a63 55%, #1cae82 100%) !important;
+}
+.auth-card {
+  border-radius: 24px !important;
+  box-shadow: 0 36px 90px rgba(4, 30, 22, .32) !important;
+  border: 1px solid rgba(255, 255, 255, .5);
+}
+.auth-card button:not(.secondary) {
+  background: linear-gradient(120deg, var(--primary-dark), var(--primary)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 24px rgba(15, 138, 99, .28) !important;
+}
+.auth-card input {
+  border-radius: 10px !important;
+}
+.auth-card button.secondary {
+  border-radius: 10px !important;
+  background: #f1f5f3 !important;
+  color: #33463d !important;
+}
+
+:focus-visible { outline-color: rgba(47, 111, 237, .35) !important; }
