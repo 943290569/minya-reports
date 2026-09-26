@@ -28,12 +28,121 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
       ON employee_complaints(status,due_date,submitted_at);
     CREATE INDEX IF NOT EXISTS idx_employee_complaints_type
       ON employee_complaints(complaint_type,submitted_at);
+    CREATE TABLE IF NOT EXISTS complaint_reviewers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL DEFAULT '',
+      password_hash TEXT NOT NULL,
+      salt TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS complaint_reviewer_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reviewer_id INTEGER NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(reviewer_id) REFERENCES complaint_reviewers(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_complaint_reviewer_sessions_expires
+      ON complaint_reviewer_sessions(expires_at);
   `);
 
   const TYPES = new Set(["إدارية","مالية","الدوام","المواصلات","بيئة العمل","السلامة","المعدات والأدوات","معاملة وظيفية","أخرى"]);
   const STATUSES = new Set(["new","reviewing","action_taken","responded","closed"]);
   const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
   const attempts = new Map();
+
+  function passwordHash(password, salt) {
+    return crypto.scryptSync(String(password), salt, 64).toString("hex");
+  }
+  function tokenHash(token) {
+    return crypto.createHash("sha256").update(String(token)).digest("hex");
+  }
+  function parseCookies(req) {
+    return String(req.headers.cookie || "").split(";").reduce((acc, part) => {
+      const i = part.indexOf("=");
+      if (i > -1) acc[part.slice(0,i).trim()] = decodeURIComponent(part.slice(i+1).trim());
+      return acc;
+    }, {});
+  }
+  function complaintReviewer(req) {
+    try {
+      db.prepare("DELETE FROM complaint_reviewer_sessions WHERE expires_at < ?").run(new Date().toISOString());
+      const token = parseCookies(req).complaint_session;
+      if (!token) return null;
+      return db.prepare(`SELECT r.id,r.username,r.display_name,r.is_active,s.expires_at
+        FROM complaint_reviewer_sessions s JOIN complaint_reviewers r ON r.id=s.reviewer_id
+        WHERE s.token_hash=?`).get(tokenHash(token)) || null;
+    } catch { return null; }
+  }
+  function requireComplaintReviewer(req, res, next) {
+    const reviewer = complaintReviewer(req);
+    if (!reviewer || !reviewer.is_active || new Date(reviewer.expires_at).getTime() < Date.now()) {
+      return res.status(401).json({ ok:false, message:"يجب تسجيل الدخول إلى إدارة الشكاوى." });
+    }
+    req.complaintReviewer = reviewer;
+    next();
+  }
+  function setComplaintCookie(req, res, token) {
+    const secure = req.secure || String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";
+    res.cookie("complaint_session", token, {
+      httpOnly:true, sameSite:"lax", secure, path:"/", maxAge:12*60*60*1000
+    });
+  }
+
+  app.post("/api/employee-complaints-auth/login", (req,res) => {
+    const username = String(req.body?.username || "").trim().toLowerCase();
+    const password = String(req.body?.password || "");
+    const row = db.prepare("SELECT * FROM complaint_reviewers WHERE lower(username)=? AND is_active=1").get(username);
+    if (!row || passwordHash(password,row.salt) !== row.password_hash) {
+      return res.status(401).json({ ok:false, message:"اسم المستخدم أو كلمة المرور غير صحيحة." });
+    }
+    db.prepare("DELETE FROM complaint_reviewer_sessions WHERE reviewer_id=?").run(row.id);
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now()+12*60*60*1000).toISOString();
+    db.prepare("INSERT INTO complaint_reviewer_sessions(reviewer_id,token_hash,expires_at) VALUES(?,?,?)")
+      .run(row.id,tokenHash(token),expires);
+    setComplaintCookie(req,res,token);
+    res.json({ ok:true, reviewer:{ username:row.username, display_name:row.display_name } });
+  });
+  app.post("/api/employee-complaints-auth/logout", requireComplaintReviewer, (req,res) => {
+    const token = parseCookies(req).complaint_session;
+    if (token) db.prepare("DELETE FROM complaint_reviewer_sessions WHERE token_hash=?").run(tokenHash(token));
+    res.clearCookie("complaint_session",{path:"/"});
+    res.json({ok:true});
+  });
+  app.get("/api/employee-complaints-auth/me", requireComplaintReviewer, (req,res) => {
+    res.json({ok:true,reviewer:{username:req.complaintReviewer.username,display_name:req.complaintReviewer.display_name}});
+  });
+
+  app.get("/api/employee-complaints-reviewer", requireRole("admin"), (req,res) => {
+    const row = db.prepare("SELECT id,username,display_name,is_active,created_at,updated_at FROM complaint_reviewers ORDER BY id LIMIT 1").get();
+    res.json({ok:true,reviewer:row||null});
+  });
+  app.put("/api/employee-complaints-reviewer", requireRole("admin"), (req,res) => {
+    const username = String(req.body?.username || "").trim().toLowerCase();
+    const displayName = String(req.body?.display_name || "").trim().slice(0,120);
+    const password = String(req.body?.password || "");
+    if (!/^[a-zA-Z0-9._-]{3,40}$/.test(username)) return res.status(400).json({ok:false,message:"اسم المستخدم يجب أن يكون من 3 إلى 40 حرفًا أو رقمًا."});
+    if (password.length < 8) return res.status(400).json({ok:false,message:"كلمة المرور يجب ألا تقل عن 8 أحرف."});
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hash = passwordHash(password,salt);
+    const existing = db.prepare("SELECT id FROM complaint_reviewers ORDER BY id LIMIT 1").get();
+    if (existing) {
+      db.prepare("UPDATE complaint_reviewers SET username=?,display_name=?,password_hash=?,salt=?,is_active=1,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+        .run(username,displayName,hash,salt,existing.id);
+      db.prepare("DELETE FROM complaint_reviewer_sessions WHERE reviewer_id=?").run(existing.id);
+      audit(req.user,"RESET_COMPLAINT_REVIEWER","complaint_reviewer",existing.id,username);
+    } else {
+      const r=db.prepare("INSERT INTO complaint_reviewers(username,display_name,password_hash,salt) VALUES(?,?,?,?)")
+        .run(username,displayName,hash,salt);
+      audit(req.user,"CREATE_COMPLAINT_REVIEWER","complaint_reviewer",r.lastInsertRowid,username);
+    }
+    res.json({ok:true});
+  });
 
   function ipOf(req) {
     return String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim().slice(0,120);
@@ -160,7 +269,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     res.json({ ok:true, complaint:publicShape(row) });
   });
 
-  app.get("/api/employee-complaints", requireRole("admin","editor"), (req, res) => {
+  app.get("/api/employee-complaints", requireComplaintReviewer, (req, res) => {
     const status = String(req.query.status || "").trim();
     const type = String(req.query.type || "").trim();
     const where = [], params = [];
@@ -174,7 +283,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     res.json({ ok:true, complaints:db.prepare(sql).all(...params) });
   });
 
-  app.patch("/api/employee-complaints/:id", requireRole("admin","editor"), (req, res) => {
+  app.patch("/api/employee-complaints/:id", requireComplaintReviewer, (req, res) => {
     const id = Number(req.params.id);
     const current = db.prepare("SELECT * FROM employee_complaints WHERE id=?").get(id);
     if (!current) return res.status(404).json({ ok:false, message:"الشكوى غير موجودة." });
@@ -187,11 +296,11 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     const closedAt = status === "closed" ? (current.closed_at || now) : null;
     db.prepare(`UPDATE employee_complaints SET status=?,action_taken=?,response_text=?,responded_at=?,closed_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
       .run(status, actionTaken, responseText, respondedAt, closedAt, id);
-    audit(req.user, "UPDATE_EMPLOYEE_COMPLAINT", "employee_complaint", id, `${current.complaint_no} - ${status}`);
+    audit({id:null,username:`complaints:${req.complaintReviewer.username}`}, "UPDATE_EMPLOYEE_COMPLAINT", "employee_complaint", id, `${current.complaint_no} - ${status}`);
     res.json({ ok:true });
   });
 
-  app.get("/api/employee-complaints/:id/audio", requireRole("admin","editor"), (req, res) => {
+  app.get("/api/employee-complaints/:id/audio", requireComplaintReviewer, (req, res) => {
     const row = db.prepare("SELECT complaint_no,audio_stored_name,audio_original_name,audio_mime_type FROM employee_complaints WHERE id=?").get(Number(req.params.id));
     if (!row || !row.audio_stored_name) return res.status(404).json({ ok:false, message:"لا يوجد تسجيل صوتي." });
     const root = path.resolve(uploadsDir);
