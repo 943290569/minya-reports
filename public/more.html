@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/app-bundle.css?v=3.8.0-20260919">
   <link rel="stylesheet" href="/review-improvements.css?v=20260919-5">
-  <link rel="stylesheet" href="/more.css?v=20260923">
+  <link rel="stylesheet" href="/more.css?v=20260926">
 </head>
 <body>
   <header class="top-header">
@@ -26,51 +26,131 @@
     </nav>
   </header>
 
+  <svg class="more-icon-sprite" aria-hidden="true" style="display:none">
+    <symbol id="mi-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/><path d="M9 12.5h6M9 16h6M9 9h2"/></symbol>
+    <symbol id="mi-week" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></symbol>
+    <symbol id="mi-month" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M7 13.5h10M7 17h6"/></symbol>
+    <symbol id="mi-year" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v8.5l6 3.4"/></symbol>
+    <symbol id="mi-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.6-4.6"/></symbol>
+    <symbol id="mi-gauge" viewBox="0 0 24 24"><path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4-5"/><circle cx="12" cy="15" r="1.3"/></symbol>
+    <symbol id="mi-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6.5v5.7c0 4.3 3 7 7 8.3 4-1.3 7-4 7-8.3V6.5L12 3.5Z"/><path d="m9.3 12.3 2 2 3.4-4"/></symbol>
+    <symbol id="mi-wrench" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 1 0-4.9 5.6L4 17.7l1.8 1.8 5.6-5.6a4 4 0 0 0 5.6-4.9L14 12l-2-2 3-3 .5-.5Z"/></symbol>
+    <symbol id="mi-folder" viewBox="0 0 24 24"><path d="M3.5 6.5a1 1 0 0 1 1-1h4.4l1.6 2h9a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-11.5Z"/></symbol>
+    <symbol id="mi-truck" viewBox="0 0 24 24"><path d="M3 7h10v9H3zM13 11h4l3.5 3v2H13z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></symbol>
+    <symbol id="mi-drop" viewBox="0 0 24 24"><path d="M12 3.5s6 6.6 6 10.6a6 6 0 0 1-12 0c0-4 6-10.6 6-10.6Z"/></symbol>
+    <symbol id="mi-check" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="m8 12.5 3 3 5.5-6.5"/></symbol>
+    <symbol id="mi-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3 12.5h18"/></symbol>
+    <symbol id="mi-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.4M12 18.1v2.4M4.8 7l2 1.2M17.2 15.8l2 1.2M4.8 17l2-1.2M17.2 8.2l2-1.2M3.5 12h2.4M18.1 12h2.4"/></symbol>
+  </svg>
+
   <main class="more-page container">
     <section class="more-hero" aria-labelledby="more-title">
-      <div>
+      <div class="more-hero-copy">
         <p class="more-eyebrow">مساحة العمل</p>
         <h2 id="more-title">كل أدوات النظام في مكان واحد</h2>
         <p>انتقل بسرعة إلى التقارير، التشغيل، الملفات، والإدارة من خلال الأقسام التالية.</p>
       </div>
-      <a class="more-home-link" href="/" aria-label="العودة إلى لوحة البداية">العودة للرئيسية <span aria-hidden="true">←</span></a>
-    </section>
-
-    <section class="more-section" aria-labelledby="reports-title">
-      <div class="more-section-heading"><span class="more-section-icon" aria-hidden="true">▤</span><div><h3 id="reports-title">التقارير والتحليلات</h3><p>استعرض البيانات اليومية والدورية واتخذ القرار بسرعة.</p></div></div>
-      <div class="more-grid">
-        <a class="more-card" href="/reports/manage"><span class="more-card-icon" aria-hidden="true">▣</span><span><strong>إدارة التقارير</strong><small>مراجعة وتحديث تقارير التشغيل اليومية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/weekly"><span class="more-card-icon" aria-hidden="true">≋</span><span><strong>التقرير الأسبوعي</strong><small>ملخص الأداء خلال أيام الأسبوع</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/monthly"><span class="more-card-icon" aria-hidden="true">▦</span><span><strong>التقرير الشهري</strong><small>مقارنة المؤشرات والنتائج الشهرية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/annual"><span class="more-card-icon" aria-hidden="true">◔</span><span><strong>التقرير السنوي</strong><small>رؤية شاملة للأداء السنوي</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/search"><span class="more-card-icon" aria-hidden="true">⌕</span><span><strong>البحث المتقدم</strong><small>العثور على التقارير وفق عدة معايير</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+      <div class="more-hero-actions">
+        <label class="more-search" for="moreSearchInput">
+          <svg aria-hidden="true"><use href="#mi-search"/></svg>
+          <input id="moreSearchInput" type="search" placeholder="ابحث عن أداة أو صفحة…" autocomplete="off">
+        </label>
+        <a class="more-home-link" href="/" aria-label="العودة إلى لوحة البداية">العودة للرئيسية <span aria-hidden="true">←</span></a>
       </div>
     </section>
 
-    <section class="more-section" aria-labelledby="operations-title">
-      <div class="more-section-heading"><span class="more-section-icon" aria-hidden="true">⚙</span><div><h3 id="operations-title">التشغيل والموقع</h3><p>أدوات متابعة المعدات، الحركة، والملفات الميدانية.</p></div></div>
+    <nav class="more-filters" aria-label="تصفية الأقسام">
+      <button type="button" class="more-filter-btn is-active" data-filter="all">الكل</button>
+      <button type="button" class="more-filter-btn" data-filter="reports">التقارير</button>
+      <button type="button" class="more-filter-btn" data-filter="operations">التشغيل والموقع</button>
+      <button type="button" class="more-filter-btn" data-filter="admin">الإدارة والخدمات</button>
+    </nav>
+
+    <p class="more-empty hidden" id="moreEmptyState">لا توجد نتائج مطابقة لبحثك.</p>
+
+    <section class="more-section" data-category="reports" aria-labelledby="reports-title">
+      <div class="more-section-heading"><span class="more-section-icon" aria-hidden="true"><svg><use href="#mi-doc"/></svg></span><div><h3 id="reports-title">التقارير والتحليلات</h3><p>استعرض البيانات اليومية والدورية واتخذ القرار بسرعة.</p></div></div>
       <div class="more-grid">
-        <a class="more-card" href="/ops-dashboard"><span class="more-card-icon" aria-hidden="true">▥</span><span><strong>لوحة التشغيل</strong><small>متابعة مؤشرات التشغيل الحالية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/equipment-management"><span class="more-card-icon" aria-hidden="true">⚙</span><span><strong>إدارة المعدات الوقائية</strong><small>سجل المعدات والتنبيهات الوقائية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/maintenance-incidents"><span class="more-card-icon" aria-hidden="true">⚒</span><span><strong>الصيانة والحوادث</strong><small>تسجيل ومتابعة البلاغات والإجراءات</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/files"><span class="more-card-icon" aria-hidden="true">▰</span><span><strong>ملفات ومرفقات الموقع</strong><small>الوصول إلى الملفات المرتبطة بالتقارير</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/fleet"><span class="more-card-icon" aria-hidden="true">▣</span><span><strong>مركبات حركة المكب</strong><small>متابعة المركبات وحركة الدخول</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/environment"><span class="more-card-icon" aria-hidden="true">◫</span><span><strong>العصارة والغطاء اليومي</strong><small>تسجيل المتابعة البيئية للموقع</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/reports/manage" data-label="إدارة التقارير مراجعة وتحديث تقارير التشغيل اليومية"><span class="more-card-icon"><svg><use href="#mi-doc"/></svg></span><span><strong>إدارة التقارير</strong><small>مراجعة وتحديث تقارير التشغيل اليومية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/weekly" data-label="التقرير الأسبوعي ملخص الأداء خلال أيام الأسبوع"><span class="more-card-icon"><svg><use href="#mi-week"/></svg></span><span><strong>التقرير الأسبوعي</strong><small>ملخص الأداء خلال أيام الأسبوع</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/monthly" data-label="التقرير الشهري مقارنة المؤشرات والنتائج الشهرية"><span class="more-card-icon"><svg><use href="#mi-month"/></svg></span><span><strong>التقرير الشهري</strong><small>مقارنة المؤشرات والنتائج الشهرية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/annual" data-label="التقرير السنوي رؤية شاملة للأداء السنوي"><span class="more-card-icon"><svg><use href="#mi-year"/></svg></span><span><strong>التقرير السنوي</strong><small>رؤية شاملة للأداء السنوي</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/search" data-label="البحث المتقدم العثور على التقارير وفق عدة معايير"><span class="more-card-icon"><svg><use href="#mi-search"/></svg></span><span><strong>البحث المتقدم</strong><small>العثور على التقارير وفق عدة معايير</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
       </div>
     </section>
 
-    <section class="more-section more-section-compact" aria-labelledby="admin-title">
-      <div class="more-section-heading"><span class="more-section-icon" aria-hidden="true">◇</span><div><h3 id="admin-title">الإدارة والخدمات</h3><p>خدمات مساندة لإدارة المستخدمين والنظام.</p></div></div>
+    <section class="more-section" data-category="operations" aria-labelledby="operations-title">
+      <div class="more-section-heading"><span class="more-section-icon" aria-hidden="true"><svg><use href="#mi-gauge"/></svg></span><div><h3 id="operations-title">التشغيل والموقع</h3><p>أدوات متابعة المعدات، الحركة، والملفات الميدانية.</p></div></div>
       <div class="more-grid">
-        <a class="more-card" href="/tasks"><span class="more-card-icon" aria-hidden="true">✓</span><span><strong>الملاحظات والمهام</strong><small>تنظيم الأعمال المفتوحة والمتابعة</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/contracts"><span class="more-card-icon" aria-hidden="true">▧</span><span><strong>المقاولون والعقود</strong><small>بيانات الجهات والعقود المرتبطة</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
-        <a class="more-card" href="/system.html"><span class="more-card-icon" aria-hidden="true">⚙</span><span><strong>إدارة النظام</strong><small>الإعدادات، النسخ الاحتياطي، والصلاحيات</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/ops-dashboard" data-label="لوحة التشغيل متابعة مؤشرات التشغيل الحالية"><span class="more-card-icon"><svg><use href="#mi-gauge"/></svg></span><span><strong>لوحة التشغيل</strong><small>متابعة مؤشرات التشغيل الحالية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/equipment-management" data-label="إدارة المعدات الوقائية سجل المعدات والتنبيهات الوقائية"><span class="more-card-icon"><svg><use href="#mi-shield"/></svg></span><span><strong>إدارة المعدات الوقائية</strong><small>سجل المعدات والتنبيهات الوقائية</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/maintenance-incidents" data-label="الصيانة والحوادث تسجيل ومتابعة البلاغات والإجراءات"><span class="more-card-icon"><svg><use href="#mi-wrench"/></svg></span><span><strong>الصيانة والحوادث</strong><small>تسجيل ومتابعة البلاغات والإجراءات</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/files" data-label="ملفات ومرفقات الموقع الوصول إلى الملفات المرتبطة بالتقارير"><span class="more-card-icon"><svg><use href="#mi-folder"/></svg></span><span><strong>ملفات ومرفقات الموقع</strong><small>الوصول إلى الملفات المرتبطة بالتقارير</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/fleet" data-label="مركبات حركة المكب متابعة المركبات وحركة الدخول"><span class="more-card-icon"><svg><use href="#mi-truck"/></svg></span><span><strong>مركبات حركة المكب</strong><small>متابعة المركبات وحركة الدخول</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/environment" data-label="العصارة والغطاء اليومي تسجيل المتابعة البيئية للموقع"><span class="more-card-icon"><svg><use href="#mi-drop"/></svg></span><span><strong>العصارة والغطاء اليومي</strong><small>تسجيل المتابعة البيئية للموقع</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+      </div>
+    </section>
+
+    <section class="more-section more-section-compact" data-category="admin" aria-labelledby="admin-title">
+      <div class="more-section-heading"><span class="more-section-icon" aria-hidden="true"><svg><use href="#mi-gear"/></svg></span><div><h3 id="admin-title">الإدارة والخدمات</h3><p>خدمات مساندة لإدارة المستخدمين والنظام.</p></div></div>
+      <div class="more-grid">
+        <a class="more-card" href="/tasks" data-label="الملاحظات والمهام تنظيم الأعمال المفتوحة والمتابعة"><span class="more-card-icon"><svg><use href="#mi-check"/></svg></span><span><strong>الملاحظات والمهام</strong><small>تنظيم الأعمال المفتوحة والمتابعة</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/contracts" data-label="المقاولون والعقود بيانات الجهات والعقود المرتبطة"><span class="more-card-icon"><svg><use href="#mi-briefcase"/></svg></span><span><strong>المقاولون والعقود</strong><small>بيانات الجهات والعقود المرتبطة</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
+        <a class="more-card" href="/system.html" data-label="إدارة النظام الإعدادات، النسخ الاحتياطي، والصلاحيات"><span class="more-card-icon"><svg><use href="#mi-gear"/></svg></span><span><strong>إدارة النظام</strong><small>الإعدادات، النسخ الاحتياطي، والصلاحيات</small></span><span class="more-arrow" aria-hidden="true">←</span></a>
       </div>
     </section>
   </main>
 
   <script src="/js/app-auth.js?v=20260919"></script>
   <script src="/js/app-header-menu.js?v=20260919"></script>
+  <script>
+  (function () {
+    var searchInput = document.getElementById('moreSearchInput');
+    var filterBtns = Array.prototype.slice.call(document.querySelectorAll('.more-filter-btn'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.more-section'));
+    var emptyState = document.getElementById('moreEmptyState');
+    var activeFilter = 'all';
+
+    function normalize(str) {
+      return (str || '').toLowerCase();
+    }
+
+    function applyFilters() {
+      var query = normalize(searchInput.value.trim());
+      var anyVisible = false;
+
+      sections.forEach(function (section) {
+        var category = section.getAttribute('data-category');
+        var categoryMatches = activeFilter === 'all' || activeFilter === category;
+        var cards = Array.prototype.slice.call(section.querySelectorAll('.more-card'));
+        var sectionHasMatch = false;
+
+        cards.forEach(function (card) {
+          var text = normalize(card.getAttribute('data-label'));
+          var matchesQuery = query === '' || text.indexOf(query) !== -1;
+          var show = categoryMatches && matchesQuery;
+          card.classList.toggle('hidden', !show);
+          if (show) sectionHasMatch = true;
+        });
+
+        section.classList.toggle('hidden', !sectionHasMatch);
+        if (sectionHasMatch) anyVisible = true;
+      });
+
+      emptyState.classList.toggle('hidden', anyVisible);
+    }
+
+    filterBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        filterBtns.forEach(function (b) { b.classList.remove('is-active'); });
+        btn.classList.add('is-active');
+        activeFilter = btn.getAttribute('data-filter');
+        applyFilters();
+      });
+    });
+
+    searchInput.addEventListener('input', applyFilters);
+  })();
+  </script>
 </body>
 </html>
-     
