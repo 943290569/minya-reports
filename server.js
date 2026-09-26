@@ -328,7 +328,7 @@ app.use((req, res, next) => {
 require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
 require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomaticBackup});
 require("./cloud-files")(app,{db,requireAuth,requireRole,audit});
-require("./employee-complaints")(app,{db,requireRole,audit,uploadsDir});
+require("./employee-complaints")(app,{db,requireRole,currentUser,audit,uploadsDir});
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");

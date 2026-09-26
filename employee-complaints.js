@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-module.exports = function installEmployeeComplaints(app, { db, requireRole, audit, uploadsDir }) {
+module.exports = function installEmployeeComplaints(app, { db, requireRole, currentUser, audit, uploadsDir }) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS employee_complaints (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,13 +78,19 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
         WHERE s.token_hash=?`).get(tokenHash(token)) || null;
     } catch { return null; }
   }
-  function requireComplaintReviewer(req, res, next) {
+  function requireComplaintAccess(req, res, next) {
     const reviewer = complaintReviewer(req);
-    if (!reviewer || !reviewer.is_active || new Date(reviewer.expires_at).getTime() < Date.now()) {
-      return res.status(401).json({ ok:false, message:"يجب تسجيل الدخول إلى إدارة الشكاوى." });
+    if (reviewer && reviewer.is_active && new Date(reviewer.expires_at).getTime() >= Date.now()) {
+      req.complaintReviewer = reviewer;
+      req.complaintAccessUser = { id:null, username:`complaints:${reviewer.username}`, source:"reviewer" };
+      return next();
     }
-    req.complaintReviewer = reviewer;
-    next();
+    const siteUser = typeof currentUser === "function" ? currentUser(req) : null;
+    if (siteUser && siteUser.is_active && ["admin","editor"].includes(siteUser.role)) {
+      req.complaintAccessUser = siteUser;
+      return next();
+    }
+    return res.status(401).json({ ok:false, message:"يجب تسجيل الدخول بحساب مسؤول الشكاوى أو بحساب مدير/محرر." });
   }
   function setComplaintCookie(req, res, token) {
     const secure = req.secure || String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";
@@ -108,14 +114,15 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     setComplaintCookie(req,res,token);
     res.json({ ok:true, reviewer:{ username:row.username, display_name:row.display_name } });
   });
-  app.post("/api/employee-complaints-auth/logout", requireComplaintReviewer, (req,res) => {
+  app.post("/api/employee-complaints-auth/logout", requireComplaintAccess, (req,res) => {
     const token = parseCookies(req).complaint_session;
     if (token) db.prepare("DELETE FROM complaint_reviewer_sessions WHERE token_hash=?").run(tokenHash(token));
     res.clearCookie("complaint_session",{path:"/"});
     res.json({ok:true});
   });
-  app.get("/api/employee-complaints-auth/me", requireComplaintReviewer, (req,res) => {
-    res.json({ok:true,reviewer:{username:req.complaintReviewer.username,display_name:req.complaintReviewer.display_name}});
+  app.get("/api/employee-complaints-auth/me", requireComplaintAccess, (req,res) => {
+    if (req.complaintReviewer) return res.json({ok:true,reviewer:{username:req.complaintReviewer.username,display_name:req.complaintReviewer.display_name},source:"reviewer"});
+    res.json({ok:true,reviewer:{username:req.complaintAccessUser.username,display_name:req.complaintAccessUser.display_name||""},source:"site"});
   });
 
   app.get("/api/employee-complaints-reviewer", requireRole("admin"), (req,res) => {
@@ -269,7 +276,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     res.json({ ok:true, complaint:publicShape(row) });
   });
 
-  app.get("/api/employee-complaints", requireComplaintReviewer, (req, res) => {
+  app.get("/api/employee-complaints", requireComplaintAccess, (req, res) => {
     const status = String(req.query.status || "").trim();
     const type = String(req.query.type || "").trim();
     const where = [], params = [];
@@ -283,7 +290,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     res.json({ ok:true, complaints:db.prepare(sql).all(...params) });
   });
 
-  app.patch("/api/employee-complaints/:id", requireComplaintReviewer, (req, res) => {
+  app.patch("/api/employee-complaints/:id", requireComplaintAccess, (req, res) => {
     const id = Number(req.params.id);
     const current = db.prepare("SELECT * FROM employee_complaints WHERE id=?").get(id);
     if (!current) return res.status(404).json({ ok:false, message:"الشكوى غير موجودة." });
@@ -296,11 +303,11 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, audi
     const closedAt = status === "closed" ? (current.closed_at || now) : null;
     db.prepare(`UPDATE employee_complaints SET status=?,action_taken=?,response_text=?,responded_at=?,closed_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
       .run(status, actionTaken, responseText, respondedAt, closedAt, id);
-    audit({id:null,username:`complaints:${req.complaintReviewer.username}`}, "UPDATE_EMPLOYEE_COMPLAINT", "employee_complaint", id, `${current.complaint_no} - ${status}`);
+    audit(req.complaintAccessUser, "UPDATE_EMPLOYEE_COMPLAINT", "employee_complaint", id, `${current.complaint_no} - ${status}`);
     res.json({ ok:true });
   });
 
-  app.get("/api/employee-complaints/:id/audio", requireComplaintReviewer, (req, res) => {
+  app.get("/api/employee-complaints/:id/audio", requireComplaintAccess, (req, res) => {
     const row = db.prepare("SELECT complaint_no,audio_stored_name,audio_original_name,audio_mime_type FROM employee_complaints WHERE id=?").get(Number(req.params.id));
     if (!row || !row.audio_stored_name) return res.status(404).json({ ok:false, message:"لا يوجد تسجيل صوتي." });
     const root = path.resolve(uploadsDir);
