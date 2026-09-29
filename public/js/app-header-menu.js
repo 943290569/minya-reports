@@ -243,6 +243,9 @@
         link.href=item.href;
       }
       if(link.tagName==="A"){
+        // The desktop stylesheet hides direct links without this marker.
+        // Assign it here too, including links created outside page-mode.js.
+        link.classList.toggle("minya-primary-nav-link",primaryHrefs.includes(key));
         link.textContent=item.label;
         const active=normalizeHref(path)===key;
         link.classList.toggle("active",active);
