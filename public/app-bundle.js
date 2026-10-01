@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919d";
+const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919d-nav-20260929";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -4359,7 +4359,11 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     ).join("");
     // The shared header menu owns the single desktop “More” dropdown.
     // Keeping a second dropdown here caused a duplicate, non-working button.
+    // Keep the existing fold control and its click handler when replacing links.
+    // The fold script can initialize before this DOMContentLoaded listener.
+    const foldButton = nav.querySelector(":scope > .minya-nav-fold-button");
     nav.innerHTML = primary;
+    if (foldButton) nav.prepend(foldButton);
   }
 
   function hideReportEditor() {
@@ -8782,6 +8786,9 @@ ${payload.sections.join("\n")}
         link.href=item.href;
       }
       if(link.tagName==="A"){
+        // The desktop stylesheet hides direct links without this marker.
+        // Assign it here too, including links created outside page-mode.js.
+        link.classList.toggle("minya-primary-nav-link",primaryHrefs.includes(key));
         link.textContent=item.label;
         const active=normalizeHref(path)===key;
         link.classList.toggle("active",active);
