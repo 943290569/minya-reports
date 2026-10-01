@@ -434,7 +434,7 @@
     });
     return blocks;
   }
-  function paginatedPrintRows(firstPageUnits = 27, nextPageUnits = 31) {
+  function paginatedPrintRows(firstPageUnits = 22, nextPageUnits = 27) {
     const pages = [];
     let current = [];
     let units = 0;
