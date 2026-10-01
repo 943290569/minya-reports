@@ -48,7 +48,7 @@ assert(client.includes('src="/assets/header.png"'), "official print header is mi
 assert(client.includes('src="/assets/footer.png"'), "official print footer is missing");
 assert(client.includes('class="print-page"'), "print report does not use explicit A4 pages");
 assert(client.includes("paginatedPrintRows"), "print report does not paginate rows");
-assert(client.includes("firstPageUnits = 27, nextPageUnits = 31"), "print pagination does not match the current larger print font and header layout");
+assert(client.includes("firstPageUnits = 22, nextPageUnits = 27"), "print pagination does not reserve enough space for the larger font, header and footer");
 assert(client.includes('const summary = index === 0 ?'), "print summary is not limited to the first page");
 assert(client.includes('class="page-number">(${index + 1})'), "print page number is not shown at the bottom in parentheses");
 assert(!client.includes("صفحة ${index + 1} من ${pages.length}"), "print page number is still shown in the report title");
