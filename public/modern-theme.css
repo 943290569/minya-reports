@@ -291,3 +291,40 @@ thead th, .v3-table th {
 }
 
 :focus-visible { outline-color: rgba(47, 111, 237, .35) !important; }
+
+/* Opaque navigation colors remain legible outside the green header. */
+@media screen and (min-width: 761px) {
+  body header.top-header > nav {
+    background: #103f32 !important;
+    border: 1px solid #769d8e !important;
+    box-shadow: 0 3px 10px #0003 !important;
+  }
+  body header.top-header > nav > a.app-nav-link,
+  body header.top-header > nav .minya-desktop-more-button,
+  body header.top-header > nav > button.minya-nav-fold-button {
+    background: #175c46 !important;
+    color: #fff !important;
+    border: 1px solid #94b8a9 !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+  }
+  body header.top-header > nav > a.app-nav-link:hover,
+  body header.top-header > nav .minya-desktop-more-button:hover,
+  body header.top-header > nav > button.minya-nav-fold-button:hover {
+    background: #237456 !important;
+    color: #fff !important;
+  }
+  body header.top-header > nav > a.app-nav-link.active,
+  body header.top-header > nav .minya-desktop-more.open .minya-desktop-more-button,
+  body header.top-header > nav .minya-desktop-more-button.active {
+    background: #fff !important;
+    color: #103f32 !important;
+    border-color: #fff !important;
+  }
+  body header.top-header > nav > a.app-nav-link:focus-visible,
+  body header.top-header > nav button:focus-visible {
+    outline: 3px solid #ffdf80 !important;
+    outline-offset: 2px !important;
+  }
+}
