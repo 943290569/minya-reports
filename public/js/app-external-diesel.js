@@ -468,6 +468,81 @@
       @page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Tahoma,sans-serif;direction:rtl}.print-page{width:210mm;height:297mm;padding:0 4mm 4mm;display:flex;flex-direction:column;overflow:hidden;break-after:page;page-break-after:always}.print-page:last-child{break-after:auto;page-break-after:auto}.official-header{width:210mm;height:43.32mm;margin:0 -4mm;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}.official-header img{display:block;width:210mm;height:43.32mm;object-fit:contain}main{width:202mm;flex:1;min-height:0}.page-number{height:5mm;line-height:5mm;text-align:center;font-size:11px;font-weight:800;direction:ltr;flex-shrink:0}.official-footer{width:210mm;height:22mm;margin:0 -4mm;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex-shrink:0}.official-footer img{display:block;width:210mm;height:22mm;object-fit:fill}.title{text-align:center;border-top:1px solid #444;border-bottom:1px solid #444;padding:2.2mm 1mm;margin:0 0 2mm}.title h1{font-size:17px;margin:0}.title p{font-size:12px;font-weight:700;margin:1mm 0 0}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1mm;margin-bottom:2mm}.summary div{border:1px solid #777;text-align:center;padding:1.5mm}.summary span{display:block;font-size:9px}.summary strong{display:block;font-size:12px;margin-top:.5mm}table{width:97%;margin:0 auto;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #555;padding:1.45mm .9mm;text-align:center;vertical-align:middle;font-size:13px;line-height:1.22;overflow-wrap:anywhere}th{background:#e9efec;font-weight:800;font-size:13px}.day-group{break-inside:avoid}.day-total td{background:#f0f5f2;font-weight:800;font-size:14px}.grand-total td{background:#173f31;color:#fff;font-weight:800;font-size:14px}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30mm;margin-top:8mm;text-align:center;font-size:12px;font-weight:800;break-inside:avoid}.signatures div{width:60mm;max-width:100%;justify-self:center;padding-bottom:15mm;border-bottom:1px solid #555}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pageHtml}<script>window.onload=()=>Promise.all(Array.from(document.images).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve}))).then(()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);
     popup.document.close();
   }
+  async function imageToDataUrl(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("تعذر تحميل صور الترويسة والتذييل");
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("تعذر تجهيز صور ملف Word"));
+      reader.readAsDataURL(blob);
+    });
+  }
+  async function exportWordReport() {
+    const source = selectedSource();
+    const month = selectedMonth();
+    if (!source || !month) { message("edFilterMessage", "حدد الشركة والشهر والسنة قبل تصدير Word", "error"); return; }
+    if (!state.entries.length) { message("edFilterMessage", "لا توجد بيانات لتصديرها", "error"); return; }
+    const button = $("edWordBtn");
+    if (button) button.disabled = true;
+    message("edFilterMessage", "جاري تجهيز ملف Word...");
+    try {
+      const [headerData, footerData] = await Promise.all([
+        imageToDataUrl("/assets/header.png"),
+        imageToDataUrl("/assets/footer.png")
+      ]);
+      const [year, monthNumber] = month.split("-");
+      const pages = paginatedPrintRows();
+      const pageHtml = pages.map((rows, index) => {
+        const isLast = index === pages.length - 1;
+        const summary = index === 0 ? `<section class="summary"><div><span>الشركة</span><strong>${esc(source)}</strong></div><div><span>الفترة</span><strong>${Number(monthNumber)}/${year}</strong></div><div><span>عدد التعبئات</span><strong>${formatNumber(state.summary.entries_count)}</strong></div><div><span>إجمالي السولار</span><strong>${formatNumber(state.summary.total_liters)} لتر</strong></div></section>` : "";
+        return `<section class="word-page"><div class="official-header"><img src="${headerData}" alt="الترويسة الرسمية"></div><main><section class="title"><h1>كشف تعبئة السولار لشركة ${esc(companyName(source))} شهر ${Number(monthNumber)}/${year}</h1></section>${summary}<table><colgroup><col style="width:12%"><col style="width:22%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:21%"></colgroup><thead><tr><th>التاريخ</th><th>اسم السائق</th><th>رقم المركبة</th><th>الكمية (لتر)</th><th>رقم الوصل</th><th>ملاحظات</th></tr></thead>${rows}${isLast ? `<tfoot><tr class="grand-total"><td colspan="3">المجموع الشهري</td><td>${formatNumber(state.summary.total_liters)}</td><td colspan="2">${formatNumber(state.summary.entries_count)} تعبئة</td></tr></tfoot>` : ""}</table>${isLast ? `<section class="signatures"><div>مسؤول تعبئة السولار</div><div>قسم المكب</div></section>` : ""}</main><div class="page-number">(${index + 1})</div><div class="official-footer"><img src="${footerData}" alt="التذييل الرسمي"></div></section>`;
+      }).join("");
+      const html = `<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف السولار ${esc(source)} ${month}</title><style>
+        @page WordSection{size:595.3pt 841.9pt;margin:0}
+        div.WordSection{page:WordSection}
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Tahoma,sans-serif;direction:rtl}
+        .word-page{width:210mm;height:297mm;padding:0 4mm 4mm;display:flex;flex-direction:column;overflow:hidden;page-break-after:always;mso-page-break-after:always}
+        .word-page:last-child{page-break-after:auto;mso-page-break-after:auto}
+        .official-header{width:210mm;height:43.32mm;margin:0 -4mm;text-align:center;overflow:hidden}
+        .official-header img{display:block;width:210mm;height:43.32mm;object-fit:contain}
+        main{width:202mm;min-height:0}
+        .page-number{height:5mm;line-height:5mm;text-align:center;font-size:11px;font-weight:800;direction:ltr}
+        .official-footer{width:210mm;height:22mm;margin:0 -4mm;text-align:center;overflow:hidden}
+        .official-footer img{display:block;width:210mm;height:22mm}
+        .title{text-align:center;border-top:1px solid #444;border-bottom:1px solid #444;padding:2.2mm 1mm;margin:0 0 2mm}
+        .title h1{font-size:17px;margin:0}
+        .summary{display:table;width:100%;table-layout:fixed;margin-bottom:2mm}
+        .summary div{display:table-cell;border:1px solid #777;text-align:center;padding:1.5mm;width:25%}
+        .summary span{display:block;font-size:9px}
+        .summary strong{display:block;font-size:12px;margin-top:.5mm}
+        table{width:97%;margin:0 auto;border-collapse:collapse;table-layout:fixed}
+        th,td{border:1px solid #555;padding:1.45mm .9mm;text-align:center;vertical-align:middle;font-size:13px;line-height:1.22;overflow-wrap:anywhere}
+        th{background:#e9efec;font-weight:800;font-size:13px}
+        .day-total td{background:#f0f5f2;font-weight:800;font-size:14px}
+        .grand-total td{background:#173f31;color:#fff;font-weight:800;font-size:14px}
+        .signatures{display:table;width:100%;margin-top:8mm;text-align:center;font-size:12px;font-weight:800}
+        .signatures div{display:table-cell;width:50%;padding-bottom:15mm}
+      </style></head><body><div class="WordSection">${pageHtml}</div></body></html>`;
+      const blob = new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `كشف-سولار-${companyName(source).replace(/\s+/g, "-")}-${month}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      message("edFilterMessage", "تم تجهيز ملف Word بنفس تنسيق الطباعة", "success");
+    } catch (error) {
+      message("edFilterMessage", error.message || "تعذر إنشاء ملف Word", "error");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   function formatDateTime(value) {
     if (!value) return "-";
     const date = new Date(value);
@@ -560,7 +635,7 @@
   $("edVehicle").addEventListener("input", () => { $("edVehicle").dataset.suggested = ""; applyVehicleSuggestion($("edVehicle"), $("edDriver")); });
   $("edExcelFile").addEventListener("change", (event) => { $("edFileName").textContent = event.target.files[0]?.name || "لم يتم اختيار ملف"; });
   $("edPreviewBtn").addEventListener("click", previewImportFile); $("edImportBtn").addEventListener("click", importPreview);
-  $("edTemplateBtn").addEventListener("click", () => writeWorkbook(false)); $("edExportBtn").addEventListener("click", () => writeWorkbook(true)); $("edPrintBtn").addEventListener("click", printReport);
+  $("edTemplateBtn").addEventListener("click", () => writeWorkbook(false)); $("edExportBtn").addEventListener("click", () => writeWorkbook(true)); $("edPrintBtn").addEventListener("click", printReport); if ($("edWordBtn")) $("edWordBtn").addEventListener("click", exportWordReport);
   if ($("edCreateClerkLinkBtn")) $("edCreateClerkLinkBtn").addEventListener("click", createClerkLink);
   if ($("edCopyClerkLinkBtn")) $("edCopyClerkLinkBtn").addEventListener("click", copyClerkLink);
   init();
