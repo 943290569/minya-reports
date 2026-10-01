@@ -4359,7 +4359,11 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     ).join("");
     // The shared header menu owns the single desktop “More” dropdown.
     // Keeping a second dropdown here caused a duplicate, non-working button.
+    // Keep the existing fold control and its click handler when replacing links.
+    // The fold script can initialize before this DOMContentLoaded listener.
+    const foldButton = nav.querySelector(":scope > .minya-nav-fold-button");
     nav.innerHTML = primary;
+    if (foldButton) nav.prepend(foldButton);
   }
 
   function hideReportEditor() {
