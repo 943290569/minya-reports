@@ -3,9 +3,9 @@ const fields = ["employee_name","employee_number","identity_number","employment_
 const facts = ["absence","late","written_notices","warnings","incidents","safety_violations","misuse_failures","praise","training","inspection_reports"];
 function grade(total) { return total >= 90 ? "ممتاز" : total >= 80 ? "جيد جداً" : total >= 70 ? "جيد" : total >= 60 ? "مقبول" : "يحتاج إلى تحسين"; }
 function dateValid(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value; }
-function normalize(body) {
+function normalize(body, savedTemplate=null) {
   if (!body || !Object.hasOwn(templates,body.category)) throw Error("اختر فئة الموظف");
-  const t = templates[body.category], data = {category:body.category};
+  const t = savedTemplate || templates[body.category], data = {category:body.category};
   for (const f of fields) {
     if (body[f] != null && typeof body[f] !== "string") throw Error("بيانات النص غير صالحة");
     data[f] = String(body[f] || "").trim();
@@ -70,8 +70,11 @@ function install(app,{db,requireRole,audit,writeAutomaticBackup}) {
     res.set("Cache-Control","no-store").json({ok:true,...row,data:JSON.parse(row.payload),payload:undefined});
   });
   function save(req,res,edit) {
+    const existing=edit?db.prepare("SELECT revision,payload FROM employee_evaluations WHERE id=?").get(Number(req.params.id)):null;
+    if(edit&&!existing) return res.status(404).json({ok:false,message:"التقييم غير موجود"});
+    const saved=existing?JSON.parse(existing.payload):null;
     let d;
-    try { d=normalize(req.body); } catch(e){return res.status(400).json({ok:false,message:e.message});}
+    try { d=normalize(req.body,saved&&saved.category===req.body.category?saved.template:null); } catch(e){return res.status(400).json({ok:false,message:e.message});}
     const p=[d.employee_name,d.employee_number,d.category,d.evaluation_date,d.period_from,d.period_to,d.total,d.grade,JSON.stringify(d)];
     let id;
     if(edit){

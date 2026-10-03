@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const fields=["employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
 const factLabels={absence:"أيام الغياب",late:"حالات التأخير",written_notices:"لفت نظر خطي",warnings:"إنذارات",incidents:"حوادث مرتبطة بالعمل",safety_violations:"مخالفات سلامة",misuse_failures:"أعطال بسبب سوء الاستخدام",praise:"إشادات أو مكافآت",training:"دورات أو تدريب",inspection_reports:"تقارير صيانة أو فحص"};
 const columns={indicators:{indicator:"المؤشر",value:"القيمة أو العدد",source:"الفترة أو المصدر",note:"ملاحظات"},plans:{area:"المجال المطلوب تحسينه",action:"الإجراء المطلوب",owner:"المسؤول عن المتابعة",duration:"المدة",result:"نتيجة المتابعة"}};
-let templates={},editingId=null,revision=null,dirty=false,offset=0,total=0,loading=false;
+let activeTemplate=null,templates={},editingId=null,revision=null,dirty=false,offset=0,total=0,loading=false;
 const selected=new Map();
 function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 const E=escapeHTML;
@@ -14,14 +14,15 @@ function today(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Heb
 function rows(key,values=[]){
   $(key).innerHTML=Array.from({length:3},(_,i)=>'<div class="follow-row"><div class="grid">'+Object.entries(columns[key]).map(([c,l])=>'<label>'+l+'<input data-col="'+c+'" maxlength="1000" value="'+E(values[i]?.[c]||"")+'"></label>').join("")+'</div></div>').join("");
 }
-function renderCriteria(category,scores=[]){
-  $("criteria").innerHTML=templates[category].criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="grid"><label>العلامة<input class="score" type="number" required min="0" max="'+c.max+'" step="0.01" value="'+E(scores[i]?.score??"")+'"></label><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
+function renderCriteria(category,scores=[],snapshot=null){
+  activeTemplate=snapshot||templates[category];
+  $("criteria").innerHTML=activeTemplate.criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="grid"><label>العلامة<input class="score" type="number" required min="0" max="'+c.max+'" step="0.01" value="'+E(scores[i]?.score??"")+'"></label><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
   sum();
 }
 function sum(){
   const inputs=[...document.querySelectorAll(".score")],filled=inputs.filter(x=>x.value!=="").length;
   const n=Math.round(inputs.reduce((s,x)=>s+(Number(x.value)||0),0)*100)/100;
-  $("scoreSummary").textContent="المجموع "+n+" / 100 — "+(filled===10?grade(n):"أكمل علامات البنود")+" — البنود المدخلة "+filled+" من 10";
+  $("scoreSummary").textContent="المجموع "+n+" / 100 — "+(filled===inputs.length?grade(n):"أكمل علامات البنود")+" — البنود المدخلة "+filled+" من "+inputs.length;
 }
 function leave(){return !dirty||confirm("توجد تغييرات لم تحفظ. هل تريد تركها؟");}
 function openEditor(data=null,id=null,rev=null){
@@ -32,8 +33,7 @@ function openEditor(data=null,id=null,rev=null){
   $("facts").innerHTML=Object.entries(factLabels).map(([f,l])=>'<label>'+l+'<input data-fact="'+f+'" type="number" min="0" max="100000" step="1" value="'+E(data?.facts?.[f]??0)+'"></label>').join("");
   $("previous_actions").value=data?.previous_actions||"";
   rows("indicators",data?.indicators);rows("plans",data?.plans);
-  if(data?.template) templates[data.category]=data.template;
-  renderCriteria($("category").value,data?.scores);
+  renderCriteria($("category").value,data?.scores,data?.template);
   $("formTitle").textContent=id?"تعديل تقييم رقم "+id:"تقييم جديد";
   $("registry").hidden=true;$("editor").hidden=false;$("printPreview").hidden=true;dirty=false;
   $("editor").scrollIntoView({block:"start"});
@@ -58,7 +58,7 @@ async function list(){
   }catch(e){say(e.message);}finally{loading=false;$("find").disabled=false;}
 }
 function printData(d){
-  const t=templates[d.category],n=Math.round(d.scores.reduce((s,x)=>s+x.score,0)*100)/100;
+  const t=activeTemplate||templates[d.category],n=Math.round(d.scores.reduce((s,x)=>s+x.score,0)*100)/100;
   const meta=[["اسم الموظف",d.employee_name],["الرقم الوظيفي",d.employee_number],["رقم الهوية",d.identity_number],["المسمى الوظيفي",t.title],["تاريخ التوظيف",d.employment_date],["تاريخ التقييم",d.evaluation_date],["فترة التقييم",d.period_from+" إلى "+d.period_to],["المسؤول المباشر",d.supervisor]];
   let html="<h2>نموذج تقييم أداء "+E(t.title)+" في مكب المنيا</h2>"+(dirty?"<p>معاينة تغييرات لم تحفظ بعد</p>":"")+"<div class='print-meta'>"+meta.map(([l,v])=>"<p>"+l+" — "+E(v||"................")+"</p>").join("")+"</div>";
   html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:38%'>عنصر التقييم</th><th style='width:10%'>العظمى</th><th style='width:10%'>المستحقة</th><th>مصدر التحقق</th><th>ملاحظات</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td><td>"+E(d.scores[i].source)+"</td><td>"+E(d.scores[i].note)+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
