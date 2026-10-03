@@ -1,0 +1,54 @@
+name: Inspect and preserve site data
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-site-data.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+          PORT="${DEPLOY_PORT:-22}"
+          rm -f ~/.ssh/known_hosts
+          for attempt in 1 2 3 4 5 6; do
+            if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ]; then
+              break
+            fi
+            rm -f ~/.ssh/known_hosts
+            echo "SSH host key lookup attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "Unable to reach the Google server on SSH port $PORT."
+            exit 1
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Preserve databases and inspect counts
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PM2_NAME: ${{ secrets.DEPLOY_PM2_NAME }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          python3 - <<'INSPECT'
+          import os,json,shlex,subprocess
+          remote = "import os,json,sqlite3,subprocess,shutil,time\nfrom pathlib import Path\npayload=json.load(__import__('sys').stdin)\nroot=Path(payload['path']).resolve()\nrows=json.loads(subprocess.check_output(['pm2','jlist'],text=True))\napp=next(r for r in rows if r.get('name')==payload['name'])\nenv=app.get('pm2_env',{})\ncurrent=Path(env.get('MINYA_DATA_DIR') or env.get('env',{}).get('MINYA_DATA_DIR') or root).resolve()\nprint('ACTIVE_DATA_DIR',str(current))\nprint('PROCESS_SCRIPT',env.get('pm_exec_path'))\npid=app.get('pid')\nif pid:\n    for f in Path('/proc/'+str(pid)+'/fd').glob('*'):\n        try:\n            target=os.readlink(f)\n            if '.db' in target: print('OPEN_DATABASE',target)\n        except OSError: pass\nsafe=Path.home()/'minya-recovery'/time.strftime('%Y%m%d-%H%M%S',time.gmtime())\nsafe.mkdir(parents=True,mode=0o700)\ncandidates=set()\nfor base in {root.parent, current.parent, Path.home()}:\n    for folder,dirs,files in os.walk(base):\n        here=Path(folder)\n        if len(here.relative_to(base).parts)>=4: dirs[:]=[]\n        dirs[:]=[d for d in dirs if d not in ('node_modules','.git','.cache','minya-recovery','.npm','.local')]\n        for name in files:\n            if name.endswith(('.db','.sqlite','.sqlite3')): candidates.add(here/name)\nfor i,p in enumerate(sorted(candidates)):\n    try:\n        db=sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True,timeout=20)\n        tables=[r[0] for r in db.execute(\"select name from sqlite_master where type='table'\")]\n        if 'daily_reports' not in tables: db.close();continue\n        dest=safe/('dataset-'+str(i));dest.mkdir()\n        out=sqlite3.connect(dest/'database.db');db.backup(out);out.close()\n        summary={}\n        for name in ('daily_reports','attachments','cloud_files','cloud_folders','cloud_file_links','equipment_assets','driver_licenses','operation_tasks'):\n            if name in tables: summary[name]=db.execute('select count(*) from \"'+name+'\"').fetchone()[0]\n        summary['latest_report']=db.execute('select max(report_date) from daily_reports').fetchone()[0]\n        print('DATABASE',str(p),json.dumps(summary))\n        db.close()\n        for dirname in ('backups','uploads'):\n            source=p.parent/dirname\n            if source.is_dir(): shutil.copytree(source,dest/dirname)\n        for backup in sorted((p.parent/'backups').glob('*.json')):\n            try:\n                data=json.loads(backup.read_text())\n                reports=data.get('reports',[])\n                print('BACKUP',backup.name,'reports',len(reports),'latest',max((r.get('report_date','') for r in reports),default=''),'operations',json.dumps({k:len(v) for k,v in data.get('operations_data',{}).items() if isinstance(v,list)}))\n            except Exception as e: print('BACKUP_ERROR',backup.name,type(e).__name__)\n    except Exception as e: print('DATABASE_ERROR',str(p),type(e).__name__,str(e))\nprint('SAFETY_COPY',str(safe))\n"
+          command=['ssh','-i',os.path.expanduser('~/.ssh/deploy_key'),'-p',os.environ.get('DEPLOY_PORT') or '22','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',os.environ['DEPLOY_USER']+'@'+os.environ['DEPLOY_HOST'],'python3 -c '+shlex.quote(remote)]
+          subprocess.run(command,input=json.dumps({'path':os.environ['DEPLOY_PATH'],'name':os.environ['DEPLOY_PM2_NAME']}),text=True,check=True)
+          INSPECT
