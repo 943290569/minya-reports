@@ -1,0 +1,114 @@
+"use strict";
+const $=id=>document.getElementById(id);
+const fields=["employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
+const factLabels={absence:"أيام الغياب",late:"حالات التأخير",written_notices:"لفت نظر خطي",warnings:"إنذارات",incidents:"حوادث مرتبطة بالعمل",safety_violations:"مخالفات سلامة",misuse_failures:"أعطال بسبب سوء الاستخدام",praise:"إشادات أو مكافآت",training:"دورات أو تدريب",inspection_reports:"تقارير صيانة أو فحص"};
+const columns={indicators:{indicator:"المؤشر",value:"القيمة أو العدد",source:"الفترة أو المصدر",note:"ملاحظات"},plans:{area:"المجال المطلوب تحسينه",action:"الإجراء المطلوب",owner:"المسؤول عن المتابعة",duration:"المدة",result:"نتيجة المتابعة"}};
+let templates={},editingId=null,revision=null,dirty=false,offset=0,total=0,loading=false;
+const selected=new Map();
+function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+const E=escapeHTML;
+function grade(n){return n>=90?"ممتاز":n>=80?"جيد جداً":n>=70?"جيد":n>=60?"مقبول":"يحتاج إلى تحسين";}
+function say(s){$("message").textContent=s;}
+async function api(url,options={}){const r=await fetch(url,{cache:"no-store",...options});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.message||"تعذر تنفيذ الطلب");return d;}
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function rows(key,values=[]){
+  $(key).innerHTML=Array.from({length:3},(_,i)=>'<div class="follow-row"><div class="grid">'+Object.entries(columns[key]).map(([c,l])=>'<label>'+l+'<input data-col="'+c+'" maxlength="1000" value="'+E(values[i]?.[c]||"")+'"></label>').join("")+'</div></div>').join("");
+}
+function renderCriteria(category,scores=[]){
+  $("criteria").innerHTML=templates[category].criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="grid"><label>العلامة<input class="score" type="number" required min="0" max="'+c.max+'" step="0.01" value="'+E(scores[i]?.score??"")+'"></label><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
+  sum();
+}
+function sum(){
+  const inputs=[...document.querySelectorAll(".score")],filled=inputs.filter(x=>x.value!=="").length;
+  const n=Math.round(inputs.reduce((s,x)=>s+(Number(x.value)||0),0)*100)/100;
+  $("scoreSummary").textContent="المجموع "+n+" / 100 — "+(filled===10?grade(n):"أكمل علامات البنود")+" — البنود المدخلة "+filled+" من 10";
+}
+function leave(){return !dirty||confirm("توجد تغييرات لم تحفظ. هل تريد تركها؟");}
+function openEditor(data=null,id=null,rev=null){
+  editingId=id;revision=rev;$("evaluationForm").reset();
+  $("category").value=data?.category||"operator";
+  for(const f of fields) $(f).value=data?.[f]||"";
+  if(!data){$("evaluation_date").value=today();$("recommendation").selectedIndex=0;}
+  $("facts").innerHTML=Object.entries(factLabels).map(([f,l])=>'<label>'+l+'<input data-fact="'+f+'" type="number" min="0" max="100000" step="1" value="'+E(data?.facts?.[f]??0)+'"></label>').join("");
+  $("previous_actions").value=data?.previous_actions||"";
+  rows("indicators",data?.indicators);rows("plans",data?.plans);
+  if(data?.template) templates[data.category]=data.template;
+  renderCriteria($("category").value,data?.scores);
+  $("formTitle").textContent=id?"تعديل تقييم رقم "+id:"تقييم جديد";
+  $("registry").hidden=true;$("editor").hidden=false;$("printPreview").hidden=true;dirty=false;
+  $("editor").scrollIntoView({block:"start"});
+}
+function collect(){
+  const d={category:$("category").value,revision,facts:{},scores:[]};
+  for(const f of fields)d[f]=$(f).value;
+  d.previous_actions=$("previous_actions").value;
+  document.querySelectorAll("[data-fact]").forEach(x=>d.facts[x.dataset.fact]=Number(x.value));
+  document.querySelectorAll(".criterion").forEach(c=>d.scores.push({score:Number(c.querySelector(".score").value),source:c.querySelector(".source").value,note:c.querySelector(".note").value}));
+  for(const key of ["indicators","plans"])d[key]=[...$(key).querySelectorAll(".follow-row")].map(r=>Object.fromEntries([...r.querySelectorAll("[data-col]")].map(x=>[x.dataset.col,x.value])));
+  return d;
+}
+async function list(){
+  if(loading)return;loading=true;$("find").disabled=true;
+  try{
+    const d=await api("/api/employee-evaluations?q="+encodeURIComponent($("search").value)+"&category="+encodeURIComponent($("filterCategory").value)+"&offset="+offset);
+    total=d.total;
+    $("records").innerHTML=d.rows.map(r=>'<article class="record"><input type="checkbox" aria-label="اختيار تقييم '+E(r.employee_name)+' للمقارنة" data-select="'+r.id+'" '+(selected.has(r.id)?"checked":"")+'><div><strong>'+E(r.employee_name)+'</strong><p>'+E(templates[r.category]?.title||r.category)+' — '+E(r.evaluation_date)+'</p><p>الفترة '+E(r.period_from)+' إلى '+E(r.period_to)+' — '+r.total+' / 100 — '+E(r.grade)+'</p></div><button data-open="'+r.id+'">فتح التقييم</button></article>').join("")||"<p>لا توجد تقييمات محفوظة</p>";
+    $("count").textContent="عدد التقييمات "+total+(total?" — عرض "+(offset+1)+" إلى "+Math.min(offset+100,total):"");
+    $("previous").disabled=offset===0;$("next").disabled=offset+100>=total;
+  }catch(e){say(e.message);}finally{loading=false;$("find").disabled=false;}
+}
+function printData(d){
+  const t=templates[d.category],n=Math.round(d.scores.reduce((s,x)=>s+x.score,0)*100)/100;
+  const meta=[["اسم الموظف",d.employee_name],["الرقم الوظيفي",d.employee_number],["رقم الهوية",d.identity_number],["المسمى الوظيفي",t.title],["تاريخ التوظيف",d.employment_date],["تاريخ التقييم",d.evaluation_date],["فترة التقييم",d.period_from+" إلى "+d.period_to],["المسؤول المباشر",d.supervisor]];
+  let html="<h2>نموذج تقييم أداء "+E(t.title)+" في مكب المنيا</h2>"+(dirty?"<p>معاينة تغييرات لم تحفظ بعد</p>":"")+"<div class='print-meta'>"+meta.map(([l,v])=>"<p>"+l+" — "+E(v||"................")+"</p>").join("")+"</div>";
+  html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:38%'>عنصر التقييم</th><th style='width:10%'>العظمى</th><th style='width:10%'>المستحقة</th><th>مصدر التحقق</th><th>ملاحظات</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td><td>"+E(d.scores[i].source)+"</td><td>"+E(d.scores[i].note)+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
+  html+="<h3>سجل الوقائع خلال فترة التقييم</h3><table><tbody>"+Object.entries(factLabels).map(([f,l])=>"<tr><td>"+l+"</td><td>"+d.facts[f]+"</td></tr>").join("")+"</tbody></table><p>إجراءات تصحيحية سابقة — "+E(d.previous_actions)+"</p>";
+  for(const [key,title] of [["indicators","مؤشرات الأداء المستخدمة في التقييم"],["plans","خطة التحسين والمتابعة"]])html+="<h3>"+title+"</h3><table><thead><tr>"+Object.values(columns[key]).map(l=>"<th>"+l+"</th>").join("")+"</tr></thead><tbody>"+d[key].map(r=>"<tr>"+Object.keys(columns[key]).map(c=>"<td>"+E(r[c])+"</td>").join("")+"</tr>").join("")+"</tbody></table>";
+  html+="<h3>التوصية والاعتماد</h3><p>التوصية — "+E(d.recommendation)+"</p><p>موعد إعادة التقييم — "+E(d.recheck_date)+"</p><p>ملاحظات إضافية — "+E(d.notes)+"</p><p>قرار الاعتماد — "+E(d.approval)+"</p><div class='signature-grid'>";
+  for(const [f,l] of [["employee_signature","الموظف"],["supervisor_signature","المسؤول المباشر"],["section_signature","رئيس قسم المكب"],["director_signature","المدير الفني"]])html+="<div><p>"+l+"</p><p>الاسم "+E(d[f])+"</p><p>التوقيع ................</p><p>التاريخ ................</p></div>";
+  $("printBody").innerHTML=html+"</div>";$("editor").hidden=true;$("printPreview").hidden=false;
+}
+$("new").onclick=()=>{if(leave())openEditor();};
+$("category").onchange=()=>{renderCriteria($("category").value);dirty=true;};
+$("evaluationForm").oninput=()=>{dirty=true;sum();};
+$("evaluationForm").onchange=()=>{dirty=true;};
+$("evaluationForm").onsubmit=async e=>{
+  e.preventDefault();if(!$("evaluationForm").reportValidity())return;
+  $("save").disabled=true;
+  try{const d=await api("/api/employee-evaluations"+(editingId?"/"+editingId:""),{method:editingId?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(collect())});editingId=d.id;revision=revision?revision+1:1;dirty=false;$("formTitle").textContent="تعديل تقييم رقم "+editingId;say(d.message+" — "+d.total+" / 100 — "+d.grade);}
+  catch(e){say(e.message);}finally{$("save").disabled=false;}
+};
+$("close").onclick=()=>{if(!leave())return;dirty=false;$("editor").hidden=true;$("registry").hidden=false;list();};
+$("print").onclick=()=>{if($("evaluationForm").reportValidity())printData(collect());};
+$("closePreview").onclick=()=>{$("printPreview").hidden=true;$("editor").hidden=false;};
+$("doPrint").onclick=()=>window.print();
+$("find").onclick=()=>{offset=0;selected.clear();$("comparison").hidden=true;list();};
+$("previous").onclick=()=>{offset=Math.max(0,offset-100);list();};
+$("next").onclick=()=>{offset+=100;list();};
+$("export").onclick=()=>{window.location.href="/api/employee-evaluations/export";};
+$("records").onclick=async e=>{
+  const b=e.target.closest("[data-open]");if(!b||!leave())return;b.disabled=true;
+  try{const d=await api("/api/employee-evaluations/"+b.dataset.open);openEditor(d.data,d.id,d.revision);}catch(err){say(err.message);}finally{b.disabled=false;}
+};
+$("records").onchange=e=>{
+  const x=e.target;if(!x.dataset.select)return;
+  const id=Number(x.dataset.select);
+  if(x.checked&&selected.size>=2){x.checked=false;say("اختر تقييمين فقط للمقارنة");return;}
+  if(x.checked)selected.set(id,true);else selected.delete(id);
+};
+$("compare").onclick=async()=>{
+  if(selected.size!==2){say("اختر تقييمين للموظف نفسه باستخدام مربعات الاختيار");return;}
+  try{
+    let ds=await Promise.all([...selected.keys()].map(id=>api("/api/employee-evaluations/"+id)));
+    ds.sort((a,b)=>a.evaluation_date.localeCompare(b.evaluation_date)||a.id-b.id);
+    const [a,b]=ds,da=a.data,db=b.data;
+    const same=a.employee_number&&b.employee_number?a.employee_number===b.employee_number:a.employee_name.trim()===b.employee_name.trim();
+    if(!same||a.category!==b.category)throw Error("اختر تقييمين للموظف نفسه ومن الفئة نفسها");
+    if(JSON.stringify(da.template.criteria)!==JSON.stringify(db.template.criteria))throw Error("تختلف بنود التقييمين ولا يمكن مقارنتها بندًا ببند");
+    const delta=Math.round((b.total-a.total)*100)/100;
+    $("comparison").innerHTML="<h3>مقارنة تقييمات "+E(a.employee_name)+"</h3><p>"+E(a.evaluation_date)+" — "+a.total+" / 100 مقابل "+E(b.evaluation_date)+" — "+b.total+" / 100</p><p>فرق المجموع "+(delta>0?"+":"")+delta+" علامات</p><table><thead><tr><th>البند</th><th>التقييم الأول</th><th>التقييم الثاني</th><th>الفرق</th></tr></thead><tbody>"+da.template.criteria.map((c,i)=>"<tr><td>"+E(c.label)+"</td><td>"+da.scores[i].score+"</td><td>"+db.scores[i].score+"</td><td>"+Math.round((db.scores[i].score-da.scores[i].score)*100)/100+"</td></tr>").join("")+"</tbody></table>";
+    $("comparison").hidden=false;
+  }catch(e){say(e.message);}
+};
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+(async()=>{try{const d=await api("/api/employee-evaluations/templates");templates=d.templates;$("workspace").hidden=false;say("متاح للمدير والمحرر");await list();}catch(e){say(e.message+" — سجل الدخول من الصفحة الرئيسية بحساب المدير أو المحرر");}})();
