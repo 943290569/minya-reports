@@ -45,7 +45,19 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
           PORT="${DEPLOY_PORT:-22}"
-          ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          rm -f ~/.ssh/known_hosts
+          for attempt in 1 2 3 4 5 6; do
+            if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ]; then
+              break
+            fi
+            rm -f ~/.ssh/known_hosts
+            echo "SSH host key lookup attempt $attempt failed; retrying..."
+            sleep 5
+          done
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "Unable to reach the Google server on SSH port $PORT."
+            exit 1
+          fi
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy latest main to Google server
