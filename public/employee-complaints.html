@@ -30,6 +30,8 @@
         <label>تسجيل صوتي <span>اختياري، حتى 8 MB</span>
           <input id="complaintAudio" type="file" accept="audio/*">
         </label>
+        <div class="record-actions"><button id="recordStart" type="button">بدء التسجيل</button><button id="recordStop" type="button" disabled>إيقاف التسجيل</button><button id="recordClear" type="button" class="secondary">حذف التسجيل</button></div>
+        <p id="recordStatus" role="status" aria-live="polite"></p>
         <audio id="audioPreview" controls hidden></audio>
         <button id="submitBtn" type="submit">إرسال الشكوى</button>
         <div id="formMessage" class="message" aria-live="polite"></div>
@@ -61,6 +63,6 @@
     <button id="copyLink" type="button">نسخ رابط المتابعة</button>
     <button id="closeDialog" class="secondary" type="button">إغلاق</button>
   </dialog>
-  <script src="/employee-complaints.js?v=1" defer></script>
+  <script src="/employee-complaints.js?v=audio-2" defer></script>
 </body>
 </html>

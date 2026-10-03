@@ -4,14 +4,69 @@
   const statusNames = { new:"جديدة", reviewing:"قيد المراجعة", action_taken:"تم اتخاذ إجراء", responded:"تم الرد", closed:"مغلقة" };
   let trackingUrl = "";
 
-  audioInput.addEventListener("change", () => {
-    const file = audioInput.files?.[0];
-    if (!file) { preview.hidden = true; preview.removeAttribute("src"); return; }
-    if (file.size > 8 * 1024 * 1024) {
-      audioInput.value = ""; preview.hidden = true; alert("حجم التسجيل الصوتي يجب ألا يتجاوز 8 MB."); return;
+  let selectedAudio = null, recorder = null, stream = null, previewUrl = "", timer = null, starting = false;
+  const startButton = $("recordStart"), stopButton = $("recordStop"), clearButton = $("recordClear"), recordStatus = $("recordStatus");
+  const maxBytes = 8 * 1024 * 1024;
+  function releaseMicrophone() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  function setAudio(file) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = ""; selectedAudio = null;
+    preview.pause(); preview.removeAttribute("src"); preview.hidden = true;
+    if (!file) return;
+    if (file.size > maxBytes || !file.type.startsWith("audio/")) {
+      audioInput.value = "";
+      recordStatus.textContent = "اختر ملفًا صوتيًا لا يتجاوز 8 MB."; return;
     }
-    preview.src = URL.createObjectURL(file); preview.hidden = false;
+    selectedAudio = file; previewUrl = URL.createObjectURL(file);
+    preview.src = previewUrl; preview.hidden = false;
+  }
+  audioInput.addEventListener("change", () => { setAudio(audioInput.files?.[0]); });
+  startButton.addEventListener("click", async () => {
+    if (starting || recorder?.state === "recording") return;
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      recordStatus.textContent = "المتصفح لا يدعم التسجيل هنا. يمكنك رفع ملف صوتي."; return;
+    }
+    starting = true; startButton.disabled = true; clearButton.disabled = true; audioInput.disabled = true; $("submitBtn").disabled = true;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find(type => MediaRecorder.isTypeSupported(type));
+      recorder = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
+      const chunks = []; let bytes = 0; const begun = Date.now();
+      recorder.ondataavailable = event => {
+        if (event.data.size) { chunks.push(event.data); bytes += event.data.size; }
+        if (bytes >= maxBytes && recorder.state === "recording") recorder.stop();
+      };
+      recorder.onstop = () => {
+        const type = recorder.mimeType || chunks[0]?.type || "audio/webm";
+        const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
+        const blob = new Blob(chunks, { type });
+        releaseMicrophone(); audioInput.value = "";
+        if (blob.size) setAudio(new File([blob], "complaint-recording." + ext, { type }));
+        recordStatus.textContent = blob.size > maxBytes ? "التسجيل تجاوز 8 MB. أعد تسجيل مقطع أقصر." : blob.size ? "التسجيل جاهز للمعاينة والإرسال." : "لم يُسجّل صوت. حاول مرة أخرى.";
+        startButton.disabled = false; stopButton.disabled = true; clearButton.disabled = false; audioInput.disabled = false; $("submitBtn").disabled = false;
+      };
+      recorder.onerror = () => { recordStatus.textContent = "تعذر إكمال التسجيل."; if (recorder.state !== "inactive") recorder.stop(); releaseMicrophone(); };
+      recorder.start(1000); stopButton.disabled = false;
+      recordStatus.textContent = "جارٍ التسجيل — 0 ثانية";
+      timer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - begun) / 1000);
+        recordStatus.textContent = "جارٍ التسجيل — " + seconds + " ثانية";
+        if (seconds >= 600 && recorder.state === "recording") recorder.stop();
+      }, 1000);
+    } catch (error) {
+      releaseMicrophone();
+      recordStatus.textContent = error.name === "NotAllowedError" ? "اسمح للصفحة باستخدام الميكروفون من إعدادات المتصفح." : error.name === "NotFoundError" ? "لم يعثر المتصفح على ميكروفون." : "تعذر تشغيل الميكروفون. يمكنك رفع ملف صوتي.";
+      startButton.disabled = false; stopButton.disabled = true; clearButton.disabled = false; audioInput.disabled = false; $("submitBtn").disabled = false;
+    } finally { starting = false; }
   });
+  stopButton.addEventListener("click", () => { if (recorder?.state === "recording") { stopButton.disabled = true; recorder.stop(); } });
+  clearButton.addEventListener("click", () => { setAudio(null); audioInput.value = ""; recordStatus.textContent = ""; });
+  window.addEventListener("pagehide", () => { if (recorder?.state === "recording") recorder.stop(); releaseMicrophone(); });
 
   function fileToBase64(file) {
     return new Promise((resolve,reject) => {
@@ -48,7 +103,8 @@
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
-    const file = audioInput.files?.[0] || null;
+    if (starting || recorder?.state === "recording") return;
+    const file = selectedAudio;
     const text = $("complaintText").value.trim();
     if (!text && !file) { $("formMessage").textContent = "اكتب تفاصيل الشكوى أو أرفق تسجيلًا صوتيًا."; return; }
     const btn = $("submitBtn"); btn.disabled = true; btn.textContent = "جارٍ الإرسال";
@@ -73,7 +129,7 @@
       trackingUrl = location.origin + location.pathname + "?track=" + encodeURIComponent(data.tracking_token);
       history.replaceState(null, "", "?track=" + encodeURIComponent(data.tracking_token));
       await loadTracking(data.tracking_token);
-      form.reset(); preview.hidden = true; preview.removeAttribute("src");
+      form.reset(); setAudio(null); recordStatus.textContent = "";
       $("successDialog").showModal();
     } catch (err) {
       $("formMessage").textContent = err.message || "تعذر إرسال الشكوى.";
