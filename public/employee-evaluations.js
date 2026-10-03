@@ -10,7 +10,7 @@ const E=escapeHTML;
 function grade(n){return n>=90?"ممتاز":n>=80?"جيد جداً":n>=70?"جيد":n>=60?"مقبول":"يحتاج إلى تحسين";}
 function say(s){$("message").textContent=s;}
 async function api(url,options={}){const r=await fetch(url,{cache:"no-store",...options});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.message||"تعذر تنفيذ الطلب");return d;}
-function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function today(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Hebron",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return p.year+"-"+p.month+"-"+p.day;}
 function rows(key,values=[]){
   $(key).innerHTML=Array.from({length:3},(_,i)=>'<div class="follow-row"><div class="grid">'+Object.entries(columns[key]).map(([c,l])=>'<label>'+l+'<input data-col="'+c+'" maxlength="1000" value="'+E(values[i]?.[c]||"")+'"></label>').join("")+'</div></div>').join("");
 }
@@ -66,7 +66,7 @@ function printData(d){
   for(const [key,title] of [["indicators","مؤشرات الأداء المستخدمة في التقييم"],["plans","خطة التحسين والمتابعة"]])html+="<h3>"+title+"</h3><table><thead><tr>"+Object.values(columns[key]).map(l=>"<th>"+l+"</th>").join("")+"</tr></thead><tbody>"+d[key].map(r=>"<tr>"+Object.keys(columns[key]).map(c=>"<td>"+E(r[c])+"</td>").join("")+"</tr>").join("")+"</tbody></table>";
   html+="<h3>التوصية والاعتماد</h3><p>التوصية — "+E(d.recommendation)+"</p><p>موعد إعادة التقييم — "+E(d.recheck_date)+"</p><p>ملاحظات إضافية — "+E(d.notes)+"</p><p>قرار الاعتماد — "+E(d.approval)+"</p><div class='signature-grid'>";
   for(const [f,l] of [["employee_signature","الموظف"],["supervisor_signature","المسؤول المباشر"],["section_signature","رئيس قسم المكب"],["director_signature","المدير الفني"]])html+="<div><p>"+l+"</p><p>الاسم "+E(d[f])+"</p><p>التوقيع ................</p><p>التاريخ ................</p></div>";
-  $("printBody").innerHTML=html+"</div>";$("editor").hidden=true;$("printPreview").hidden=false;
+  $("printBody").innerHTML=html+"</div>";$("editor").hidden=true;$("printPreview").hidden=false;$("printPreview").scrollIntoView({block:"start"});
 }
 $("new").onclick=()=>{if(leave())openEditor();};
 $("category").onchange=()=>{renderCriteria($("category").value);dirty=true;};
