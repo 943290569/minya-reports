@@ -116,7 +116,64 @@ jobs:
           print('Runtime sync compatibility guard installed for deployment.')
           PY
 
-          if ! pm2 restart "$DEPLOY_PM2_NAME" --update-env; then
+          restart_app() {
+          python3 - <<'R2_RECOVERY'
+          import json, os, shlex, subprocess
+          from pathlib import Path
+          keys = ('R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET')
+          name = os.environ['DEPLOY_PM2_NAME']
+          def complete(env):
+              return all(str(env.get(k, '')).strip() for k in keys)
+          def app_env(rows):
+              for row in rows:
+                  env = row.get('pm2_env', row)
+                  if env.get('name', row.get('name')) == name:
+                      return {**env.get('env', {}), **env}
+              return {}
+          candidates = []
+          try:
+              current = app_env(json.loads(subprocess.check_output(['pm2', 'jlist'], text=True)))
+              candidates.append(('running process', current))
+          except Exception:
+              current = {}
+          for filename in ('.env', '.env.production'):
+              p = Path(filename)
+              if not p.is_file():
+                  continue
+              env = {}
+              for line in p.read_text(encoding='utf-8').splitlines():
+                  line = line.strip()
+                  if line.startswith('export '):
+                      line = line[7:].strip()
+                  key, sep, value = line.partition('=')
+                  if sep and key.strip() in keys:
+                      try:
+                          parts = shlex.split(value, comments=True)
+                          if len(parts) == 1:
+                              env[key.strip()] = parts[0]
+                      except ValueError:
+                          pass
+              candidates.append((filename, env))
+          dump = Path(os.environ.get('PM2_HOME', str(Path.home() / '.pm2'))) / 'dump.pm2'
+          if dump.is_file():
+              try:
+                  candidates.append(('saved PM2 process', app_env(json.loads(dump.read_text(encoding='utf-8')))))
+              except Exception:
+                  pass
+          selected = next(((source, env) for source, env in candidates if complete(env)), None)
+          restart_env = os.environ.copy()
+          if selected:
+              source, env = selected
+              restart_env.update({k: str(env[k]).strip() for k in keys})
+              print('R2 configuration restored from ' + source, flush=True)
+          else:
+              print('R2 configuration incomplete. No credential values were changed.', flush=True)
+              for k in keys:
+                  print(k + ': ' + ('present' if str(current.get(k, '')).strip() else 'missing'), flush=True)
+          subprocess.run(['pm2', 'restart', name, '--update-env'], env=restart_env, check=True)
+          R2_RECOVERY
+          }
+          if ! restart_app; then
             echo "Normal PM2 restart failed; rebuilding PM2 daemon from saved process list."
             pm2 kill || true
             sleep 2
