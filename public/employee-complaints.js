@@ -2,7 +2,9 @@
   const $ = id => document.getElementById(id);
   const form = $("complaintForm"), audioInput = $("complaintAudio"), preview = $("audioPreview");
   const statusNames = { new:"جديدة", reviewing:"قيد المراجعة", action_taken:"تم اتخاذ إجراء", responded:"تم الرد", closed:"مغلقة" };
-  let trackingUrl = "";
+  const legacyToken = new URLSearchParams(location.search).get("track");
+  if (legacyToken) { location.replace("/employee-complaints-track.html#code=" + encodeURIComponent(legacyToken)); return; }
+  let trackingUrl = "", trackingCode = "";
 
   let selectedAudio = null, recorder = null, stream = null, previewUrl = "", timer = null, starting = false;
   const startButton = $("recordStart"), stopButton = $("recordStop"), clearButton = $("recordClear"), recordStatus = $("recordStatus");
@@ -76,31 +78,6 @@
       reader.readAsDataURL(file);
     });
   }
-  function formatDate(value) {
-    if (!value) return "-";
-    const [y,m,d] = String(value).slice(0,10).split("-");
-    return y && m && d ? `${d}/${m}/${y}` : value;
-  }
-  async function loadTracking(token) {
-    if (!token) return;
-    try {
-      const r = await fetch("/api/employee-complaints/track/" + encodeURIComponent(token));
-      const data = await r.json();
-      if (!r.ok || !data.ok) return;
-      const c = data.complaint;
-      $("trackingBox").hidden = false;
-      $("trackNo").textContent = c.complaint_no;
-      $("trackStatus").textContent = statusNames[c.status] || c.status;
-      $("trackDue").textContent = formatDate(c.due_date);
-      if (c.response_text) {
-        $("trackResponseWrap").hidden = false;
-        $("trackResponse").textContent = c.response_text;
-      }
-    } catch {}
-  }
-  const tokenFromUrl = new URLSearchParams(location.search).get("track");
-  if (tokenFromUrl) loadTracking(tokenFromUrl);
-
   form.addEventListener("submit", async e => {
     e.preventDefault();
     if (starting || recorder?.state === "recording") return;
@@ -126,9 +103,10 @@
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.ok) throw new Error(data.message || "تعذر إرسال الشكوى.");
       $("receiptNo").textContent = data.complaint_no;
-      trackingUrl = location.origin + location.pathname + "?track=" + encodeURIComponent(data.tracking_token);
-      history.replaceState(null, "", "?track=" + encodeURIComponent(data.tracking_token));
-      await loadTracking(data.tracking_token);
+      trackingCode = data.tracking_token;
+      trackingUrl = location.origin + "/employee-complaints-track.html#code=" + encodeURIComponent(trackingCode);
+      $("receiptCode").textContent = trackingCode;
+      $("openTracking").href = trackingUrl;
       form.reset(); setAudio(null); recordStatus.textContent = "";
       $("successDialog").showModal();
     } catch (err) {
@@ -141,6 +119,11 @@
     if (!trackingUrl) return;
     try { await navigator.clipboard.writeText(trackingUrl); $("copyLink").textContent = "تم النسخ"; }
     catch { prompt("انسخ رابط المتابعة", trackingUrl); }
+  });
+  $("copyCode").addEventListener("click", async () => {
+    if (!trackingCode) return;
+    try { await navigator.clipboard.writeText(trackingCode); $("copyCode").textContent = "تم النسخ"; }
+    catch { prompt("انسخ كود المتابعة", trackingCode); }
   });
   $("closeDialog").addEventListener("click", () => $("successDialog").close());
 })();

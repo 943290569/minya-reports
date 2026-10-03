@@ -38,31 +38,17 @@
       </form>
     </section>
 
-    <section class="complaint-card compact">
-      <h2>متابعة شكوى</h2>
-      <p>استخدم رابط المتابعة الذي يظهر لك بعد الإرسال.</p>
-      <div id="trackingBox" hidden>
-        <div class="tracking-grid">
-          <div><small>رقم الشكوى</small><strong id="trackNo"></strong></div>
-          <div><small>الحالة</small><strong id="trackStatus"></strong></div>
-          <div><small>تاريخ الاستحقاق</small><strong id="trackDue"></strong></div>
-        </div>
-        <div id="trackResponseWrap" hidden>
-          <small>الرد</small>
-          <p id="trackResponse"></p>
-        </div>
-      </div>
-    </section>
+    <section class="complaint-card compact"><h2>متابعة شكوى</h2><p>لديك كود متابعة؟</p><a href="/employee-complaints-track.html">فتح صفحة متابعة الشكوى</a></section>
   </main>
 
   <dialog id="successDialog">
     <h2>تم استلام الشكوى الخاصة بك</h2>
     <p>سيتم مراجعة الشكوى والرد عليها خلال مدة أقصاها 5 أيام عمل.</p>
     <div class="receipt"><small>رقم الشكوى</small><strong id="receiptNo"></strong></div>
-    <p>احتفظ برقم الشكوى ورابط المتابعة.</p>
+    <p>احتفظ بكود المتابعة لعرض حالة الشكوى والرد.</p><div class="receipt"><small>كود المتابعة</small><strong id="receiptCode" style="font-size:16px;overflow-wrap:anywhere;user-select:all"></strong></div><button id="copyCode" type="button">نسخ الكود</button><p><a id="openTracking" href="/employee-complaints-track.html">متابعة الشكوى</a></p>
     <button id="copyLink" type="button">نسخ رابط المتابعة</button>
     <button id="closeDialog" class="secondary" type="button">إغلاق</button>
   </dialog>
-  <script src="/employee-complaints.js?v=audio-2" defer></script>
+  <script src="/employee-complaints.js?v=track-3" defer></script>
 </body>
 </html>
