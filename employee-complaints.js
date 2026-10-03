@@ -309,7 +309,8 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
     const where = [], params = [];
     if (status && STATUSES.has(status)) { where.push("status=?"); params.push(status); }
     if (type && TYPES.has(type)) { where.push("complaint_type=?"); params.push(type); }
-    const sql = `SELECT id,complaint_no,employee_name,complaint_type,complaint_text,audio_original_name,audio_mime_type,audio_size_bytes,
+    res.setHeader("Cache-Control", "no-store");
+    const sql = `SELECT id,complaint_no,public_token,employee_name,complaint_type,complaint_text,audio_original_name,audio_mime_type,audio_size_bytes,
       status,action_taken,response_text,submitted_at,due_date,responded_at,closed_at,updated_at
       FROM employee_complaints ${where.length ? "WHERE " + where.join(" AND ") : ""}
       ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'reviewing' THEN 1 WHEN 'action_taken' THEN 2 WHEN 'responded' THEN 3 ELSE 4 END,
