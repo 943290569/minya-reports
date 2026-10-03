@@ -60,6 +60,37 @@ jobs:
           fi
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Install complete R2 configuration from GitHub secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          python3 - <<'R2_INSTALL'
+          import json, os, shlex, subprocess
+          keys = ('R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET')
+          config = {k: os.environ.get(k, '').strip() for k in keys}
+          missing = [k for k in keys if not config[k]]
+          if missing:
+              print('GitHub R2 secrets missing: ' + ', '.join(missing))
+              print('Keeping any server-local R2 configuration.')
+          else:
+              remote = "import json, os, tempfile\nfrom pathlib import Path\npayload = json.load(__import__('sys').stdin)\nconfig = payload['config']\nkeys = ('R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET')\nif not all(isinstance(config.get(k), str) and config[k].strip() for k in keys):\n    raise SystemExit('Incomplete R2 configuration')\ntarget = Path(payload['path']) / '.env.r2'\nif not target.parent.is_dir():\n    raise SystemExit('Deployment directory missing')\nfd, temp = tempfile.mkstemp(prefix='.r2-config-', dir=target.parent)\ntry:\n    with os.fdopen(fd, 'w', encoding='utf-8') as f:\n        f.write(''.join(k + '=' + json.dumps(config[k].strip()) + '\\n' for k in keys))\n    os.chmod(temp, 0o600)\n    os.replace(temp, target)\nexcept BaseException:\n    if os.path.exists(temp):\n        os.unlink(temp)\n    raise\nprint('Complete R2 configuration installed securely.')\n"
+              command = ['ssh', '-i', os.path.expanduser('~/.ssh/deploy_key'),
+                         '-p', os.environ.get('DEPLOY_PORT') or '22',
+                         '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
+                         os.environ['DEPLOY_USER'] + '@' + os.environ['DEPLOY_HOST'],
+                         'python3 -c ' + shlex.quote(remote)]
+              payload = {'path': os.environ['DEPLOY_PATH'], 'config': config}
+              subprocess.run(command, input=json.dumps(payload), text=True, check=True)
+          R2_INSTALL
+
       - name: Deploy latest main to Google server
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -136,7 +167,7 @@ jobs:
               candidates.append(('running process', current))
           except Exception:
               current = {}
-          for filename in ('.env', '.env.production'):
+          for filename in ('.env.r2', '.env', '.env.production'):
               p = Path(filename)
               if not p.is_file():
                   continue
