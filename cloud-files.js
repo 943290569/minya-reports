@@ -30,6 +30,8 @@ module.exports = function installCloudFiles(app, { db, requireAuth, requireRole,
     CREATE INDEX IF NOT EXISTS idx_cloud_files_folder ON cloud_files(folder_id,status,created_at);
   `);
 
+  require('./cloud-file-links')(app, { db, requireAuth, requireRole, audit });
+
   const config = () => ({
     accountId: String(process.env.R2_ACCOUNT_ID || '').trim(),
     accessKeyId: String(process.env.R2_ACCESS_KEY_ID || '').trim(),

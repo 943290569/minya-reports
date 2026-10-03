@@ -72,6 +72,19 @@
     const controls = document.getElementById("attachmentsControls");
     if (unsaved) unsaved.hidden = saved;
     if (controls) controls.hidden = !saved || !canEdit();
+    const panel = document.getElementById('reportAttachmentsPanel');
+    let reuse = document.getElementById('reportCloudFilesLink');
+    if (panel && !reuse) {
+      reuse = document.createElement('a');
+      reuse.id = 'reportCloudFilesLink';
+      reuse.className = 'attachment-actions no-print';
+      reuse.textContent = 'اختيار ملف من ملفات الموقع';
+      panel.querySelector('.report-attachments-head')?.after(reuse);
+    }
+    if (reuse) {
+      reuse.hidden = !saved || !canEdit();
+      reuse.href = `/files?type=report&record=${Number(editingId || 0)}`;
+    }
   }
 
   async function loadAttachments() {
@@ -94,6 +107,11 @@
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل المرفقات");
       const items = Array.isArray(data.attachments) ? data.attachments : [];
+      const cloudResponse = await fetch(`/api/cloud-files/linked?type=report&id=${reportId}`);
+      const cloudData = await cloudResponse.json();
+      if (!cloudResponse.ok || !cloudData.ok) throw new Error(cloudData.message || 'تعذر تحميل الملفات المرتبطة');
+      (cloudData.files || []).forEach(item => items.push({ ...item, cloud_file: true }));
+      if (reportId !== Number(editingId || 0)) return;
       count.textContent = `${items.length} مرفق`;
       list.innerHTML = items.length ? items.map(item => `
         <div class="attachment-row">
@@ -102,14 +120,28 @@
             <small>${fmtBytes(item.size_bytes)} • ${esc(String(item.created_at || "").slice(0, 16).replace("T", " "))}</small>
           </div>
           <div class="attachment-actions">
-            <a href="/api/attachments/${item.id}/download" target="_blank" rel="noopener">فتح</a>
-            ${canEdit() ? `<button type="button" data-delete-attachment="${item.id}">حذف</button>` : ""}
+            <a href="/api/${item.cloud_file ? 'cloud-files' : 'attachments'}/${item.id}/download" target="_blank" rel="noopener">فتح</a>
+            ${canEdit() ? item.cloud_file ? `<button type="button" data-unlink-cloud-file="${item.id}">فك الربط</button>` : `<button type="button" data-delete-attachment="${item.id}">حذف</button>` : ""}
           </div>
         </div>
       `).join("") : '<div class="muted">لا توجد مرفقات لهذا التقرير.</div>';
 
       list.querySelectorAll("[data-delete-attachment]").forEach(button => {
         button.addEventListener("click", () => deleteAttachment(Number(button.dataset.deleteAttachment)));
+      });
+      list.querySelectorAll('[data-unlink-cloud-file]').forEach(button => {
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            const r = await fetch(`/api/cloud-files/${button.dataset.unlinkCloudFile}/links/report/${reportId}`, {method:'DELETE'});
+            const d = await r.json();
+            if (!r.ok || !d.ok) throw new Error(d.message || 'تعذر فك الربط');
+            await loadAttachments();
+          } catch (error) {
+            document.getElementById('attachmentStatus').textContent = error.message;
+            button.disabled = false;
+          }
+        });
       });
     } catch (error) {
       list.innerHTML = `<div class="muted">${esc(error.message)}</div>`;
