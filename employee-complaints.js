@@ -53,6 +53,30 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
   const TYPES = new Set(["إدارية","مالية","الدوام","المواصلات","بيئة العمل","السلامة","المعدات والأدوات","معاملة وظيفية","أخرى"]);
   const STATUSES = new Set(["new","reviewing","action_taken","responded","closed"]);
   const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
+  const trackingAttempts = new Map();
+  const trackingAlphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+  function newTrackingCode() {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      let code = "";
+      for (let i = 0; i < 8; i++) code += trackingAlphabet[crypto.randomInt(trackingAlphabet.length)];
+      if (!db.prepare("SELECT id FROM employee_complaints WHERE public_token=?").get(code)) return code;
+    }
+    throw new Error("Unable to allocate tracking code");
+  }
+  function allowTracking(req, res) {
+    const peer = String(req.socket?.remoteAddress || req.ip || "unknown");
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").map(x => x.trim()).filter(Boolean);
+    const ip = ["127.0.0.1","::1","::ffff:127.0.0.1"].includes(peer) ? forwarded.at(-1) || peer : peer;
+    const now = Date.now(), windowMs = 10 * 60 * 1000;
+    for (const [key, entry] of trackingAttempts) if (now >= entry.until) trackingAttempts.delete(key);
+    let entry = trackingAttempts.get(ip);
+    if (!entry) { entry = { count: 0, until: now + windowMs }; trackingAttempts.set(ip, entry); }
+    if (entry.count >= 20 || trackingAttempts.size > 10000) {
+      res.setHeader("Retry-After", String(Math.max(1, Math.ceil((entry.until - now) / 1000))));
+      return false;
+    }
+    entry.count++; return true;
+  }
   const attempts = new Map();
 
   function passwordHash(password, salt) {
@@ -251,7 +275,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
       }
       const submittedDate = localDateString();
       const dueDate = addBusinessDays(submittedDate, 5);
-      const token = crypto.randomBytes(32).toString("hex");
+      const token = newTrackingCode();
       const insert = db.transaction(() => {
         const complaintNo = nextComplaintNo();
         db.prepare(`INSERT INTO employee_complaints
@@ -269,8 +293,11 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
   });
 
   app.get("/api/employee-complaints/track/:token", (req, res) => {
-    const token = String(req.params.token || "");
-    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(404).json({ ok:false, message:"رقم المتابعة غير صالح." });
+    res.setHeader("Cache-Control", "no-store");
+    if (!allowTracking(req, res)) return res.status(429).json({ ok:false, message:"تكررت محاولات البحث. انتظر 10 دقائق ثم حاول مجددًا." });
+    const rawToken = String(req.params.token || "").trim();
+    const token = rawToken.length === 8 ? rawToken.toUpperCase() : rawToken.toLowerCase();
+    if (!/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(token) && !/^[a-f0-9]{64}$/.test(token)) return res.status(404).json({ ok:false, message:"رقم المتابعة غير صالح." });
     const row = db.prepare("SELECT * FROM employee_complaints WHERE public_token=?").get(token);
     if (!row) return res.status(404).json({ ok:false, message:"لم يتم العثور على الشكوى." });
     res.json({ ok:true, complaint:publicShape(row) });

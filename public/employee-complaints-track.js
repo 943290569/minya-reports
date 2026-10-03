@@ -4,9 +4,10 @@
   function date(value) { const [y,m,d] = String(value || "").slice(0,10).split("-"); return y && m && d ? d+"/"+m+"/"+y : "—"; }
   async function show(event) {
     event?.preventDefault();
-    const code = $("trackingCode").value.trim().toLowerCase();
+    const raw = $("trackingCode").value.trim();
+    const code = raw.length === 8 ? raw.toUpperCase() : raw.toLowerCase();
     $("trackingResult").hidden = true; $("trackResponse").textContent = "";
-    if (!/^[a-f0-9]{64}$/.test(code)) { $("trackingMessage").textContent = "أدخل كود المتابعة كاملًا كما ظهر بعد إرسال الشكوى."; return; }
+    if (!/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(code) && !/^[a-f0-9]{64}$/.test(code)) { $("trackingMessage").textContent = "أدخل كود المتابعة كاملًا كما ظهر بعد إرسال الشكوى."; return; }
     $("trackingSubmit").disabled = true; $("trackingMessage").textContent = "جارٍ البحث...";
     try {
       const response = await fetch("/api/employee-complaints/track/" + encodeURIComponent(code), { cache:"no-store" });
