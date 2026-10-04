@@ -1,6 +1,6 @@
 "use strict";
 const $=id=>document.getElementById(id);
-const fields=["employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
+const fields=["job_nature","employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
 const factLabels={absence:"أيام الغياب",late:"حالات التأخير",written_notices:"لفت نظر خطي",warnings:"إنذارات",incidents:"حوادث مرتبطة بالعمل",safety_violations:"مخالفات سلامة",misuse_failures:"أعطال بسبب سوء الاستخدام",praise:"إشادات أو مكافآت",training:"دورات أو تدريب",inspection_reports:"تقارير صيانة أو فحص"};
 const columns={indicators:{indicator:"المؤشر",value:"القيمة أو العدد",source:"الفترة أو المصدر",note:"ملاحظات"},plans:{area:"المجال المطلوب تحسينه",action:"الإجراء المطلوب",owner:"المسؤول عن المتابعة",duration:"المدة",result:"نتيجة المتابعة"}};
 let preservedData=null,activeTemplate=null,templates={},editingId=null,revision=null,dirty=false,offset=0,total=0,loading=false;
@@ -69,6 +69,7 @@ async function list(){
 function printData(d){
   const t=activeTemplate||templates[d.category],n=Math.round(d.scores.reduce((s,x)=>s+x.score,0)*100)/100;
   let html="<h2>تقييم "+E(t.title)+" — مكب المنيا</h2><p>اسم الموظف — "+E(d.employee_name)+"</p><p>تاريخ التقييم — "+E(d.evaluation_date)+"</p>";
+  if(d.job_nature)html+="<p>طبيعة الوظيفة — "+E(d.job_nature)+"</p>";
   if(dirty)html+="<p>معاينة تغييرات لم تحفظ بعد</p>";
   html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:55%'>عنصر التقييم</th><th style='width:13%'>العظمى</th><th style='width:13%'>المستحقة</th><th style='width:13%'>التقييم</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td><td>"+ratingLabel(d.scores[i].score,c.max)+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
   if(d.notes)html+="<p>الملاحظات — "+E(d.notes)+"</p>";

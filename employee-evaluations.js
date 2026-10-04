@@ -1,5 +1,5 @@
 const templates = require("./employee-evaluation-templates.json");
-const fields = ["employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
+const fields = ["job_nature","employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
 const facts = ["absence","late","written_notices","warnings","incidents","safety_violations","misuse_failures","praise","training","inspection_reports"];
 function grade(total) { return total >= 90 ? "ممتاز" : total >= 80 ? "جيد جداً" : total >= 70 ? "جيد" : total >= 60 ? "مقبول" : "يحتاج إلى تحسين"; }
 function dateValid(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value; }

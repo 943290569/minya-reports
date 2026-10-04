@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تقييم الموظفين | مكب المنيا</title>
-<link rel="stylesheet" href="/employee-evaluations.css?v=20261004-words-1"></head><body class="simple-evaluation">
+<link rel="stylesheet" href="/employee-evaluations.css?v=20261004-fifteen-1"></head><body class="simple-evaluation">
 <header><h1>تقييم موظفي مكب المنيا</h1><nav><a href="/">الرئيسية</a><a href="/more">المزيد</a></nav></header>
 <p id="message" role="status" aria-live="polite">جاري التحقق من صلاحية الدخول</p>
 <main id="workspace" hidden>
 <section id="registry"><h2>سجل التقييمات</h2><div class="toolbar"><input id="search" aria-label="بحث بالاسم أو الرقم الوظيفي" placeholder="اسم الموظف أو الرقم الوظيفي"><select id="filterCategory" aria-label="فئة الموظف"><option value="">جميع الفئات</option><option value="operator">مشغلو الآليات</option><option value="driver">السائقون</option><option value="worker">العمال</option></select><button id="find">بحث</button><button id="new">تقييم جديد</button><button id="export">تنزيل نسخة التقييمات</button></div><p id="count"></p><div id="records"></div><div class="toolbar"><button id="previous">السابق</button><button id="next">التالي</button><button id="compare">مقارنة تقييمين</button></div><div id="comparison" hidden></div></section>
 <section id="editor" hidden><form id="evaluationForm"><h2 id="formTitle">تقييم جديد</h2><div class="grid">
 <label>فئة الموظف<select id="category" required><option value="operator">مشغل آلية ثقيلة</option><option value="driver">سائق مركبة</option><option value="worker">عامل مكب نفايات</option></select></label>
+<label>طبيعة الوظيفة<input id="job_nature" maxlength="200" placeholder="مثل مشغل ضاغطة أو سائق صهريج أو عامل نظافة"></label>
 <label>اسم الموظف<input id="employee_name" maxlength="200" required></label><label hidden>الرقم الوظيفي<input id="employee_number" maxlength="200"></label><label hidden>رقم الهوية<input id="identity_number" maxlength="200"></label>
 <label hidden>تاريخ التوظيف<input id="employment_date" type="date"></label><label>تاريخ التقييم<input id="evaluation_date" type="date" required></label><label hidden>بداية فترة التقييم<input id="period_from" type="date"></label><label hidden>نهاية فترة التقييم<input id="period_to" type="date"></label><label hidden>المسؤول المباشر<input id="supervisor" maxlength="200"></label>
 </div><h3>بنود التقييم</h3><p>اختر تقييم كل بند بالكلمات. يحسب الموقع النتيجة من 100.</p><div id="criteria"></div><p id="scoreSummary" aria-live="polite"></p>
@@ -18,4 +19,4 @@
 <div class="grid"><label>اسم الموظف للتوقيع<input id="employee_signature" maxlength="200"></label><label>اسم المسؤول المباشر للتوقيع<input id="supervisor_signature" maxlength="200"></label><label>اسم رئيس قسم المكب للتوقيع<input id="section_signature" maxlength="200"></label><label>اسم المدير الفني للتوقيع<input id="director_signature" maxlength="200"></label></div>
 </div><div class="toolbar"><button id="save" type="submit">حفظ التقييم</button><button id="print" type="button">معاينة وطباعة</button><button id="close" type="button">إغلاق</button></div></form></section>
 <section id="printPreview" hidden><div class="toolbar"><button id="doPrint">طباعة</button><button id="closePreview">العودة للتقييم</button></div><div id="printBody"></div></section>
-</main><script src="/employee-evaluations.js?v=20261004-words-1"></script></body></html>
+</main><script src="/employee-evaluations.js?v=20261004-fifteen-1"></script></body></html>
