@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const fields=["employee_name","employee_number","identity_number","employment_date","evaluation_date","period_from","period_to","supervisor","notes","recommendation","recheck_date","approval","employee_signature","supervisor_signature","section_signature","director_signature"];
 const factLabels={absence:"أيام الغياب",late:"حالات التأخير",written_notices:"لفت نظر خطي",warnings:"إنذارات",incidents:"حوادث مرتبطة بالعمل",safety_violations:"مخالفات سلامة",misuse_failures:"أعطال بسبب سوء الاستخدام",praise:"إشادات أو مكافآت",training:"دورات أو تدريب",inspection_reports:"تقارير صيانة أو فحص"};
 const columns={indicators:{indicator:"المؤشر",value:"القيمة أو العدد",source:"الفترة أو المصدر",note:"ملاحظات"},plans:{area:"المجال المطلوب تحسينه",action:"الإجراء المطلوب",owner:"المسؤول عن المتابعة",duration:"المدة",result:"نتيجة المتابعة"}};
-let activeTemplate=null,templates={},editingId=null,revision=null,dirty=false,offset=0,total=0,loading=false;
+let preservedData=null,activeTemplate=null,templates={},editingId=null,revision=null,dirty=false,offset=0,total=0,loading=false;
 const selected=new Map();
 function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 const E=escapeHTML;
@@ -16,7 +16,7 @@ function rows(key,values=[]){
 }
 function renderCriteria(category,scores=[],snapshot=null){
   activeTemplate=snapshot||templates[category];
-  $("criteria").innerHTML=activeTemplate.criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="grid"><label>العلامة<input class="score" type="number" required min="0" max="'+c.max+'" step="0.01" value="'+E(scores[i]?.score??"")+'"></label><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
+  $("criteria").innerHTML=activeTemplate.criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="criterion-score"><label>العلامة<input class="score" type="number" required min="0" max="'+c.max+'" step="0.01" value="'+E(scores[i]?.score??"")+'"></label></div><div hidden><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
   sum();
 }
 function sum(){
@@ -26,7 +26,7 @@ function sum(){
 }
 function leave(){return !dirty||confirm("توجد تغييرات لم تحفظ. هل تريد تركها؟");}
 function openEditor(data=null,id=null,rev=null){
-  editingId=id;revision=rev;$("evaluationForm").reset();
+  preservedData=data?structuredClone(data):null;editingId=id;revision=rev;$("evaluationForm").reset();
   $("category").value=data?.category||"operator";
   for(const f of fields) $(f).value=data?.[f]||"";
   if(!data){$("evaluation_date").value=today();$("recommendation").selectedIndex=0;}
@@ -45,6 +45,8 @@ function collect(){
   document.querySelectorAll("[data-fact]").forEach(x=>d.facts[x.dataset.fact]=Number(x.value));
   document.querySelectorAll(".criterion").forEach(c=>d.scores.push({score:Number(c.querySelector(".score").value),source:c.querySelector(".source").value,note:c.querySelector(".note").value}));
   for(const key of ["indicators","plans"])d[key]=[...$(key).querySelectorAll(".follow-row")].map(r=>Object.fromEntries([...r.querySelectorAll("[data-col]")].map(x=>[x.dataset.col,x.value])));
+  if(!preservedData){d.period_from=d.evaluation_date;d.period_to=d.evaluation_date;}
+  if(preservedData){d.indicators=preservedData.indicators||[];d.plans=preservedData.plans||[];}
   return d;
 }
 async function list(){
@@ -59,14 +61,12 @@ async function list(){
 }
 function printData(d){
   const t=activeTemplate||templates[d.category],n=Math.round(d.scores.reduce((s,x)=>s+x.score,0)*100)/100;
-  const meta=[["اسم الموظف",d.employee_name],["الرقم الوظيفي",d.employee_number],["رقم الهوية",d.identity_number],["المسمى الوظيفي",t.title],["تاريخ التوظيف",d.employment_date],["تاريخ التقييم",d.evaluation_date],["فترة التقييم",d.period_from+" إلى "+d.period_to],["المسؤول المباشر",d.supervisor]];
-  let html="<h2>نموذج تقييم أداء "+E(t.title)+" في مكب المنيا</h2>"+(dirty?"<p>معاينة تغييرات لم تحفظ بعد</p>":"")+"<div class='print-meta'>"+meta.map(([l,v])=>"<p>"+l+" — "+E(v||"................")+"</p>").join("")+"</div>";
-  html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:38%'>عنصر التقييم</th><th style='width:10%'>العظمى</th><th style='width:10%'>المستحقة</th><th>مصدر التحقق</th><th>ملاحظات</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td><td>"+E(d.scores[i].source)+"</td><td>"+E(d.scores[i].note)+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
-  html+="<h3>سجل الوقائع خلال فترة التقييم</h3><table><tbody>"+Object.entries(factLabels).map(([f,l])=>"<tr><td>"+l+"</td><td>"+d.facts[f]+"</td></tr>").join("")+"</tbody></table><p>إجراءات تصحيحية سابقة — "+E(d.previous_actions)+"</p>";
-  for(const [key,title] of [["indicators","مؤشرات الأداء المستخدمة في التقييم"],["plans","خطة التحسين والمتابعة"]])html+="<h3>"+title+"</h3><table><thead><tr>"+Object.values(columns[key]).map(l=>"<th>"+l+"</th>").join("")+"</tr></thead><tbody>"+d[key].map(r=>"<tr>"+Object.keys(columns[key]).map(c=>"<td>"+E(r[c])+"</td>").join("")+"</tr>").join("")+"</tbody></table>";
-  html+="<h3>التوصية والاعتماد</h3><p>التوصية — "+E(d.recommendation)+"</p><p>موعد إعادة التقييم — "+E(d.recheck_date)+"</p><p>ملاحظات إضافية — "+E(d.notes)+"</p><p>قرار الاعتماد — "+E(d.approval)+"</p><div class='signature-grid'>";
-  for(const [f,l] of [["employee_signature","الموظف"],["supervisor_signature","المسؤول المباشر"],["section_signature","رئيس قسم المكب"],["director_signature","المدير الفني"]])html+="<div><p>"+l+"</p><p>الاسم "+E(d[f])+"</p><p>التوقيع ................</p><p>التاريخ ................</p></div>";
-  $("printBody").innerHTML=html+"</div>";$("editor").hidden=true;$("printPreview").hidden=false;$("printPreview").scrollIntoView({block:"start"});
+  let html="<h2>تقييم "+E(t.title)+" — مكب المنيا</h2><p>اسم الموظف — "+E(d.employee_name)+"</p><p>تاريخ التقييم — "+E(d.evaluation_date)+"</p>";
+  if(dirty)html+="<p>معاينة تغييرات لم تحفظ بعد</p>";
+  html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:68%'>عنصر التقييم</th><th style='width:13%'>العظمى</th><th style='width:13%'>المستحقة</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
+  if(d.notes)html+="<p>الملاحظات — "+E(d.notes)+"</p>";
+  html+="<p>توقيع الموظف ....................　توقيع المسؤول ....................</p>";
+  $("printBody").innerHTML=html;$("editor").hidden=true;$("printPreview").hidden=false;$("printPreview").scrollIntoView({block:"start"});
 }
 $("new").onclick=()=>{if(leave())openEditor();};
 $("category").onchange=()=>{renderCriteria($("category").value);dirty=true;};
