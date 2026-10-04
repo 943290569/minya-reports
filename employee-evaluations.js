@@ -50,6 +50,7 @@ function install(app,{db,requireRole,audit,writeAutomaticBackup}) {
     created_by INTEGER,updated_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   ); CREATE INDEX IF NOT EXISTS idx_employee_eval_name_date ON employee_evaluations(employee_name,evaluation_date);
   CREATE INDEX IF NOT EXISTS idx_employee_eval_number_date ON employee_evaluations(employee_number,evaluation_date);`);
+  if(!db.prepare("PRAGMA table_info(employee_evaluations)").all().some(c=>c.name==="deleted_at"))db.exec("ALTER TABLE employee_evaluations ADD COLUMN deleted_at TEXT");
   const access=requireRole("admin","editor");
   app.get("/api/employee-evaluations/templates",access,(req,res)=>res.set("Cache-Control","no-store").json({ok:true,templates}));
   app.get("/api/employee-evaluations/export",access,(req,res)=>{
@@ -57,7 +58,7 @@ function install(app,{db,requireRole,audit,writeAutomaticBackup}) {
   });
   app.get("/api/employee-evaluations",access,(req,res)=>{
     const q=String(req.query.q||"").slice(0,200),category=String(req.query.category||"");
-    let sql="SELECT id,employee_name,employee_number,category,evaluation_date,period_from,period_to,total,grade,revision,updated_at FROM employee_evaluations WHERE 1=1",p=[];
+    let sql="SELECT id,employee_name,employee_number,category,evaluation_date,period_from,period_to,total,grade,revision,updated_at FROM employee_evaluations WHERE deleted_at IS NULL",p=[];
     if(q){sql+=" AND (employee_name LIKE ? OR employee_number LIKE ?)";p.push("%"+q+"%","%"+q+"%");}
     if(category){sql+=" AND category=?";p.push(category);}
     const offset=Math.max(0,Math.min(1000000,Math.trunc(Number(req.query.offset)||0)));
@@ -65,12 +66,12 @@ function install(app,{db,requireRole,audit,writeAutomaticBackup}) {
     res.set("Cache-Control","no-store").json({ok:true,total,rows:db.prepare(sql+" ORDER BY evaluation_date DESC,id DESC LIMIT 100 OFFSET ?").all(...p,offset),offset});
   });
   app.get("/api/employee-evaluations/:id",access,(req,res)=>{
-    const row=db.prepare("SELECT * FROM employee_evaluations WHERE id=?").get(Number(req.params.id));
+    const row=db.prepare("SELECT * FROM employee_evaluations WHERE id=? AND deleted_at IS NULL").get(Number(req.params.id));
     if(!row) return res.status(404).json({ok:false,message:"التقييم غير موجود"});
     res.set("Cache-Control","no-store").json({ok:true,...row,data:JSON.parse(row.payload),payload:undefined});
   });
   function save(req,res,edit) {
-    const existing=edit?db.prepare("SELECT revision,payload FROM employee_evaluations WHERE id=?").get(Number(req.params.id)):null;
+    const existing=edit?db.prepare("SELECT revision,payload FROM employee_evaluations WHERE id=? AND deleted_at IS NULL").get(Number(req.params.id)):null;
     if(edit&&!existing) return res.status(404).json({ok:false,message:"التقييم غير موجود"});
     const saved=existing?JSON.parse(existing.payload):null;
     let d;
@@ -79,7 +80,7 @@ function install(app,{db,requireRole,audit,writeAutomaticBackup}) {
     let id;
     if(edit){
       id=Number(req.params.id);
-      const row=db.prepare("SELECT revision FROM employee_evaluations WHERE id=?").get(id);
+      const row=db.prepare("SELECT revision FROM employee_evaluations WHERE id=? AND deleted_at IS NULL").get(id);
       if(!row) return res.status(404).json({ok:false,message:"التقييم غير موجود"});
       if(req.body.revision!==row.revision) return res.status(409).json({ok:false,message:"عدّل مستخدم آخر هذا التقييم. أعد فتحه قبل الحفظ"});
       const result=db.prepare("UPDATE employee_evaluations SET employee_name=?,employee_number=?,category=?,evaluation_date=?,period_from=?,period_to=?,total=?,grade=?,payload=?,updated_by=?,updated_at=CURRENT_TIMESTAMP,revision=revision+1 WHERE id=? AND revision=?").run(...p,req.user.id,id,row.revision);
@@ -91,6 +92,18 @@ function install(app,{db,requireRole,audit,writeAutomaticBackup}) {
     writeAutomaticBackup("employee-evaluation-save",true);
     res.json({ok:true,id,message:"تم حفظ التقييم",total:d.total,grade:d.grade});
   }
+  app.delete("/api/employee-evaluations/:id",access,(req,res)=>{
+    const id=Number(req.params.id),row=db.prepare("SELECT employee_name FROM employee_evaluations WHERE id=? AND deleted_at IS NULL").get(id);
+    if(!row)return res.status(404).json({ok:false,message:"التقييم غير موجود"});
+    db.prepare("UPDATE employee_evaluations SET deleted_at=CURRENT_TIMESTAMP,revision=revision+1 WHERE id=? AND deleted_at IS NULL").run(id);
+    audit(req.user,"DELETE_EMPLOYEE_EVALUATION","employee_evaluation",id,row.employee_name);writeAutomaticBackup("employee-evaluation-delete",true);
+    res.json({ok:true,message:"تم حذف التقييم"});
+  });
+  app.post("/api/employee-evaluations/:id/restore",access,(req,res)=>{
+    const id=Number(req.params.id),result=db.prepare("UPDATE employee_evaluations SET deleted_at=NULL,revision=revision+1 WHERE id=? AND deleted_at IS NOT NULL").run(id);
+    if(!result.changes)return res.status(404).json({ok:false,message:"التقييم غير موجود"});
+    audit(req.user,"RESTORE_EMPLOYEE_EVALUATION","employee_evaluation",id,"");writeAutomaticBackup("employee-evaluation-restore",true);res.json({ok:true});
+  });
   app.post("/api/employee-evaluations",access,(req,res)=>save(req,res,false));
   app.put("/api/employee-evaluations/:id",access,(req,res)=>save(req,res,true));
 }

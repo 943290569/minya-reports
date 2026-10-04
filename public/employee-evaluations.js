@@ -61,7 +61,7 @@ async function list(){
   try{
     const d=await api("/api/employee-evaluations?q="+encodeURIComponent($("search").value)+"&category="+encodeURIComponent($("filterCategory").value)+"&offset="+offset);
     total=d.total;
-    $("records").innerHTML=d.rows.map(r=>'<article class="record"><input type="checkbox" aria-label="اختيار تقييم '+E(r.employee_name)+' للمقارنة" data-select="'+r.id+'" '+(selected.has(r.id)?"checked":"")+'><div><strong>'+E(r.employee_name)+'</strong><p>'+E(templates[r.category]?.title||r.category)+' — '+E(r.evaluation_date)+'</p><p>الفترة '+E(r.period_from)+' إلى '+E(r.period_to)+' — '+r.total+' / 100 — '+E(r.grade)+'</p></div><button data-open="'+r.id+'">فتح التقييم</button></article>').join("")||"<p>لا توجد تقييمات محفوظة</p>";
+    $("records").innerHTML=d.rows.map(r=>'<article class="record"><input type="checkbox" aria-label="اختيار تقييم '+E(r.employee_name)+' للمقارنة" data-select="'+r.id+'" '+(selected.has(r.id)?"checked":"")+'><div><strong>'+E(r.employee_name)+'</strong><p>'+E(templates[r.category]?.title||r.category)+' — '+E(r.evaluation_date)+'</p><p>الفترة '+E(r.period_from)+' إلى '+E(r.period_to)+' — '+r.total+' / 100 — '+E(r.grade)+'</p></div><button data-open="'+r.id+'">فتح التقييم</button><button data-delete="'+r.id+'" style="background:#a32d2d;color:white">حذف التقييم</button></article>').join("")||"<p>لا توجد تقييمات محفوظة</p>";
     $("count").textContent="عدد التقييمات "+total+(total?" — عرض "+(offset+1)+" إلى "+Math.min(offset+100,total):"");
     $("previous").disabled=offset===0;$("next").disabled=offset+100>=total;
   }catch(e){say(e.message);}finally{loading=false;$("find").disabled=false;}
@@ -95,6 +95,13 @@ $("previous").onclick=()=>{offset=Math.max(0,offset-100);list();};
 $("next").onclick=()=>{offset+=100;list();};
 $("export").onclick=()=>{window.location.href="/api/employee-evaluations/export";};
 $("records").onclick=async e=>{
+  const del=e.target.closest("[data-delete]");
+  if(del){
+    if(!confirm("هل تريد حذف هذا التقييم؟"))return;del.disabled=true;const id=del.dataset.delete;
+    try{await api("/api/employee-evaluations/"+id,{method:"DELETE"});selected.delete(Number(id));$("comparison").hidden=true;offset=0;await list();say("تم حذف التقييم ");
+      const undo=document.createElement("button");undo.textContent="تراجع عن الحذف";$("message").appendChild(undo);undo.onclick=async()=>{undo.disabled=true;try{await api("/api/employee-evaluations/"+id+"/restore",{method:"POST"});say("تم استرجاع التقييم");await list();}catch(err){say(err.message);}};
+    }catch(err){say(err.message);del.disabled=false;}return;
+  }
   const b=e.target.closest("[data-open]");if(!b||!leave())return;b.disabled=true;
   try{const d=await api("/api/employee-evaluations/"+b.dataset.open);openEditor(d.data,d.id,d.revision);}catch(err){say(err.message);}finally{b.disabled=false;}
 };

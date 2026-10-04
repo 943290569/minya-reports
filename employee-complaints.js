@@ -50,6 +50,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
       ON complaint_reviewer_sessions(expires_at);
   `);
 
+  if(!db.prepare("PRAGMA table_info(employee_complaints)").all().some(c=>c.name==="deleted_at"))db.exec("ALTER TABLE employee_complaints ADD COLUMN deleted_at TEXT");
   const TYPES = new Set(["إدارية","مالية","الدوام","المواصلات","بيئة العمل","السلامة","المعدات والأدوات","معاملة وظيفية","أخرى"]);
   const STATUSES = new Set(["new","reviewing","action_taken","responded","closed"]);
   const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
@@ -298,7 +299,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
     const rawToken = String(req.params.token || "").trim();
     const token = rawToken.length === 8 ? rawToken.toUpperCase() : rawToken.toLowerCase();
     if (!/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(token) && !/^[a-f0-9]{64}$/.test(token)) return res.status(404).json({ ok:false, message:"رقم المتابعة غير صالح." });
-    const row = db.prepare("SELECT * FROM employee_complaints WHERE public_token=?").get(token);
+    const row = db.prepare("SELECT * FROM employee_complaints WHERE public_token=? AND deleted_at IS NULL").get(token);
     if (!row) return res.status(404).json({ ok:false, message:"لم يتم العثور على الشكوى." });
     res.json({ ok:true, complaint:publicShape(row) });
   });
@@ -306,7 +307,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
   app.get("/api/employee-complaints", requireComplaintAccess, (req, res) => {
     const status = String(req.query.status || "").trim();
     const type = String(req.query.type || "").trim();
-    const where = [], params = [];
+    const where = ["deleted_at IS NULL"], params = [];
     if (status && STATUSES.has(status)) { where.push("status=?"); params.push(status); }
     if (type && TYPES.has(type)) { where.push("complaint_type=?"); params.push(type); }
     res.setHeader("Cache-Control", "no-store");
@@ -318,9 +319,20 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
     res.json({ ok:true, complaints:db.prepare(sql).all(...params) });
   });
 
+  app.delete("/api/employee-complaints/:id",requireComplaintAccess,(req,res)=>{
+    const id=Number(req.params.id),row=db.prepare("SELECT complaint_no FROM employee_complaints WHERE id=? AND deleted_at IS NULL").get(id);
+    if(!row)return res.status(404).json({ok:false,message:"الشكوى غير موجودة"});
+    db.prepare("UPDATE employee_complaints SET deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL").run(id);
+    audit(req.complaintAccessUser,"DELETE_EMPLOYEE_COMPLAINT","employee_complaint",id,row.complaint_no);res.json({ok:true});
+  });
+  app.post("/api/employee-complaints/:id/restore",requireComplaintAccess,(req,res)=>{
+    const id=Number(req.params.id),result=db.prepare("UPDATE employee_complaints SET deleted_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NOT NULL").run(id);
+    if(!result.changes)return res.status(404).json({ok:false,message:"الشكوى غير موجودة"});
+    audit(req.complaintAccessUser,"RESTORE_EMPLOYEE_COMPLAINT","employee_complaint",id,"");res.json({ok:true});
+  });
   app.patch("/api/employee-complaints/:id", requireComplaintAccess, (req, res) => {
     const id = Number(req.params.id);
-    const current = db.prepare("SELECT * FROM employee_complaints WHERE id=?").get(id);
+    const current = db.prepare("SELECT * FROM employee_complaints WHERE id=? AND deleted_at IS NULL").get(id);
     if (!current) return res.status(404).json({ ok:false, message:"الشكوى غير موجودة." });
     const status = String(req.body?.status || current.status).trim();
     if (!STATUSES.has(status)) return res.status(400).json({ ok:false, message:"حالة الشكوى غير صالحة." });
@@ -336,7 +348,7 @@ module.exports = function installEmployeeComplaints(app, { db, requireRole, curr
   });
 
   app.get("/api/employee-complaints/:id/audio", requireComplaintAccess, (req, res) => {
-    const row = db.prepare("SELECT complaint_no,audio_stored_name,audio_original_name,audio_mime_type FROM employee_complaints WHERE id=?").get(Number(req.params.id));
+    const row = db.prepare("SELECT complaint_no,audio_stored_name,audio_original_name,audio_mime_type FROM employee_complaints WHERE id=? AND deleted_at IS NULL").get(Number(req.params.id));
     if (!row || !row.audio_stored_name) return res.status(404).json({ ok:false, message:"لا يوجد تسجيل صوتي." });
     const root = path.resolve(uploadsDir);
     const file = path.resolve(root, row.audio_stored_name);
