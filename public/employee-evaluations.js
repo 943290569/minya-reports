@@ -14,15 +14,22 @@ function today(){const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Heb
 function rows(key,values=[]){
   $(key).innerHTML=Array.from({length:3},(_,i)=>'<div class="follow-row"><div class="grid">'+Object.entries(columns[key]).map(([c,l])=>'<label>'+l+'<input data-col="'+c+'" maxlength="1000" value="'+E(values[i]?.[c]||"")+'"></label>').join("")+'</div></div>').join("");
 }
+const ratingChoices=[["ممتاز",1],["جيد جدًا",0.8],["جيد",0.6],["مقبول",0.4],["ضعيف",0.2]];
+function ratingOptions(max,saved){
+  const options=ratingChoices.map(([label,ratio])=>({label,value:Math.round(max*ratio*100)/100}));
+  if(saved!==undefined && saved!==null && !options.some(o=>Math.abs(o.value-saved)<0.000001))options.push({label:"علامة محفوظة "+saved+" / "+max,value:saved});
+  return '<option value="">اختر التقييم</option>'+options.map(o=>'<option value="'+o.value+'" '+(saved!==undefined&&saved!==null&&Math.abs(saved-o.value)<0.000001?'selected':'')+'>'+E(o.label)+'</option>').join("");
+}
+function ratingLabel(score,max){return ratingChoices.find(([,ratio])=>Math.abs(Math.round(max*ratio*100)/100-score)<0.000001)?.[0]||"علامة محفوظة";}
 function renderCriteria(category,scores=[],snapshot=null){
   activeTemplate=snapshot||templates[category];
-  $("criteria").innerHTML=activeTemplate.criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="criterion-score"><label>العلامة<input class="score" type="number" required min="0" max="'+c.max+'" step="0.01" value="'+E(scores[i]?.score??"")+'"></label></div><div hidden><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
+  $("criteria").innerHTML=activeTemplate.criteria.map((c,i)=>'<div class="criterion"><h4>'+(i+1)+'. '+E(c.label)+' — '+c.max+' علامات</h4><div class="criterion-score"><label>التقييم<select class="score" required data-max="'+c.max+'">'+ratingOptions(c.max,scores[i]?.score)+'</select></label></div><div hidden><label>مصدر التحقق<input class="source" maxlength="500" value="'+E(scores[i]?.source??c.source)+'"></label><label>الملاحظات<textarea class="note" maxlength="1000">'+E(scores[i]?.note||"")+'</textarea></label></div></div>').join("");
   sum();
 }
 function sum(){
   const inputs=[...document.querySelectorAll(".score")],filled=inputs.filter(x=>x.value!=="").length;
   const n=Math.round(inputs.reduce((s,x)=>s+(Number(x.value)||0),0)*100)/100;
-  $("scoreSummary").textContent="المجموع "+n+" / 100 — "+(filled===inputs.length?grade(n):"أكمل علامات البنود")+" — البنود المدخلة "+filled+" من "+inputs.length;
+  $("scoreSummary").textContent=(filled===inputs.length?"المجموع "+n+" / 100 — "+grade(n):"أكمل تقييم جميع البنود")+" — البنود المدخلة "+filled+" من "+inputs.length;
 }
 function leave(){return !dirty||confirm("توجد تغييرات لم تحفظ. هل تريد تركها؟");}
 function openEditor(data=null,id=null,rev=null){
@@ -63,7 +70,7 @@ function printData(d){
   const t=activeTemplate||templates[d.category],n=Math.round(d.scores.reduce((s,x)=>s+x.score,0)*100)/100;
   let html="<h2>تقييم "+E(t.title)+" — مكب المنيا</h2><p>اسم الموظف — "+E(d.employee_name)+"</p><p>تاريخ التقييم — "+E(d.evaluation_date)+"</p>";
   if(dirty)html+="<p>معاينة تغييرات لم تحفظ بعد</p>";
-  html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:68%'>عنصر التقييم</th><th style='width:13%'>العظمى</th><th style='width:13%'>المستحقة</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
+  html+="<table><thead><tr><th style='width:6%'>م</th><th style='width:55%'>عنصر التقييم</th><th style='width:13%'>العظمى</th><th style='width:13%'>المستحقة</th><th style='width:13%'>التقييم</th></tr></thead><tbody>"+t.criteria.map((c,i)=>"<tr><td>"+(i+1)+"</td><td>"+E(c.label)+"</td><td>"+c.max+"</td><td>"+d.scores[i].score+"</td><td>"+ratingLabel(d.scores[i].score,c.max)+"</td></tr>").join("")+"</tbody></table><p>المجموع "+n+" / 100 — التقدير "+grade(n)+"</p>";
   if(d.notes)html+="<p>الملاحظات — "+E(d.notes)+"</p>";
   html+="<p>توقيع الموظف ....................　توقيع المسؤول ....................</p>";
   $("printBody").innerHTML=html;$("editor").hidden=true;$("printPreview").hidden=false;$("printPreview").scrollIntoView({block:"start"});
