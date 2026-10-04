@@ -1,0 +1,28 @@
+"use strict";
+const $=id=>document.getElementById(id),token=new URLSearchParams(location.hash.slice(1)).get("code")||"",key="minya-haul-"+token;
+const E=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let state={driver:null,entries:{},pending:{}},busy=false,conflict=null;
+try{state=JSON.parse(localStorage.getItem(key))||state;}catch{}
+function persist(){localStorage.setItem(key,JSON.stringify(state));}
+function today(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Hebron",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}
+async function api(path,options={}){const r=await fetch("/api/haul/"+path,{cache:"no-store",...options,headers:{"Content-Type":"application/json","X-Haul-Token":token,...options.headers}});const data=await r.json();if(!r.ok){const e=Error(data.message||"تعذر الإرسال");e.status=r.status;e.data=data;throw e;}return data;}
+const entryKey=e=>e.entry_date+"|"+e.site;
+function render(){if(state.driver){$("driverName").textContent=state.driver.name;$("editor").hidden=false;}const merged={...state.entries,...state.pending};$("history").innerHTML=Object.keys(merged).sort().reverse().slice(0,31).map(date=>{const e=merged[date];return '<article><button type="button" data-date="'+date+'">'+E(e.entry_date)+' — '+E(e.site)+' — '+e.trips+' نقلة</button><small>'+(state.pending[date]?"بانتظار الإرسال":"تم الإرسال")+'</small></article>';}).join("")||"لا توجد تسجيلات";$("sync").textContent="إرسال الآن — "+Object.keys(state.pending).length+" بانتظار الإرسال";$("save").disabled=busy;}
+function fill(){const e=state.pending[$("date").value+"|"+$("site").value]||state.entries[$("date").value+"|"+$("site").value];$("trips").value=e?.trips??"";$("notes").value=e?.notes||"";$("odo_start").value=e?.odo_start??"";$("odo_end").value=e?.odo_end??"";quantity();}
+function quantity(){const date=$("date").value;$("weekday").textContent=date?new Intl.DateTimeFormat("ar",{weekday:"long",timeZone:"UTC"}).format(new Date(date+"T12:00:00Z")):"";$("quantity").textContent=$("odo_start").value!==""&&$("odo_end").value!==""?"المسافة "+Math.round((Number($("odo_end").value)-Number($("odo_start").value))*10)/10+" كم":"";}
+async function sync(){if(busy||!token)return;busy=true;render();try{
+ for(const date of Object.keys(state.pending).sort()){const entry=state.pending[date];let d;try{d=await api("entry",{method:"POST",body:JSON.stringify(entry)});}catch(e){if(e.status===409){conflict={date,current:e.data.current};$("resolve").hidden=false;}throw e;}
+ state.entries[date]=d.entry;delete state.pending[date];persist();}
+ const d=await api("driver");state.driver=d.driver;for(const entry of d.entries)state.entries[entryKey(entry)]=entry;persist();$("status").textContent="تم الإرسال. لا توجد تسجيلات بانتظار الإرسال";
+ }catch(e){$("status").textContent=e.status?e.message:"محفوظ على الجهاز، بانتظار الإنترنت والإرسال";}finally{busy=false;render();}}
+$("form").onsubmit=async e=>{e.preventDefault();if(busy||!$("form").reportValidity())return;const entry_date=$("date").value,site=$("site").value,date=entry_date+"|"+site,odo_start=Number($("odo_start").value),odo_end=Number($("odo_end").value),trips=Number($("trips").value);if(!Number.isInteger(trips))return;if(odo_end<odo_start){$("status").textContent="عداد النهاية يجب ألا يقل عن عداد البداية";return;}const old=state.pending[date]||state.entries[date];const entry={entry_date,site,odo_start,odo_end,trips,notes:$("notes").value,revision:old?.revision||0,mutation_id:crypto.randomUUID()};
+ const previous=state.pending[date];state.pending[date]=entry;try{persist();}catch{if(previous)state.pending[date]=previous;else delete state.pending[date];$("status").textContent="تعذر الحفظ على الجهاز. لا تغلق الصفحة";return;}$("status").textContent="محفوظ على الجهاز، بانتظار الإرسال";render();await sync();};
+$("date").onchange=fill;$("site").onchange=fill;$("odo_start").oninput=quantity;$("odo_end").oninput=quantity;$("trips").oninput=quantity;$("sync").onclick=sync;
+$("history").onclick=e=>{const b=e.target.closest("[data-date]");if(b){$("date").value=b.dataset.date.split("|")[0];$("site").value=b.dataset.date.split("|")[1];fill();$("form").scrollIntoView();}};
+$("resolve").onclick=()=>{if(!conflict)return;const date=conflict.date,p=state.pending[date];state.entries[date]=conflict.current;delete state.pending[date];persist();$("date").value=date.split("|")[0];$("site").value=date.split("|")[1];fill();$("status").textContent="الموجود بالموقع "+conflict.current.trips+" نقلة. العدد الذي حاولت إرساله "+p.trips+" نقلة. عدّل العدد واضغط حفظ بعد المراجعة";conflict=null;$("resolve").hidden=true;render();};
+window.addEventListener("online",sync);document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync();});
+$("date").value=today();render();fill();
+if(!/^[a-f0-9]{48}$/.test(token)){$("driverName").textContent="افتح الرابط المخصص لك من مسؤول المكب";}else{sync();}
+const manifest={name:"نقلات الطمم",short_name:"نقل الطمم",start_url:location.origin+location.pathname+location.hash,scope:location.origin+"/haul/",display:"standalone",background_color:"#eef3f1",theme_color:"#17654d"};
+document.querySelector('link[rel="manifest"]').href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:"application/manifest+json"}));
+if("serviceWorker" in navigator)navigator.serviceWorker.register("/haul/sw.js",{scope:"/haul/"}).then(()=>navigator.serviceWorker.ready).then(()=>{$("offlineReady").textContent="الصفحة جاهزة للعمل دون إنترنت. أضف الرابط إلى الشاشة الرئيسية.";}).catch(()=>{$("offlineReady").textContent="افتح الصفحة بالإنترنت لتجهيز الحفظ دون اتصال";});
