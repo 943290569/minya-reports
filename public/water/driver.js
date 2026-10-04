@@ -22,6 +22,6 @@ $("resolve").onclick=()=>{if(!conflict)return;const date=conflict.date,p=state.p
 window.addEventListener("online",sync);document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync();});
 $("date").value=today();render();fill();
 if(!/^[a-f0-9]{48}$/.test(token)){$("driverName").textContent="افتح الرابط المخصص لك من مسؤول المكب";}else{sync();}
-const manifest={name:"تنكات رش المياه",short_name:"رش المياه",start_url:location.pathname+location.hash,scope:"/water/",display:"standalone",background_color:"#eef3f1",theme_color:"#17654d"};
+const manifest={name:"تنكات رش المياه",short_name:"رش المياه",start_url:location.origin+location.pathname+location.hash,scope:location.origin+"/water/",display:"standalone",background_color:"#eef3f1",theme_color:"#17654d"};
 document.querySelector('link[rel="manifest"]').href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:"application/manifest+json"}));
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/water/sw.js",{scope:"/water/"}).then(()=>navigator.serviceWorker.ready).then(()=>{$("offlineReady").textContent="الصفحة جاهزة للعمل دون إنترنت. أضف الرابط إلى الشاشة الرئيسية.";}).catch(()=>{$("offlineReady").textContent="افتح الصفحة بالإنترنت لتجهيز الحفظ دون اتصال";});
