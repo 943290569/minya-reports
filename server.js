@@ -333,6 +333,7 @@ require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomati
 require("./cloud-files")(app,{db,requireAuth,requireRole,audit});
 require("./employee-complaints")(app,{db,requireRole,currentUser,audit,uploadsDir});
 require("./employee-evaluations")(app,{db,requireRole,audit,writeAutomaticBackup});
+require("./water-spraying")(app,{db,requireRole,audit,writeAutomaticBackup});
 
 function hashPassword(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("hex");
@@ -616,7 +617,7 @@ function buildBackupObject() {
   const reports = db.prepare(`SELECT id FROM daily_reports ORDER BY report_date`).all().map(r => getFullReport(r.id, true));
   const maintenance = db.prepare(`SELECT * FROM maintenance_logs ORDER BY log_date,id`).all();
   const external_diesel = db.prepare(`SELECT * FROM external_diesel_entries ORDER BY entry_date,id`).all();
-  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, external_diesel, employee_evaluations: db.prepare(`SELECT * FROM employee_evaluations ORDER BY id`).all(), appearance_settings: getSharedAppearanceSettings().settings };
+  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, external_diesel, water_entries: db.prepare("SELECT * FROM water_entries ORDER BY id").all(), water_drivers: db.prepare("SELECT * FROM water_drivers ORDER BY id").all(), water_receipts: db.prepare("SELECT * FROM water_receipts").all(), employee_evaluations: db.prepare(`SELECT * FROM employee_evaluations ORDER BY id`).all(), appearance_settings: getSharedAppearanceSettings().settings };
 }
 let lastAutomaticBackupAt = 0;
 const AUTO_BACKUP_INTERVAL_MS = 15 * 60 * 1000;
