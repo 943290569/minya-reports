@@ -319,6 +319,7 @@ app.use((req, res, next) => {
     res.sendFile(path.join(__dirname, "public", "more.html"));
   });
 
+require("./section-access").install(app,{db,currentUser});
   app.use(express.static(path.join(__dirname, "public"), {
 
   setHeaders(res, filePath) {

@@ -23,7 +23,7 @@
     return role;
   }
 
-  function hide(el) { if (!el) return; if (el.style.display !== "none") el.style.display = "none"; if (el.getAttribute("aria-hidden") !== "true") el.setAttribute("aria-hidden", "true"); }
+  function hide(el) { if (!el) return; if (el.style.display !== "none") el.style.setProperty("display","none","important"); if (el.getAttribute("aria-hidden") !== "true") el.setAttribute("aria-hidden", "true"); }
   function disableEditorForm() {
     document.querySelectorAll("#reportFormSection input, #reportFormSection select, #reportFormSection textarea, #crewsTable input, #crewsTable select, #operationsTable input, #operationsTable select, #stationsTable input, #stationsTable select, #equipmentTable input, #equipmentTable select, #notes").forEach(el => { if (!el.disabled) el.disabled = true; el.title = "حساب قراءة فقط"; });
     hide(document.getElementById("saveBtn")?.closest("section") || document.getElementById("saveBtn"));
@@ -59,9 +59,10 @@
       const select = section.querySelector("#featurePermissionUser"), rows = section.querySelector("#featurePermissionRows"), msg = section.querySelector("#featurePermissionMsg");
       function renderRows() {
         const uid = Number(select.value); if (!uid) { rows.innerHTML = ""; return; }
-        const user = data.users.find(u=>Number(u.id)===uid); rows.innerHTML = data.features.map(feature => { const saved = data.rows.find(r=>Number(r.user_id)===uid && r.feature===feature); const view = saved ? Number(saved.can_view)===1 : true; const edit = saved ? Number(saved.can_edit)===1 : user?.role === "editor"; return `<div class="feature-permission-row" data-feature="${feature}" style="display:grid;grid-template-columns:minmax(160px,1fr) auto auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb"><strong>${labels[feature]||feature}</strong><label><input type="checkbox" data-view ${view?'checked':''}> مشاهدة</label><label><input type="checkbox" data-edit ${edit?'checked':''}> تعديل</label></div>`; }).join("");
+        const user = data.users.find(u=>Number(u.id)===uid); rows.innerHTML = data.features.map(feature => { const saved = data.rows.find(r=>Number(r.user_id)===uid && r.feature===feature); const configured=data.rows.some(r=>Number(r.user_id)===uid); const view = saved ? Number(saved.can_view)===1 : !configured; const edit = view && (saved ? Number(saved.can_edit)===1 : user?.role === "editor"); return `<div class="feature-permission-row" data-feature="${feature}" style="display:grid;grid-template-columns:minmax(160px,1fr) auto auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb"><strong>${data.sections?.[feature]?.label||labels[feature]||feature}</strong><label><input type="checkbox" data-view ${view?'checked':''}> مشاهدة</label><label><input type="checkbox" data-edit ${edit?'checked':''}> تعديل</label></div>`; }).join("");
       }
       select.onchange = renderRows;
+      rows.addEventListener("change",event=>{const row=event.target.closest("[data-feature]");if(!row)return;const view=row.querySelector("[data-view]"),edit=row.querySelector("[data-edit]");if(event.target===view&&!view.checked)edit.checked=false;if(event.target===edit&&edit.checked)view.checked=true;});
       section.querySelector("#featurePermissionSave").onclick = async () => { const uid = Number(select.value); if (!uid) { msg.textContent = "اختر مستخدمًا"; return; } const permissions = [...rows.querySelectorAll("[data-feature]")].map(r=>({feature:r.dataset.feature,can_view:r.querySelector("[data-view]").checked,can_edit:r.querySelector("[data-edit]").checked})); const res = await fetch(`/api/feature-permissions/${uid}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({permissions}) }); const out = await res.json().catch(()=>({})); msg.textContent = res.ok ? "تم حفظ الصلاحيات" : (out.message || "تعذر الحفظ"); };
     } catch {}
   }

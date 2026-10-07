@@ -1,0 +1,46 @@
+const sections = {
+  report_entry:{label:'إدخال التقارير',routes:['/report','/monthly-entry','/monthly-entry.html']},
+  archive:{label:'أرشيف التقارير',routes:['/archive']},
+  monthly:{label:'التقرير الشهري',routes:['/monthly','/station-sources.html']},
+  annual:{label:'التقرير السنوي',routes:['/annual']},
+  weekly:{label:'التقرير الأسبوعي',routes:['/weekly']},
+  search:{label:'البحث المتقدم',routes:['/search']},
+  managerial:{label:'التقرير الإداري',routes:['/managerial']},
+  ops_dashboard:{label:'لوحة التشغيل',routes:['/ops-dashboard']},
+  fleet:{label:'المركبات والسائقون',routes:['/fleet','/drivers-licenses','/drivers-licenses.html']},
+  equipment_management:{label:'الصيانة',routes:['/maintenance-center','/maintenance-center.html','/equipment-management','/equipment-maintenance-finance','/equipment-maintenance-finance.html','/maintenance-archive','/maintenance-archive.html','/equipment']},
+  incidents:{label:'الحوادث والأعطال',routes:['/maintenance-incidents']},
+  environment:{label:'العصارة والغطاء اليومي',routes:['/environment']},
+  tasks:{label:'الملاحظات والمهام',routes:['/tasks']},
+  contracts:{label:'المقاولون والعقود',routes:['/contracts']},
+  cells:{label:'الخلايا والسعة',routes:['/cells']},
+  global_search:{label:'البحث الشامل',routes:['/global-search']},
+  files:{label:'ملفات ومرفقات الموقع',routes:['/files']},
+  external_diesel:{label:'السولار الخارجي',routes:['/external-diesel']},
+  backups:{label:'النسخ الاحتياطي',routes:[]}
+};
+function featureForPath(value){
+  const path=String(value||'').replace(/\/+$/,'')||'/';
+  return Object.keys(sections).find(key=>sections[key].routes.some(route=>route===path||(!route.endsWith('.html')&&route+'.html'===path)))||null;
+}
+function permission(db,user,feature){
+  if(!user)return{can_view:0,can_edit:0};
+  if(user.role==='admin')return{can_view:1,can_edit:1};
+  const row=db.prepare('SELECT can_view,can_edit FROM feature_permissions WHERE user_id=? AND feature=?').get(user.id,feature);
+  if(row)return{can_view:Number(row.can_view),can_edit:Number(row.can_view)&&Number(row.can_edit)?1:0};
+  // Once an administrator chooses sections, missing choices are denied.
+  if(db.prepare('SELECT 1 FROM feature_permissions WHERE user_id=? LIMIT 1').get(user.id))return{can_view:0,can_edit:0};
+  return user.role==='editor'?{can_view:1,can_edit:1}:{can_view:1,can_edit:0};
+}
+function install(app,{db,currentUser}){
+  app.use((req,res,next)=>{
+    if(!['GET','HEAD'].includes(req.method))return next();
+    const feature=featureForPath(req.path);
+    if(!feature)return next();
+    const user=currentUser(req);
+    if(!user||permission(db,user,feature).can_view)return next();
+    res.setHeader('Cache-Control','no-store');
+    return res.redirect(303,'/');
+  });
+}
+module.exports={sections,featureForPath,permission,install};
