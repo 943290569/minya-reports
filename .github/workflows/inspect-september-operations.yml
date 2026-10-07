@@ -1,0 +1,81 @@
+name: Inspect September missing operations on Google
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-september-operations.yml'
+permissions:
+  contents: read
+concurrency:
+  group: deploy-google-production
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          for attempt in 1 2 3 4 5 6; do
+            if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" > ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ]; then break; fi
+            sleep 5
+          done
+          test -s ~/.ssh/known_hosts
+      - name: Inspect available operation sources
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PM2_NAME: ${{ secrets.DEPLOY_PM2_NAME }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          python3 - <<'PY'
+          import json,os,shlex,subprocess
+          from pathlib import Path
+          bootstrap = '''import json,subprocess,sys
+          from pathlib import Path
+          payload=json.load(sys.stdin)
+          apps=json.loads(subprocess.check_output(['pm2','jlist'],text=True))
+          matches=[a for a in apps if a.get('name')==payload['name']]
+          assert len(matches)==1, 'Active application must be uniquely identified'
+          env=matches[0]['pm2_env']; env={**env.get('env',{}),**env}
+          cwd=Path(env.get('pm_cwd') or payload['path']).resolve()
+          root=Path(env.get('MINYA_DATA_DIR') or cwd).resolve()
+          db=root/'database.db'
+          import sqlite3
+          connection=sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True)
+          connection.row_factory=sqlite3.Row
+          tables={r[0] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          checks={
+            'water_entries':"SELECT entry_date,SUM(tanks) tanks,COUNT(DISTINCT driver_id) drivers FROM water_entries WHERE entry_date LIKE '2026-09-%' GROUP BY entry_date",
+            'haul_entries':"SELECT entry_date,site,SUM(trips) trips FROM haul_entries WHERE entry_date LIKE '2026-09-%' GROUP BY entry_date,site",
+            'environmental_logs':"SELECT log_date,leachate_m3,tanker_trips,cover_trips,cover_quantity,cover_unit FROM environmental_logs WHERE log_date LIKE '2026-09-%'",
+            'equipment_meter_readings':"SELECT reading_date,SUM(diesel_liters) diesel,SUM(working_hours) hours FROM equipment_meter_readings WHERE reading_date LIKE '2026-09-%' GROUP BY reading_date",
+            'operations':"SELECT operation_name,COUNT(*) rows,SUM(quantity) quantity FROM operations WHERE report_id IN(SELECT id FROM daily_reports WHERE report_date LIKE '2026-09-%') GROUP BY operation_name",
+            'daily_reports':"SELECT COUNT(*) reports,SUM(total_diesel) diesel,SUM(CASE WHEN weather='' THEN 1 ELSE 0 END) missing_weather,SUM(CASE WHEN start_time='' OR end_time='' THEN 1 ELSE 0 END) missing_times FROM daily_reports WHERE report_date LIKE '2026-09-%'"
+          }
+          for table,sql in checks.items():
+            if table in tables: print(table,json.dumps([dict(r) for r in connection.execute(sql)],ensure_ascii=False))
+          if 'monthly_entry_rows' in tables:
+            rows=list(connection.execute("SELECT report_date,data_json FROM monthly_entry_rows WHERE report_date LIKE '2026-09-%'"))
+            print('staged_count',len(rows))
+            for row in rows:
+              x=json.loads(row['data_json']); print('staged',row['report_date'],json.dumps({k:x.get(k) for k in ('auto','operations','weather','temperature')},ensure_ascii=False))
+          print('crew_rows',connection.execute("SELECT COUNT(*) FROM crews WHERE report_id IN(SELECT id FROM daily_reports WHERE report_date LIKE '2026-09-%')").fetchone()[0])
+          print('equipment_rows',connection.execute("SELECT COUNT(*) FROM equipment WHERE report_id IN(SELECT id FROM daily_reports WHERE report_date LIKE '2026-09-%')").fetchone()[0])
+          '''
+          command=['ssh','-i',os.path.expanduser('~/.ssh/deploy_key'),'-p',os.environ.get('DEPLOY_PORT') or '22','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',os.environ['DEPLOY_USER']+'@'+os.environ['DEPLOY_HOST'],'python3 -c '+shlex.quote(bootstrap)]
+          payload={'name':os.environ['DEPLOY_PM2_NAME'],'path':os.environ['DEPLOY_PATH']}
+          subprocess.run(command,input=json.dumps(payload,ensure_ascii=False),text=True,check=True)
+          PY
