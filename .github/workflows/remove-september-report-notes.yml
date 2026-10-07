@@ -1,0 +1,66 @@
+name: Remove September report note text on Google
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/remove-september-report-notes.yml'
+      - 'scripts/remove-september-report-notes.py'
+permissions:
+  contents: read
+concurrency:
+  group: deploy-google-production
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          for attempt in 1 2 3 4 5 6; do
+            if ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" > ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ]; then break; fi
+            sleep 5
+          done
+          test -s ~/.ssh/known_hosts
+      - name: Backup, remove exact report note and verify all other data
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PM2_NAME: ${{ secrets.DEPLOY_PM2_NAME }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          python3 - <<'PY'
+          import json,os,shlex,subprocess
+          from pathlib import Path
+          bootstrap = '''import json,subprocess,sys
+          from pathlib import Path
+          payload=json.load(sys.stdin)
+          apps=json.loads(subprocess.check_output(['pm2','jlist'],text=True))
+          matches=[a for a in apps if a.get('name')==payload['name']]
+          assert len(matches)==1, 'Active application must be uniquely identified'
+          env=matches[0]['pm2_env']; env={**env.get('env',{}),**env}
+          cwd=Path(env.get('pm_cwd') or payload['path']).resolve()
+          root=Path(env.get('MINYA_DATA_DIR') or cwd).resolve()
+          db=root/'database.db'
+          namespace={'__name__':'production_import'}
+          exec(payload['script'],namespace)
+          backups=Path.home()/'minya-db-backups'/'september-2026-import'
+          namespace['run'](db,backups,False)
+          namespace['run'](db,backups,True)
+          '''
+          command=['ssh','-i',os.path.expanduser('~/.ssh/deploy_key'),'-p',os.environ.get('DEPLOY_PORT') or '22','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',os.environ['DEPLOY_USER']+'@'+os.environ['DEPLOY_HOST'],'python3 -c '+shlex.quote(bootstrap)]
+          payload={'name':os.environ['DEPLOY_PM2_NAME'],'path':os.environ['DEPLOY_PATH'],'script':Path('scripts/remove-september-report-notes.py').read_text()}
+          subprocess.run(command,input=json.dumps(payload,ensure_ascii=False),text=True,check=True)
+          PY
