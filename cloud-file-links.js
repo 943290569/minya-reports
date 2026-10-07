@@ -5,6 +5,7 @@ const TYPES = {
   vehicle: { label: 'مركبات الحركة', table: 'movement_vehicles', title: "plate_number || ' — ' || vehicle_type", order: 'plate_number,id', feature: 'fleet' },
   maintenance: { label: 'سجلات الصيانة', table: 'maintenance_logs', title: "log_date || ' — ' || equipment_name || ' — ' || substr(description,1,80)", order: 'log_date DESC,id DESC' },
   work_order: { label: 'أوامر صيانة المعدات', table: 'equipment_work_orders', title: "order_number || ' — ' || substr(description,1,80)", order: 'reported_date DESC,id DESC', feature: 'equipment_management' },
+  maintenance_record: { label: 'سجلات صيانة المعدات', table: 'equipment_maintenance_records', title: "service_date || ' — ' || invoice_number || ' — ' || substr(description,1,80)", order: 'service_date DESC,id DESC', feature: 'equipment_management' },
   incident: { label: 'الحوادث', table: 'incident_logs', title: "incident_date || ' — ' || asset_name || ' — ' || substr(description,1,80)", order: 'incident_date DESC,id DESC', feature: 'incidents' },
   task: { label: 'المهام', table: 'operation_tasks', title: 'title', order: 'id DESC', feature: 'tasks' },
   contract: { label: 'العقود', table: 'contractor_contracts', title: "contractor_name || ' — ' || contract_title", order: 'id DESC', feature: 'contracts' },

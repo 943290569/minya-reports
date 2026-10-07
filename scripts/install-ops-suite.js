@@ -19,6 +19,11 @@ if(!server.includes(stationModule)){
   if(server.includes(stationAnchor))server=server.replace(stationAnchor,`${stationAnchor}\n${stationModule}`);
   else throw new Error('Station subsource module mount point not found');
 }
+const maintenanceFinanceModule='require("./equipment-maintenance-finance")(app,{db,requireAuth,requireRole,audit});';
+if(!server.includes(maintenanceFinanceModule)){
+  if(server.includes(stationModule))server=server.replace(stationModule,`${stationModule}\n${maintenanceFinanceModule}`);
+  else throw new Error('Maintenance finance module mount point not found');
+}
 const backupPattern=/function buildBackupObject\(\) \{[\s\S]*?\n\}/;
 if(backupPattern.test(server)){
   server=server.replace(backupPattern,`function buildBackupObject() {
@@ -37,7 +42,7 @@ if(backupPattern.test(server)){
   });
   const incidentFiles = rows('incident_files').map(item => ({ ...item, data_base64: Buffer.isBuffer(item.data) ? item.data.toString('base64') : '', data: undefined }));
   const managementFiles = rows('management_files').map(item => ({ ...item, data_base64: Buffer.isBuffer(item.data) ? item.data.toString('base64') : '', data: undefined }));
-  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, external_diesel: rows('external_diesel_entries'), appearance_settings: getSharedAppearanceSettings().settings, operations_data: { movement_vehicles: rows('movement_vehicles'), driver_licenses: driverLicenses, incident_logs: rows('incident_logs'), incident_files: incidentFiles, environmental_logs: rows('environmental_logs'), operation_tasks: rows('operation_tasks'), contractor_contracts: rows('contractor_contracts'), landfill_cells: rows('landfill_cells'), management_files: managementFiles, equipment_assets: rows('equipment_assets'), equipment_meter_readings: rows('equipment_meter_readings'), preventive_maintenance_plans: rows('preventive_maintenance_plans'), equipment_work_orders: rows('equipment_work_orders'), external_diesel: rows('external_diesel_entries'), station_subsources: rows('station_subsource_monthly'), station_subsource_daily: rows('station_subsource_daily'), feature_permissions: rows('feature_permissions') } };
+  return { system: "Minya Landfill System", version: "3.2.0", exported_at: new Date().toISOString(), reports, maintenance, external_diesel: rows('external_diesel_entries'), appearance_settings: getSharedAppearanceSettings().settings, operations_data: { movement_vehicles: rows('movement_vehicles'), driver_licenses: driverLicenses, incident_logs: rows('incident_logs'), incident_files: incidentFiles, environmental_logs: rows('environmental_logs'), operation_tasks: rows('operation_tasks'), contractor_contracts: rows('contractor_contracts'), landfill_cells: rows('landfill_cells'), management_files: managementFiles, equipment_assets: rows('equipment_assets'), equipment_meter_readings: rows('equipment_meter_readings'), preventive_maintenance_plans: rows('preventive_maintenance_plans'), equipment_work_orders: rows('equipment_work_orders'), equipment_maintenance_records: rows('equipment_maintenance_records'), external_diesel: rows('external_diesel_entries'), station_subsources: rows('station_subsource_monthly'), station_subsource_daily: rows('station_subsource_daily'), feature_permissions: rows('feature_permissions') } };
 }`);
 }
 fs.writeFileSync(serverPath,server,'utf8');

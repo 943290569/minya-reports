@@ -13,6 +13,7 @@
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
     {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
     {label:"الصيانة والحوادث", href:"/maintenance-incidents", icon:"⚒"},
+    {label:"سجل صيانة وتكاليف", href:"/equipment-maintenance-finance.html", icon:"▦"},
     {label:"أرشيف الصيانة", href:"/maintenance-archive.html", icon:"▤"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
