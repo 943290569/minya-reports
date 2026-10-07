@@ -1,0 +1,675 @@
+{
+  "period": "2026-09",
+  "daily": {
+    "2026-09-01": {
+      "landfill_count": 103,
+      "landfill_tons": "1043.71",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 17,
+          "tons": "514.67"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "81.17"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 3,
+      "aziz_tons": "97.89",
+      "incoming_count": 123,
+      "incoming_tons": "1639.55"
+    },
+    "2026-09-02": {
+      "landfill_count": 119,
+      "landfill_tons": "1088.55",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 20,
+          "tons": "589.50"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "93.23"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 1,
+          "tons": "23.49"
+        }
+      },
+      "aziz_count": 11,
+      "aziz_tons": "329.58",
+      "incoming_count": 143,
+      "incoming_tons": "1794.77"
+    },
+    "2026-09-03": {
+      "landfill_count": 120,
+      "landfill_tons": "1151.47",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 14,
+          "tons": "405.12"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "89.09"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 3,
+          "tons": "80.55"
+        }
+      },
+      "aziz_count": 8,
+      "aziz_tons": "235.74",
+      "incoming_count": 140,
+      "incoming_tons": "1726.23"
+    },
+    "2026-09-04": {
+      "landfill_count": 81,
+      "landfill_tons": "676.61",
+      "stations": {
+        "محطة ترحيل ترقوميا": {
+          "count": 2,
+          "tons": "64.08"
+        },
+        "محطة ترحيل يطا": {
+          "count": 6,
+          "tons": "185.97"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 2,
+      "aziz_tons": "67.91",
+      "incoming_count": 89,
+      "incoming_tons": "926.66"
+    },
+    "2026-09-05": {
+      "landfill_count": 85,
+      "landfill_tons": "755.18",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 12,
+          "tons": "381.09"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "98.91"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 2,
+          "tons": "45.05"
+        }
+      },
+      "aziz_count": 4,
+      "aziz_tons": "149.17",
+      "incoming_count": 102,
+      "incoming_tons": "1280.23"
+    },
+    "2026-09-06": {
+      "landfill_count": 118,
+      "landfill_tons": "1176.81",
+      "stations": {
+        "محطة ترحيل الخليل": {
+          "count": 3,
+          "tons": "51.73"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "89.46"
+        },
+        "محطة ترحيل يطا": {
+          "count": 10,
+          "tons": "286.95"
+        }
+      },
+      "aziz_count": 5,
+      "aziz_tons": "152.22",
+      "incoming_count": 134,
+      "incoming_tons": "1604.95"
+    },
+    "2026-09-07": {
+      "landfill_count": 121,
+      "landfill_tons": "1239.73",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 8,
+          "tons": "227.33"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 4,
+          "tons": "119.49"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 1,
+          "tons": "23.09"
+        }
+      },
+      "aziz_count": 4,
+      "aziz_tons": "126.76",
+      "incoming_count": 134,
+      "incoming_tons": "1609.64"
+    },
+    "2026-09-08": {
+      "landfill_count": 108,
+      "landfill_tons": "1061.64",
+      "stations": {
+        "محطة ترحيل الخليل": {
+          "count": 2,
+          "tons": "54.04"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "93.72"
+        },
+        "محطة ترحيل يطا": {
+          "count": 10,
+          "tons": "314.38"
+        }
+      },
+      "aziz_count": 3,
+      "aziz_tons": "90.06",
+      "incoming_count": 123,
+      "incoming_tons": "1523.78"
+    },
+    "2026-09-09": {
+      "landfill_count": 130,
+      "landfill_tons": "1163.70",
+      "stations": {
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "83.06"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 3,
+          "tons": "58.28"
+        },
+        "محطة ترحيل يطا": {
+          "count": 11,
+          "tons": "338.52"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 147,
+      "incoming_tons": "1643.56"
+    },
+    "2026-09-10": {
+      "landfill_count": 114,
+      "landfill_tons": "1146.26",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 8,
+          "tons": "250.71"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "91.06"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 1,
+          "tons": "16.71"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 126,
+      "incoming_tons": "1504.74"
+    },
+    "2026-09-11": {
+      "landfill_count": 90,
+      "landfill_tons": "814.36",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 4,
+          "tons": "124.40"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 0,
+          "tons": "0"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 94,
+      "incoming_tons": "938.76"
+    },
+    "2026-09-12": {
+      "landfill_count": 71,
+      "landfill_tons": "613.04",
+      "stations": {
+        "محطة ترحيل ترقوميا": {
+          "count": 4,
+          "tons": "127.71"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 4,
+          "tons": "46.17"
+        },
+        "محطة ترحيل يطا": {
+          "count": 7,
+          "tons": "236.95"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 86,
+      "incoming_tons": "1023.87"
+    },
+    "2026-09-13": {
+      "landfill_count": 103,
+      "landfill_tons": "1162.79",
+      "stations": {
+        "محطة ترحيل الخليل": {
+          "count": 2,
+          "tons": "24.61"
+        },
+        "محطة ترحيل يطا": {
+          "count": 11,
+          "tons": "334.51"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 2,
+          "tons": "66.21"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 118,
+      "incoming_tons": "1588.12"
+    },
+    "2026-09-14": {
+      "landfill_count": 118,
+      "landfill_tons": "1213.08",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 9,
+          "tons": "276.21"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 1,
+          "tons": "28.96"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 2,
+          "tons": "26.58"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 130,
+      "incoming_tons": "1544.83"
+    },
+    "2026-09-15": {
+      "landfill_count": 107,
+      "landfill_tons": "1140.45",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 11,
+          "tons": "306.28"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 5,
+          "tons": "124.37"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 1,
+          "tons": "12.03"
+        }
+      },
+      "aziz_count": 1,
+      "aziz_tons": "27.4",
+      "incoming_count": 124,
+      "incoming_tons": "1583.13"
+    },
+    "2026-09-16": {
+      "landfill_count": 111,
+      "landfill_tons": "1030.64",
+      "stations": {
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "86.10"
+        },
+        "محطة ترحيل يطا": {
+          "count": 13,
+          "tons": "396.55"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 2,
+          "tons": "25.88"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 129,
+      "incoming_tons": "1539.17"
+    },
+    "2026-09-17": {
+      "landfill_count": 111,
+      "landfill_tons": "955.41",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 15,
+          "tons": "421.53"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 6,
+          "tons": "137.26"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 132,
+      "incoming_tons": "1514.20"
+    },
+    "2026-09-18": {
+      "landfill_count": 77,
+      "landfill_tons": "644.80",
+      "stations": {
+        "محطة ترحيل ترقوميا": {
+          "count": 9,
+          "tons": "191.08"
+        },
+        "محطة ترحيل يطا": {
+          "count": 7,
+          "tons": "210.92"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 93,
+      "incoming_tons": "1046.80"
+    },
+    "2026-09-19": {
+      "landfill_count": 76,
+      "landfill_tons": "618.07",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 17,
+          "tons": "491.62"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 5,
+          "tons": "136.45"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 2,
+          "tons": "25.52"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 100,
+      "incoming_tons": "1271.66"
+    },
+    "2026-09-20": {
+      "landfill_count": 137,
+      "landfill_tons": "1393.88",
+      "stations": {
+        "محطة ترحيل ترقوميا": {
+          "count": 4,
+          "tons": "101.20"
+        },
+        "محطة ترحيل يطا": {
+          "count": 16,
+          "tons": "462.58"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 12,
+          "tons": "120.18"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 169,
+      "incoming_tons": "2077.84"
+    },
+    "2026-09-21": {
+      "landfill_count": 92,
+      "landfill_tons": "845.70",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 16,
+          "tons": "436.41"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "80.84"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 5,
+          "tons": "51.44"
+        }
+      },
+      "aziz_count": 2,
+      "aziz_tons": "59.34",
+      "incoming_count": 116,
+      "incoming_tons": "1414.39"
+    },
+    "2026-09-22": {
+      "landfill_count": 118,
+      "landfill_tons": "1090.40",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 12,
+          "tons": "366.51"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "91.50"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 4,
+          "tons": "49.12"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 137,
+      "incoming_tons": "1597.53"
+    },
+    "2026-09-23": {
+      "landfill_count": 112,
+      "landfill_tons": "1150.21",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 14,
+          "tons": "408.06"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "90.97"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 4,
+          "tons": "55.06"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 133,
+      "incoming_tons": "1704.30"
+    },
+    "2026-09-24": {
+      "landfill_count": 123,
+      "landfill_tons": "1113.95",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 14,
+          "tons": "404.92"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "91.49"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 1,
+          "tons": "9.3"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 141,
+      "incoming_tons": "1619.66"
+    },
+    "2026-09-25": {
+      "landfill_count": 88,
+      "landfill_tons": "709.64",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 11,
+          "tons": "299.33"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 0,
+          "tons": "0"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 99,
+      "incoming_tons": "1008.97"
+    },
+    "2026-09-26": {
+      "landfill_count": 84,
+      "landfill_tons": "715.32",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 13,
+          "tons": "404.84"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 4,
+          "tons": "114.88"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 101,
+      "incoming_tons": "1235.04"
+    },
+    "2026-09-27": {
+      "landfill_count": 124,
+      "landfill_tons": "1282.79",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 19,
+          "tons": "561.80"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 2,
+          "tons": "58.57"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 145,
+      "incoming_tons": "1903.16"
+    },
+    "2026-09-28": {
+      "landfill_count": 111,
+      "landfill_tons": "1134.84",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 16,
+          "tons": "487.03"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "79.91"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 130,
+      "incoming_tons": "1701.78"
+    },
+    "2026-09-29": {
+      "landfill_count": 114,
+      "landfill_tons": "1228.09",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 12,
+          "tons": "340.07"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 4,
+          "tons": "115.98"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 130,
+      "incoming_tons": "1684.14"
+    },
+    "2026-09-30": {
+      "landfill_count": 113,
+      "landfill_tons": "1126.32",
+      "stations": {
+        "محطة ترحيل يطا": {
+          "count": 15,
+          "tons": "443.39"
+        },
+        "محطة ترحيل ترقوميا": {
+          "count": 3,
+          "tons": "88.39"
+        },
+        "محطة ترحيل الخليل": {
+          "count": 0,
+          "tons": "0"
+        }
+      },
+      "aziz_count": 0,
+      "aziz_tons": "0",
+      "incoming_count": 131,
+      "incoming_tons": "1658.10"
+    }
+  },
+  "source_review_required": [
+    {
+      "date": "2026-09-28",
+      "document": "1/26/000019842",
+      "quantity_tons": "4.85",
+      "category": "نفايات محطات الترحيل",
+      "source": "المكب شهر9.xlsx",
+      "reason": "مصنفة محطة ترحيل في ملف تمويل المكب دون اسم محطة. احتسبت مرة واحدة ضمن مجموع الملف لحين مطابقة بيانات الموقع."
+    }
+  ]
+}
