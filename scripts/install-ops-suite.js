@@ -14,6 +14,12 @@ server=server.replace('const AUTO_BACKUP_RETENTION_COUNT = 5;','const AUTO_BACKU
 server=server.replace('const backupJsonParser = express.json({ limit: "50mb" });','const backupJsonParser = express.json({ limit: "100mb" });');
 server=server.replace('if (req.path === "/api/backup/restore" || req.path === "/api/backup/validate") return backupJsonParser(req,res,next);','if (req.path === "/api/backup/restore" || req.path === "/api/backup/validate" || req.path === "/api/ops/restore") return backupJsonParser(req,res,next);');
 const stationModule='require("./station-subsources")(app,{db,requireAuth,requireRole,audit});';
+const equipmentModule='require("./equipment-management")(app,{db,requireAuth,requireRole,audit});';
+if(!server.includes(equipmentModule)){
+  if(server.includes(stationModule))server=server.replace(stationModule,`${stationModule}\n${equipmentModule}`);
+  else throw new Error('Equipment management module mount point not found');
+}
+
 if(!server.includes(stationModule)){
   const stationAnchor='require("./cloud-files")(app,{db,requireAuth,requireRole,audit});';
   if(server.includes(stationAnchor))server=server.replace(stationAnchor,`${stationAnchor}\n${stationModule}`);
@@ -21,7 +27,7 @@ if(!server.includes(stationModule)){
 }
 const maintenanceFinanceModule='require("./equipment-maintenance-finance")(app,{db,requireAuth,requireRole,audit});';
 if(!server.includes(maintenanceFinanceModule)){
-  if(server.includes(stationModule))server=server.replace(stationModule,`${stationModule}\n${maintenanceFinanceModule}`);
+  if(server.includes(equipmentModule))server=server.replace(equipmentModule,`${equipmentModule}\n${maintenanceFinanceModule}`);
   else throw new Error('Maintenance finance module mount point not found');
 }
 const backupPattern=/function buildBackupObject\(\) \{[\s\S]*?\n\}/;
