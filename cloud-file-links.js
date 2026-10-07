@@ -156,16 +156,23 @@ module.exports = function installCloudFileLinks(app, { db, requireAuth, requireR
         if (row) sources.push({folder_id:row.id,source_name:folderName,asset_name:assetName});
       }
       let linked=0,created=0;
-      const details=[];
+      const details=[], assetIds=new Set();
       for (const source of sources) {
         const asset = ensureArchiveAsset(source.asset_name,req.user.id);
+        assetIds.add(Number(asset.row.id));
         if (asset.created) created++;
         const count = linkFolderFilesToAsset(source.folder_id,asset.row.id,req.user.id);
         linked += count;
         details.push({folder:source.source_name,asset:asset.row.name,linked:count,created:asset.created});
       }
-      audit(req.user,'RELINK_MAINTENANCE_ARCHIVE','equipment',0,`linked=${linked},created=${created}`);
-      res.json({ok:true,linked,created,assets:details.length,details});
+      let totalLinked = 0;
+      const ids = [...assetIds];
+      if (ids.length) {
+        const marks = ids.map(()=>'?').join(',');
+        totalLinked = Number(db.prepare(`SELECT COUNT(*) c FROM cloud_file_links WHERE entity_type='equipment' AND entity_id IN (${marks})`).get(...ids)?.c || 0);
+      }
+      audit(req.user,'RELINK_MAINTENANCE_ARCHIVE','equipment',0,`new=${linked},total=${totalLinked},created=${created}`);
+      res.json({ok:true,linked,total_linked:totalLinked,created,assets:assetIds.size,details});
     } catch (error) {
       res.status(500).json({ok:false,message:'تعذر ربط أرشيف الصيانة بالمعدات',error:error.message});
     }
