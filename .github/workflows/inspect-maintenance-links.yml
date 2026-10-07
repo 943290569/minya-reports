@@ -1,0 +1,76 @@
+name: Inspect maintenance archive links
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-maintenance-links.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 --decode > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -T 10 -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Inspect maintenance archive DB
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PM2_NAME: ${{ secrets.DEPLOY_PM2_NAME }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${DEPLOY_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_PM2_NAME='$DEPLOY_PM2_NAME' python3 - <<'PY'
+          import json, os, sqlite3, subprocess
+          from pathlib import Path
+          root=Path(os.environ['DEPLOY_PATH']).resolve()
+          rows=json.loads(subprocess.check_output(['pm2','jlist'],text=True))
+          app=next(r for r in rows if r.get('name')==os.environ['DEPLOY_PM2_NAME'])
+          env=app.get('pm2_env',{})
+          merged={**env.get('env',{}),**env}
+          data=Path(merged.get('MINYA_DATA_DIR') or root).resolve()
+          db=sqlite3.connect(data/'database.db')
+          db.row_factory=sqlite3.Row
+          print('DB',data/'database.db')
+          print('READY_FILES',db.execute("select count(*) from cloud_files where status='ready'").fetchone()[0])
+          print('FOLDERS',db.execute("select count(*) from cloud_folders").fetchone()[0])
+          print('LINKS',db.execute("select count(*) from cloud_file_links").fetchone()[0])
+          roots=db.execute("select id,name,parent_id from cloud_folders where parent_id is null order by id").fetchall()
+          print('ROOTS', [dict(r) for r in roots])
+          maintenance=db.execute("select id,name from cloud_folders where parent_id is null and name='الصيانة'").fetchone()
+          if maintenance:
+              mid=maintenance['id']
+              children=db.execute("select id,name,parent_id from cloud_folders where parent_id=? order by name",(mid,)).fetchall()
+              print('MAINT_CHILDREN', [dict(r) for r in children])
+              for r in children:
+                  c=db.execute("select count(*) from cloud_files where folder_id=? and status='ready'",(r['id'],)).fetchone()[0]
+                  d=db.execute("""with recursive tree(id) as (
+                    select id from cloud_folders where id=?
+                    union all select f.id from cloud_folders f join tree t on f.parent_id=t.id
+                  ) select count(*) from cloud_files where status='ready' and folder_id in (select id from tree)""",(r['id'],)).fetchone()[0]
+                  print('CHILD_COUNT',r['id'],r['name'],'DIRECT',c,'DESC',d)
+              machine=db.execute("select id,name from cloud_folders where parent_id=? and lower(name)=lower('all machins and cars')",(mid,)).fetchone()
+              print('MACHINE_ROOT',dict(machine) if machine else None)
+              if machine:
+                  for r in db.execute("select id,name,parent_id from cloud_folders where parent_id=? order by name",(machine['id'],)).fetchall():
+                      d=db.execute("""with recursive tree(id) as (
+                        select id from cloud_folders where id=?
+                        union all select f.id from cloud_folders f join tree t on f.parent_id=t.id
+                      ) select count(*) from cloud_files where status='ready' and folder_id in (select id from tree)""",(r['id'],)).fetchone()[0]
+                      print('ASSET',r['id'],r['name'],'FILES',d)
+          print('NULL_FOLDER_READY',db.execute("select count(*) from cloud_files where status='ready' and folder_id is null").fetchone()[0])
+          print('SAMPLE_FILES',[dict(r) for r in db.execute("select id,folder_id,original_name,status from cloud_files where status='ready' order by id desc limit 12")])
+          PY
