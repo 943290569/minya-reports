@@ -4,7 +4,7 @@ module.exports=function installEquipmentMaintenanceFinance(app,{db,requireAuth,r
   if(!emrColumns.has('legacy_source'))db.exec("ALTER TABLE equipment_maintenance_records ADD COLUMN legacy_source TEXT DEFAULT ''");
   if(!emrColumns.has('legacy_id'))db.exec("ALTER TABLE equipment_maintenance_records ADD COLUMN legacy_id INTEGER");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_emr_legacy_source_id ON equipment_maintenance_records(legacy_source,legacy_id) WHERE legacy_source<>'' AND legacy_id IS NOT NULL");
-  const normName=v=>String(v||'').toLowerCase().replace(/[\\s_\\-./\\\\()[\\]]+/g,'').replace(/[^a-z0-9\\u0600-\\u06ff]/g,'');
+  const normName=v=>String(v||'').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g,'');
   function ensureAssetByLegacyName(name){
     const raw=String(name||'').trim(); if(!raw)return null;
     const wanted=normName(raw);
