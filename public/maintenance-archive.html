@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>أرشيف الصيانة - مكب المنيا</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/app-bundle.css?v=3.5.0-20260911-typography-v2-wa8">
+  <link rel="stylesheet" href="/mobile-vertical-menu.css?v=maintenance-archive-v1">
+  <link rel="stylesheet" href="/maintenance-archive.css?v=1">
+  <link rel="stylesheet" href="/modern-theme.css?v=20261001-contrast">
+</head>
+<body>
+<header class="top-header">
+  <div><h1>نظام إدارة مكب المنيا</h1><p>أرشيف الصيانة والمرفقات على Cloudflare R2</p></div>
+  <nav>
+    <a class="app-nav-link" href="/">الرئيسية</a>
+    <a class="app-nav-link" href="/equipment-management">إدارة المعدات</a>
+    <a class="app-nav-link" href="/maintenance-incidents.html">الصيانة والحوادث</a>
+    <a class="app-nav-link active" href="/maintenance-archive.html">أرشيف الصيانة</a>
+  </nav>
+</header>
+
+<main class="container maintenance-archive-page">
+  <section class="panel ma-hero">
+    <div>
+      <span class="ma-kicker">R2 MAINTENANCE ARCHIVE</span>
+      <h2>رفع مجلد الصيانة كاملًا</h2>
+      <p>يحافظ النظام على بنية المجلدات ويرفع الملفات مباشرة إلى Cloudflare R2 دون تخزينها داخل GitHub.</p>
+    </div>
+    <div id="maStorageState" class="ma-state">جاري فحص التخزين...</div>
+  </section>
+
+  <section class="panel">
+    <h3>استيراد مجلد</h3>
+    <div class="ma-upload-grid">
+      <label class="ma-folder-picker">
+        <span>اختر مجلد الصيانة بعد فك ضغط work.rar</span>
+        <input id="maFolderInput" type="file" webkitdirectory directory multiple>
+      </label>
+      <label>
+        <span>عدد الملفات</span>
+        <strong id="maFileCount">0</strong>
+      </label>
+      <label>
+        <span>الحجم الإجمالي</span>
+        <strong id="maTotalSize">0 MB</strong>
+      </label>
+      <label>
+        <span>الربط التلقائي بالمعدات</span>
+        <select id="maAutoLink"><option value="1">مفعل</option><option value="0">غير مفعل</option></select>
+      </label>
+    </div>
+    <div class="ma-actions">
+      <button id="maStartUpload" class="v3-primary" disabled>بدء الرفع</button>
+      <button id="maCancelUpload" type="button" disabled>إيقاف بعد الملف الحالي</button>
+    </div>
+    <div class="ma-progress-shell" aria-label="تقدم الرفع"><i id="maProgressBar"></i></div>
+    <div class="ma-progress-text">
+      <strong id="maProgressText">لم يبدأ الرفع</strong>
+      <span id="maProgressDetail"></span>
+    </div>
+    <div id="maUploadMessage" class="ma-message" role="status"></div>
+    <div id="maErrors" class="ma-errors"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ma-browser-head">
+      <div><h3>أرشيف الصيانة</h3><p id="maPath">الصيانة</p></div>
+      <button id="maRefresh" type="button">تحديث</button>
+    </div>
+    <div id="maBreadcrumbs" class="ma-breadcrumbs"></div>
+    <div id="maFolderList" class="ma-folder-list"></div>
+    <div class="v3-table-wrap">
+      <table class="v3-table">
+        <thead><tr><th>الملف</th><th>النوع</th><th>الحجم</th><th>التاريخ</th><th>فتح</th></tr></thead>
+        <tbody id="maFilesBody"><tr><td colspan="5">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="/js/app-auth.js"></script>
+<script src="/js/app-header-menu.js?v=review-20260919"></script>
+<script src="/js/app-appearance-settings.js?v=review-20260919"></script>
+<script src="/js/app-maintenance-archive.js?v=1"></script>
+</body>
+</html>
