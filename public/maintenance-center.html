@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>الصيانة - نظام إدارة مكب المنيا</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/app-bundle.css?v=3.5.0-20260911-typography-v2-wa8">
+  <link rel="stylesheet" href="/modern-theme.css?v=20261001-contrast">
+  <style>
+    .maintenance-center{max-width:1200px}
+    .maintenance-center-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .maintenance-center-card{display:flex;flex-direction:column;gap:7px;padding:18px;border:1px solid #d7e3dd;border-radius:14px;background:#fff;text-decoration:none;color:inherit;min-height:140px}
+    .maintenance-center-card:hover{border-color:var(--appearance-accent,#176b4f);transform:translateY(-1px)}
+    .maintenance-center-card strong{font-size:18px}
+    .maintenance-center-card span{color:#5f7068;line-height:1.7}
+    .maintenance-center-card b{margin-top:auto;color:var(--appearance-accent,#176b4f)}
+    .maintenance-center-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+    .maintenance-center-summary>div{background:#fff;border:1px solid #d7e3dd;border-radius:12px;padding:12px}
+    .maintenance-center-summary span{display:block;color:#66766e;font-size:12px}
+    .maintenance-center-summary strong{font-size:20px}
+    @media(max-width:850px){.maintenance-center-grid{grid-template-columns:1fr 1fr}.maintenance-center-summary{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.maintenance-center-grid,.maintenance-center-summary{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header class="top-header">
+  <div><h1>نظام إدارة مكب المنيا</h1><p>الصيانة</p></div>
+  <nav>
+    <a class="app-nav-link" href="/">الرئيسية</a>
+    <a class="app-nav-link active" href="/maintenance-center.html">الصيانة</a>
+  </nav>
+</header>
+<main class="container maintenance-center">
+  <section class="v3-page">
+    <div class="v3-hero">
+      <div>
+        <span>MAINTENANCE CENTER</span>
+        <h2>مركز الصيانة</h2>
+        <p>كل ما يتعلق بالمعدات والصيانة والتكاليف والحوادث والملفات في مكان واحد.</p>
+      </div>
+    </div>
+    <div class="maintenance-center-grid">
+      <a class="maintenance-center-card" href="/equipment-management">
+        <strong>إدارة المعدات</strong>
+        <span>بطاقات الآليات، العدادات، ساعات التشغيل، السولار، الحالة والسائق.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/equipment-maintenance-finance.html">
+        <strong>سجل الصيانة والتكاليف</strong>
+        <span>التاريخ، رقم الفاتورة، الشركة، نوع الصيانة، التكاليف، والتقارير الشهرية والسنوية.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/equipment-management">
+        <strong>الصيانة الوقائية</strong>
+        <span>خطط الصيانة حسب ساعات التشغيل والاستحقاق والتنبيهات.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/maintenance-incidents">
+        <strong>الصيانة والحوادث</strong>
+        <span>الأعطال والحوادث والإجراءات المتخذة والمتابعة.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/maintenance-archive.html">
+        <strong>أرشيف الصيانة</strong>
+        <span>ملفات الآليات والمراسلات والصور وWord وPDF المخزنة على R2.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/equipment">
+        <strong>سجل المعدات التشغيلي</strong>
+        <span>بيانات المعدات المرتبطة بالتقارير اليومية والتشغيل.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/equipment-maintenance-finance.html">
+        <strong>تقارير الصيانة</strong>
+        <span>شهري وسنوي لكل آلية أو لجميع الآليات، مع التجميع حسب الشركة ونوع الصيانة.</span>
+        <b>فتح</b>
+      </a>
+      <a class="maintenance-center-card" href="/maintenance-archive.html">
+        <strong>ملفات الآليات</strong>
+        <span>الوصول إلى ملفات كل آلية وربطها بالسجل الخاص بها.</span>
+        <b>فتح</b>
+      </a>
+    </div>
+  </section>
+</main>
+<script src="/js/app-auth.js"></script>
+<script src="/js/app-header-menu.js?v=20261007-maintenance-center"></script>
+</body>
+</html>
