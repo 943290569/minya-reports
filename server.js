@@ -331,6 +331,8 @@ app.use((req, res, next) => {
 require("./driver-licenses")(app,{db,requireAuth,requireRole,audit,uploadsDir});
 require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomaticBackup});
 require("./cloud-files")(app,{db,requireAuth,requireRole,audit});
+require("./equipment-maintenance-finance")(app,{db,requireAuth,requireRole,audit});
+require("./equipment-management")(app,{db,requireAuth,requireRole,audit});
 require("./employee-complaints")(app,{db,requireRole,currentUser,audit,uploadsDir});
 require("./employee-evaluations")(app,{db,requireRole,audit,writeAutomaticBackup});
 require("./water-spraying")(app,{db,requireRole,audit,writeAutomaticBackup});
