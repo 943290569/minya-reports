@@ -85,7 +85,7 @@ module.exports = function installCloudFileLinks(app, { db, requireAuth, requireR
     ['fuel tank black','Fuel Tank Black'],
     ['sprying machine','Spraying Machine']
   ]);
-  const archiveNorm = value => String(value || '').toLowerCase().replace(/[\\s_\\-./\\\\()[\\]]+/g,'').replace(/[^a-z0-9\\u0600-\\u06ff]/g,'');
+  const archiveNorm = value => String(value || '').toLowerCase().replace(/[\\s_./\\\\()[\\]-]+/g,'').replace(/[^a-z0-9\\u0600-\\u06ff]/g,'');
   function canonicalArchiveAssetName(folderName) {
     const direct = archiveAssetAliases.get(String(folderName || '').trim());
     if (direct) return direct;
