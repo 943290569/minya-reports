@@ -91,7 +91,7 @@
   }
   async function openRoot(){try{const id=await ensureRoot();breadcrumbs=[];renderCrumbs();await browse(id,['الصيانة']);}catch(e){el('maFilesBody').innerHTML='<tr><td colspan="5">'+esc(e.message)+'</td></tr>';}}
   async function init(){
-    el('maFolderInput').onchange=selected;el('maStartUpload').onclick=start;el('maCancelUpload').onclick=()=>{stopping=true;el('maCancelUpload').disabled=true;el('maProgressDetail').textContent='سيتم الإيقاف بعد الملف الحالي';};el('maRefresh').onclick=openRoot;
+    el('maFolderInput').onchange=selected;el('maStartUpload').onclick=start;el('maCancelUpload').onclick=()=>{stopping=true;el('maCancelUpload').disabled=true;el('maProgressDetail').textContent='سيتم الإيقاف بعد الملف الحالي';};el('maRefresh').onclick=openRoot;el('maRelink').onclick=async()=>{const b=el('maRelink');b.disabled=true;el('maRelinkMsg').textContent='جاري ربط الملفات بالمعدات...';try{const d=await api('/api/cloud-files/maintenance-archive/relink',jsonPost({}));el('maRelinkMsg').textContent='تم الربط: '+d.linked+' ملف، '+d.assets+' معدة/مركبة، وتم إنشاء '+d.created+' بطاقة معدات جديدة.';await loadEquipment();}catch(e){el('maRelinkMsg').textContent=e.message;}finally{b.disabled=false;}};
     await Promise.all([status(),loadEquipment()]);await openRoot();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
