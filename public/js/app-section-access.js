@@ -15,8 +15,32 @@
     delete el.dataset.sectionAccessHidden;el.hidden=false;
     el.style.removeProperty('display');el.removeAttribute('aria-hidden');
   }
+  function addSectionLinks(menu){
+    const existing=new Set([...menu.querySelectorAll('a[href]')].map(a=>new URL(a.getAttribute('href'),location.origin).pathname));
+    Object.entries(access.sections||{}).forEach(([feature,section])=>{
+      if(access.role!=='admin'&&Number(access.permissions[feature]?.can_view)!==1)return;
+      (section.links||[]).forEach(item=>{
+        if(existing.has(item.href))return;
+        const link=document.createElement('a');link.href=item.href;
+        link.dataset.sectionRelated=feature;
+        const mobile=menu.id==='minyaHeaderMenu';
+        link.className=mobile?'minya-menu-item':'app-nav-link';
+        if(mobile){
+          const label=document.createElement('span');label.className='minya-menu-label';label.textContent=item.label;
+          const arrow=document.createElement('b');arrow.textContent='‹';arrow.setAttribute('aria-hidden','true');link.append(label,arrow);
+        }else link.textContent=item.label;
+        if(location.pathname===item.href){link.classList.add('active');link.setAttribute('aria-current','page');}
+        // Reuse the existing group for this section when grouping has run.
+        const sibling=[...menu.querySelectorAll('a[href]')].find(a=>(section.links||[]).some(x=>x.href===new URL(a.getAttribute('href'),location.origin).pathname));
+        const group=sibling?.closest('.review-nav-group');
+        (group||menu).append(link);existing.add(item.href);
+      });
+    });
+  }
   function apply(){
-    if(!access||access.role==='admin')return;
+    if(!access)return;
+    document.querySelectorAll('#minyaHeaderMenu,.minya-desktop-more-panel').forEach(addSectionLinks);
+    if(access.role==='admin')return;
     const routes=new Map();
     Object.entries(access.sections||{}).forEach(([feature,section])=>section.routes.forEach(route=>{
       routes.set(route,feature);if(!route.endsWith('.html'))routes.set(route+'.html',feature);

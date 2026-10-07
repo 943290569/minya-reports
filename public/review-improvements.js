@@ -3,8 +3,8 @@
   const route=location.pathname.replace(/\/+$/,'')||'/';
   const $=id=>document.getElementById(id);
   const groups=[
-    ['التقارير والبحث',['/','/report','/archive','/monthly','/annual','/weekly','/search','/managerial','/global-search']],
-    ['التشغيل والمتابعة',['/ops-dashboard','/equipment','/equipment-management','/fleet','/drivers-licenses.html','/maintenance-center.html','/equipment-maintenance-finance.html','/maintenance-incidents','/environment','/tasks','/contracts','/cells','/external-diesel','/files']],
+    ['التقارير والبحث',['/','/report','/archive','/monthly','/annual','/weekly','/search','/managerial','/global-search','/monthly-entry.html','/station-sources.html']],
+    ['التشغيل والمتابعة',['/ops-dashboard','/equipment','/equipment-management','/fleet','/drivers-licenses.html','/maintenance-center.html','/equipment-maintenance-finance.html','/maintenance-archive.html','/maintenance-incidents','/environment','/tasks','/contracts','/cells','/external-diesel','/files']],
     ['الإدارة والبيانات',['/admin','/system.html','/drive-import.html','/reviews']]
   ];
   function groupMenu(menu){

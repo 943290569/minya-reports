@@ -19,6 +19,18 @@ const sections = {
   external_diesel:{label:'السولار الخارجي',routes:['/external-diesel']},
   backups:{label:'النسخ الاحتياطي',routes:[]}
 };
+// Canonical destinations only; route aliases are used for access checks.
+sections.report_entry.links=[{href:'/monthly-entry.html',label:'إدخال التقارير الشهرية'}];
+sections.monthly.links=[{href:'/station-sources.html',label:'مصادر كميات المحطات'}];
+sections.fleet.links=[{href:'/fleet',label:'مركبات حركة المكب'},{href:'/drivers-licenses.html',label:'رخص المركبات والسائقين'}];
+sections.equipment_management.links=[
+  {href:'/maintenance-center.html',label:'مركز الصيانة'},
+  {href:'/equipment-management',label:'المعدات وأوامر الصيانة'},
+  {href:'/equipment-maintenance-finance.html',label:'سجل الصيانة والتكاليف'},
+  {href:'/maintenance-archive.html',label:'أرشيف ملفات الصيانة'},
+  {href:'/equipment',label:'تشغيل الآليات من التقارير'}
+];
+sections.incidents.links=[{href:'/maintenance-incidents',label:'الحوادث والأعطال'}];
 function featureForPath(value){
   const path=String(value||'').replace(/\/+$/,'')||'/';
   return Object.keys(sections).find(key=>sections[key].routes.some(route=>route===path||(!route.endsWith('.html')&&route+'.html'===path)))||null;

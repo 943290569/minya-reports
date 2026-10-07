@@ -109,7 +109,7 @@
     applyRoleNavigation(user);
     removeUserBox();
     loadSharedEnhancements();
-    loadScriptOnce('/js/app-section-access.js?v=20261008-sections1','data-minya-section-access');
+    loadScriptOnce('/js/app-section-access.js?v=20261008-section-links2','data-minya-section-access');
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
