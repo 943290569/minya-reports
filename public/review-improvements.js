@@ -4,20 +4,24 @@
   const $=id=>document.getElementById(id);
   const groups=[
     ['التقارير والبحث',['/','/report','/archive','/monthly','/annual','/weekly','/search','/managerial','/global-search']],
-    ['التشغيل والمتابعة',['/ops-dashboard','/equipment','/equipment-management','/fleet','/drivers-licenses.html','/maintenance-incidents','/environment','/tasks','/contracts','/cells','/external-diesel','/files']],
+    ['التشغيل والمتابعة',['/ops-dashboard','/equipment','/equipment-management','/fleet','/drivers-licenses.html','/maintenance-center.html','/equipment-maintenance-finance.html','/maintenance-incidents','/environment','/tasks','/contracts','/cells','/external-diesel','/files']],
     ['الإدارة والبيانات',['/admin','/system.html','/drive-import.html','/reviews']]
   ];
   function groupMenu(menu){
     if(!menu)return;
     if(menu.classList.contains('minya-desktop-more-panel'))menu.style.setProperty('--review-menu-top',`${Math.ceil(menu.parentElement.getBoundingClientRect().bottom)+8}px`);
-    const links=[...menu.querySelectorAll('a[href]')];
-    if(!links.some(a=>a.parentElement===menu))return;
-    menu.querySelectorAll('.review-nav-group').forEach(g=>g.remove());
+    // Only move newly rendered direct links. Keep existing groups and links
+    // mounted so observer updates cannot interrupt a pointer click or focus.
+    const links=[...menu.querySelectorAll('a[href]')].filter(a=>a.parentElement===menu);
+    if(!links.length)return;
     groups.forEach(([label,paths])=>{
       const members=links.filter(a=>paths.includes(new URL(a.href,location.origin).pathname));
       if(!members.length)return;
-      const group=document.createElement('section');group.className='review-nav-group';
-      const title=document.createElement('strong');title.textContent=label;group.append(title);
+      let group=[...menu.querySelectorAll('.review-nav-group')].find(g=>g.querySelector('strong')?.textContent===label);
+      if(!group){
+        group=document.createElement('section');group.className='review-nav-group';
+        const title=document.createElement('strong');title.textContent=label;group.append(title);menu.append(group);
+      }
       members.forEach(a=>group.append(a));menu.append(group);
     });
   }
