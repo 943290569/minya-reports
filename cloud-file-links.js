@@ -110,21 +110,29 @@ module.exports = function installCloudFileLinks(app, { db, requireAuth, requireR
     return {row,created:true};
   }
   function descendantFolderIds(folderId) {
-    return db.prepare(`WITH RECURSIVE tree(id) AS (
-      SELECT id FROM cloud_folders WHERE id=?
-      UNION ALL
-      SELECT f.id FROM cloud_folders f JOIN tree t ON f.parent_id=t.id
-    ) SELECT id FROM tree`).all(folderId).map(x=>Number(x.id));
+    const seen = new Set();
+    const queue = [Number(folderId)];
+    const childStmt = db.prepare('SELECT id FROM cloud_folders WHERE parent_id=? ORDER BY id');
+    while (queue.length) {
+      const current = Number(queue.shift());
+      if (!Number.isSafeInteger(current) || current <= 0 || seen.has(current)) continue;
+      seen.add(current);
+      for (const row of childStmt.all(current)) queue.push(Number(row.id));
+    }
+    return [...seen];
   }
   function linkFolderFilesToAsset(folderId,assetId,userId) {
     const ids = descendantFolderIds(folderId);
     if (!ids.length) return 0;
-    const marks = ids.map(()=>'?').join(',');
-    const files = db.prepare(`SELECT id FROM cloud_files WHERE status='ready' AND folder_id IN (${marks})`).all(...ids);
-    const stmt = db.prepare("INSERT OR IGNORE INTO cloud_file_links(file_id,entity_type,entity_id,created_by) VALUES(?,'equipment',?,?)");
+    const fileStmt = db.prepare("SELECT id FROM cloud_files WHERE status='ready' AND folder_id=? ORDER BY id");
+    const linkStmt = db.prepare("INSERT OR IGNORE INTO cloud_file_links(file_id,entity_type,entity_id,created_by) VALUES(?,'equipment',?,?)");
     let linked = 0;
-    const tx = db.transaction(rows => { for (const row of rows) linked += stmt.run(row.id,assetId,userId).changes; });
-    tx(files);
+    const tx = db.transaction(folderIds => {
+      for (const id of folderIds) {
+        for (const file of fileStmt.all(id)) linked += linkStmt.run(file.id,assetId,userId).changes;
+      }
+    });
+    tx(ids);
     return linked;
   }
   app.post('/api/cloud-files/maintenance-archive/relink', requireRole('admin','editor'), (req,res) => {
