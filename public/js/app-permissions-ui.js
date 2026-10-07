@@ -36,8 +36,8 @@
     const adminOnlyHrefs = ["/admin","/admin.html","/system.html","/drive-import.html","/reviews"];
     adminOnlyHrefs.forEach(href => document.querySelectorAll(`a[href="${href}"]`).forEach(link => { if (role !== "admin") hide(link); }));
     if (role === "viewer") document.querySelectorAll('a[href="/report"]').forEach(hide);
-    const featureLinks = { fleet:"/fleet", incidents:"/maintenance-incidents", environment:"/environment", tasks:"/tasks", contracts:"/contracts", cells:"/cells", equipment_management:"/equipment-management", global_search:"/global-search" };
-    if (featurePermissions) Object.entries(featureLinks).forEach(([feature,href]) => { if (!featurePermissions[feature]?.can_view) document.querySelectorAll(`a[href="${href}"]`).forEach(hide); });
+    const featureLinks = { fleet:["/fleet"], incidents:["/maintenance-incidents"], environment:["/environment"], tasks:["/tasks"], contracts:["/contracts"], cells:["/cells"], equipment_management:["/maintenance-center.html","/equipment-maintenance-finance.html","/equipment-management"], global_search:["/global-search"] };
+    if (featurePermissions) Object.entries(featureLinks).forEach(([feature,hrefs]) => { if (!featurePermissions[feature]?.can_view) hrefs.forEach(href=>document.querySelectorAll(`a[href="${href}"]`).forEach(hide)); });
   }
   function applyV3Permissions() {
     if (role === "viewer") { hide(document.getElementById("maintSave")); document.querySelectorAll("#v3Content input, #v3Content textarea, #v3Content select").forEach(el => { if (!el.closest(".v3-filter") && !el.closest(".v3-search-grid")) el.disabled = true; }); }
@@ -52,7 +52,7 @@
     try {
       const response = await fetch("/api/feature-permissions", { cache:"no-store" });
       const data = await response.json(); if (!response.ok || !data.ok) return;
-      const labels = { fleet:"المركبات والسائقون", incidents:"الصيانة والحوادث", environment:"العصارة والغطاء", tasks:"الملاحظات والمهام", contracts:"المقاولون والعقود", cells:"الخلايا والسعة", equipment_management:"إدارة المعدات الوقائية", global_search:"البحث الشامل", backups:"النسخ الاحتياطي" };
+      const labels = { fleet:"المركبات والسائقون", incidents:"الصيانة والحوادث", environment:"العصارة والغطاء", tasks:"الملاحظات والمهام", contracts:"المقاولون والعقود", cells:"الخلايا والسعة", equipment_management:"الصيانة", global_search:"البحث الشامل", backups:"النسخ الاحتياطي" };
       const section = document.createElement("section"); section.id = "featurePermissionManager"; section.className = "v3-panel";
       section.innerHTML = `<h3>صلاحيات الأقسام</h3><p>تحديد من يستطيع مشاهدة أو تعديل كل قسم. صلاحيات المدير كاملة دائمًا.</p><label>المستخدم<select id="featurePermissionUser"><option value="">اختر مستخدمًا</option>${data.users.filter(u=>u.role!=="admin").map(u=>`<option value="${u.id}">${u.display_name} (${u.username})</option>`).join("")}</select></label><div id="featurePermissionRows"></div><button id="featurePermissionSave" class="v3-primary" type="button">حفظ الصلاحيات</button><span id="featurePermissionMsg"></span>`;
       host.appendChild(section);
