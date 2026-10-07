@@ -57,6 +57,112 @@ module.exports = function installCloudFileLinks(app, { db, requireAuth, requireR
       return row ? [{...link,title:row.title,section:TYPES[link.entity_type].label,can_edit:allowed(user,link.entity_type,true)}] : [];
     });
   }
+  const archiveAssetAliases = new Map([
+    ['963 081 (22)','CAT 963 موديل 2022'],
+    ['963 917 (23)','CAT 963 موديل 2023'],
+    ['963k','CAT 963K'],
+    ['336 E','CAT 336E'],
+    ['428 F2','CAT 428 F2'],
+    ['950 H','CAT 950H'],
+    ['CAT 816','CAT 816'],
+    ['bomag 24 ton','Bomag 24 طن'],
+    ['bomag 36 ton','Bomag 36 طن'],
+    ['volvo 1770','Volvo 1770'],
+    ['volvo 1772','Volvo 1772'],
+    ['volvo 1776','Volvo 1776'],
+    ['landini tractor','Landini Tractor'],
+    ['kia','Kia'],
+    ['ssang medical waste','SsangYong Medical Waste'],
+    ['ssang black','SsangYong Black'],
+    ['ssang silver','SsangYong Silver'],
+    ['ssang rexton','SsangYong Rexton'],
+    ['ford medical waste','Ford Medical Waste'],
+    ['bobcat','Bobcat'],
+    ['john deer','John Deere'],
+    ['mitsubishi','Mitsubishi'],
+    ['main getor','Main Generator'],
+    ['main fuel pump','Main Fuel Pump'],
+    ['fuel tank black','Fuel Tank Black'],
+    ['sprying machine','Spraying Machine']
+  ]);
+  const archiveNorm = value => String(value || '').toLowerCase().replace(/[\\s_\\-./\\\\()[\\]]+/g,'').replace(/[^a-z0-9\\u0600-\\u06ff]/g,'');
+  function canonicalArchiveAssetName(folderName) {
+    const direct = archiveAssetAliases.get(String(folderName || '').trim());
+    if (direct) return direct;
+    const n = archiveNorm(folderName);
+    for (const [source,targetName] of archiveAssetAliases) if (archiveNorm(source) === n) return targetName;
+    return String(folderName || '').trim().slice(0,120);
+  }
+  function assetByLooseName(name) {
+    const wanted = archiveNorm(name);
+    const rows = db.prepare('SELECT id,name FROM equipment_assets ORDER BY id').all();
+    return rows.find(row => archiveNorm(row.name) === wanted) || rows.find(row => {
+      const n = archiveNorm(row.name);
+      return n && wanted && (n.includes(wanted) || wanted.includes(n));
+    });
+  }
+  function ensureArchiveAsset(name,userId) {
+    let row = assetByLooseName(name);
+    if (row) return {row,created:false};
+    const result = db.prepare("INSERT INTO equipment_assets(name,equipment_type,status,notes,created_by) VALUES(?,?,'تعمل',?,?)")
+      .run(name,'معدة / مركبة','مستورد تلقائيًا من أرشيف الصيانة',userId);
+    row = db.prepare('SELECT id,name FROM equipment_assets WHERE id=?').get(result.lastInsertRowid);
+    return {row,created:true};
+  }
+  function descendantFolderIds(folderId) {
+    return db.prepare(`WITH RECURSIVE tree(id) AS (
+      SELECT id FROM cloud_folders WHERE id=?
+      UNION ALL
+      SELECT f.id FROM cloud_folders f JOIN tree t ON f.parent_id=t.id
+    ) SELECT id FROM tree`).all(folderId).map(x=>Number(x.id));
+  }
+  function linkFolderFilesToAsset(folderId,assetId,userId) {
+    const ids = descendantFolderIds(folderId);
+    if (!ids.length) return 0;
+    const marks = ids.map(()=>'?').join(',');
+    const files = db.prepare(`SELECT id FROM cloud_files WHERE status='ready' AND folder_id IN (${marks})`).all(...ids);
+    const stmt = db.prepare("INSERT OR IGNORE INTO cloud_file_links(file_id,entity_type,entity_id,created_by) VALUES(?,'equipment',?,?)");
+    let linked = 0;
+    const tx = db.transaction(rows => { for (const row of rows) linked += stmt.run(row.id,assetId,userId).changes; });
+    tx(files);
+    return linked;
+  }
+  app.post('/api/cloud-files/maintenance-archive/relink', requireRole('admin','editor'), (req,res) => {
+    try {
+      if (!exists('equipment_assets')) return res.status(503).json({ok:false,message:'جدول المعدات غير جاهز'});
+      const root = db.prepare("SELECT id FROM cloud_folders WHERE parent_id IS NULL AND name='الصيانة'").get();
+      if (!root) return res.status(404).json({ok:false,message:'مجلد الصيانة غير موجود'});
+      const machineRoot = db.prepare("SELECT id FROM cloud_folders WHERE parent_id=? AND lower(name)=lower('all machins and cars')").get(root.id);
+      const sources = [];
+      if (machineRoot) {
+        db.prepare('SELECT id,name FROM cloud_folders WHERE parent_id=? ORDER BY name').all(machineRoot.id)
+          .filter(x=>String(x.name||'').trim())
+          .forEach(x=>sources.push({folder_id:x.id,source_name:x.name,asset_name:canonicalArchiveAssetName(x.name)}));
+      }
+      const special = [
+        ['محرك CAT 816','CAT 816'],
+        ['محرك جرافة جنزير 963 2022','CAT 963 موديل 2022']
+      ];
+      for (const [folderName,assetName] of special) {
+        const row = db.prepare('SELECT id FROM cloud_folders WHERE parent_id=? AND name=?').get(root.id,folderName);
+        if (row) sources.push({folder_id:row.id,source_name:folderName,asset_name:assetName});
+      }
+      let linked=0,created=0;
+      const details=[];
+      for (const source of sources) {
+        const asset = ensureArchiveAsset(source.asset_name,req.user.id);
+        if (asset.created) created++;
+        const count = linkFolderFilesToAsset(source.folder_id,asset.row.id,req.user.id);
+        linked += count;
+        details.push({folder:source.source_name,asset:asset.row.name,linked:count,created:asset.created});
+      }
+      audit(req.user,'RELINK_MAINTENANCE_ARCHIVE','equipment',0,`linked=${linked},created=${created}`);
+      res.json({ok:true,linked,created,assets:details.length,details});
+    } catch (error) {
+      res.status(500).json({ok:false,message:'تعذر ربط أرشيف الصيانة بالمعدات',error:error.message});
+    }
+  });
+
   app.get('/api/cloud-files/link-types', requireAuth, (req,res) => {
     res.json({ok:true,types:Object.entries(TYPES).filter(([type])=>allowed(req.user,type)).map(([type,t])=>({type,label:t.label,can_edit:allowed(req.user,type,true)}))});
   });
