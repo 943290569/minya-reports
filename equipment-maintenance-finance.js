@@ -1,5 +1,41 @@
 module.exports=function installEquipmentMaintenanceFinance(app,{db,requireAuth,requireRole,audit}){
   db.exec("CREATE TABLE IF NOT EXISTS equipment_maintenance_records(id INTEGER PRIMARY KEY AUTOINCREMENT,asset_id INTEGER NOT NULL,service_date TEXT NOT NULL,invoice_number TEXT DEFAULT '',vendor_name TEXT DEFAULT '',service_type TEXT DEFAULT 'صيانة',description TEXT DEFAULT '',action_taken TEXT DEFAULT '',meter_reading REAL DEFAULT 0,parts_cost REAL DEFAULT 0,labor_cost REAL DEFAULT 0,other_cost REAL DEFAULT 0,invoice_status TEXT DEFAULT 'غير مدفوعة',work_order_id INTEGER,notes TEXT DEFAULT '',created_by INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(asset_id) REFERENCES equipment_assets(id) ON DELETE CASCADE,FOREIGN KEY(work_order_id) REFERENCES equipment_work_orders(id) ON DELETE SET NULL);CREATE INDEX IF NOT EXISTS idx_emr_asset_date ON equipment_maintenance_records(asset_id,service_date);CREATE INDEX IF NOT EXISTS idx_emr_vendor_date ON equipment_maintenance_records(vendor_name,service_date);CREATE INDEX IF NOT EXISTS idx_emr_invoice ON equipment_maintenance_records(invoice_number);");
+  const emrColumns=new Set(db.pragma("table_info(equipment_maintenance_records)").map(x=>x.name));
+  if(!emrColumns.has('legacy_source'))db.exec("ALTER TABLE equipment_maintenance_records ADD COLUMN legacy_source TEXT DEFAULT ''");
+  if(!emrColumns.has('legacy_id'))db.exec("ALTER TABLE equipment_maintenance_records ADD COLUMN legacy_id INTEGER");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_emr_legacy_source_id ON equipment_maintenance_records(legacy_source,legacy_id) WHERE legacy_source<>'' AND legacy_id IS NOT NULL");
+  const normName=v=>String(v||'').toLowerCase().replace(/[\\s_\\-./\\\\()[\\]]+/g,'').replace(/[^a-z0-9\\u0600-\\u06ff]/g,'');
+  function ensureAssetByLegacyName(name){
+    const raw=String(name||'').trim(); if(!raw)return null;
+    const wanted=normName(raw);
+    let rows=[]; try{rows=db.prepare('SELECT id,name FROM equipment_assets ORDER BY id').all();}catch{return null;}
+    let found=rows.find(x=>normName(x.name)===wanted)||rows.find(x=>{const n=normName(x.name);return n&&wanted&&(n.includes(wanted)||wanted.includes(n));});
+    if(found)return found;
+    try{
+      const r=db.prepare("INSERT INTO equipment_assets(name,equipment_type,status,notes) VALUES(?,?,'تعمل',?)").run(raw,'معدة / مركبة','أنشئت تلقائيًا من سجل الصيانة القديم');
+      return {id:Number(r.lastInsertRowid),name:raw};
+    }catch{
+      return db.prepare('SELECT id,name FROM equipment_assets WHERE name=?').get(raw)||null;
+    }
+  }
+  function migrateLegacyMaintenance(){
+    let legacy=[]; try{legacy=db.prepare('SELECT * FROM maintenance_logs ORDER BY log_date,id').all();}catch{return {migrated:0,skipped:0};}
+    const existsStmt=db.prepare("SELECT id FROM equipment_maintenance_records WHERE legacy_source='maintenance_logs' AND legacy_id=?");
+    const insertStmt=db.prepare("INSERT INTO equipment_maintenance_records(asset_id,service_date,invoice_number,vendor_name,service_type,description,action_taken,meter_reading,parts_cost,labor_cost,other_cost,invoice_status,work_order_id,notes,created_by,legacy_source,legacy_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    let migrated=0,skipped=0;
+    const tx=db.transaction(rows=>{
+      for(const row of rows){
+        if(existsStmt.get(row.id)){skipped++;continue;}
+        const a=ensureAssetByLegacyName(row.equipment_name); if(!a||!/\\d{4}-\\d{2}-\\d{2}/.test(String(row.log_date||''))){skipped++;continue;}
+        insertStmt.run(a.id,String(row.log_date).slice(0,10),'','',String(row.status||'صيانة قديمة').trim()||'صيانة قديمة',String(row.description||'').trim(),String(row.action_taken||'').trim(),0,0,0,Math.max(0,Number(row.cost||0)||0),'بيانات قديمة',null,'مرحّل تلقائيًا من سجل الصيانة السابق',row.created_by||null,'maintenance_logs',row.id);
+        migrated++;
+      }
+    });
+    tx(legacy);
+    return {migrated,skipped,total:legacy.length};
+  }
+  const legacyMigration=migrateLegacyMaintenance();
+
   const clean=(v,n=500)=>String(v??'').trim().slice(0,n);
   const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>=0?n:0;};
   const dateOk=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''));
@@ -7,6 +43,12 @@ module.exports=function installEquipmentMaintenanceFinance(app,{db,requireAuth,r
   const guard=edit=>(req,res,next)=>requireAuth(req,res,()=>{const p=permission(req.user);if(!p.can_view||(edit&&!p.can_edit))return res.status(403).json({ok:false,message:'لا توجد صلاحية كافية لإدارة صيانة المعدات'});next();});
   const asset=id=>db.prepare('SELECT id,name,current_meter FROM equipment_assets WHERE id=?').get(Number(id));
   function filter(req,alias='m'){const where=[],args=[];const assetId=Number(req.query.asset_id||0),year=clean(req.query.year,4),month=clean(req.query.month,2);if(assetId){where.push(alias+'.asset_id=?');args.push(assetId);}if(/^\d{4}$/.test(year)){where.push("substr("+alias+".service_date,1,4)=?");args.push(year);}if(/^\d{2}$/.test(month)){where.push("substr("+alias+".service_date,6,2)=?");args.push(month);}return{where:where.length?' WHERE '+where.join(' AND '):'',args};}
+  app.get('/api/equipment-maintenance/meta',guard(false),(req,res)=>{
+    const years=db.prepare("SELECT DISTINCT substr(service_date,1,4) year FROM equipment_maintenance_records WHERE service_date GLOB '[0-9][0-9][0-9][0-9]-*' ORDER BY year DESC").all().map(x=>x.year);
+    const total=Number(db.prepare('SELECT COUNT(*) c FROM equipment_maintenance_records').get()?.c||0);
+    const legacy=Number(db.prepare("SELECT COUNT(*) c FROM equipment_maintenance_records WHERE legacy_source='maintenance_logs'").get()?.c||0);
+    res.json({ok:true,years,total,legacy,migrated_now:legacyMigration.migrated||0});
+  });
   app.get('/api/equipment-maintenance/files/:assetId',guard(false),(req,res)=>{const a=asset(req.params.assetId);if(!a)return res.status(404).json({ok:false,message:'المعدة غير موجودة'});const files=db.prepare("SELECT f.id,f.original_name,f.mime_type,f.size_bytes,f.created_at,l.created_at linked_at FROM cloud_file_links l JOIN cloud_files f ON f.id=l.file_id WHERE l.entity_type='equipment' AND l.entity_id=? AND f.status='ready' ORDER BY f.created_at DESC,f.id DESC").all(a.id);res.json({ok:true,asset:a,files});});
   app.get('/api/equipment-maintenance/records',guard(false),(req,res)=>{const q=filter(req);const rows=db.prepare("SELECT m.*,a.name asset_name,o.order_number,(m.parts_cost+m.labor_cost+m.other_cost) total_cost,(SELECT COUNT(*) FROM cloud_file_links l WHERE l.entity_type='maintenance_record' AND l.entity_id=m.id) attachment_count FROM equipment_maintenance_records m JOIN equipment_assets a ON a.id=m.asset_id LEFT JOIN equipment_work_orders o ON o.id=m.work_order_id"+q.where+" ORDER BY m.service_date DESC,m.id DESC").all(...q.args);res.json({ok:true,records:rows,permission:permission(req.user)});});
   app.post('/api/equipment-maintenance/records',guard(true),(req,res)=>{const b=req.body||{},assetId=Number(b.asset_id),day=clean(b.service_date,10);if(!assetId||!dateOk(day))return res.status(400).json({ok:false,message:'المعدة وتاريخ الصيانة مطلوبان'});if(!asset(assetId))return res.status(404).json({ok:false,message:'المعدة غير موجودة'});const r=db.prepare("INSERT INTO equipment_maintenance_records(asset_id,service_date,invoice_number,vendor_name,service_type,description,action_taken,meter_reading,parts_cost,labor_cost,other_cost,invoice_status,work_order_id,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(assetId,day,clean(b.invoice_number,100),clean(b.vendor_name,160),clean(b.service_type,120)||'صيانة',clean(b.description,2000),clean(b.action_taken,2000),num(b.meter_reading),num(b.parts_cost),num(b.labor_cost),num(b.other_cost),clean(b.invoice_status,80)||'غير مدفوعة',Number(b.work_order_id||0)||null,clean(b.notes,1500),req.user.id);if(num(b.meter_reading)>0)db.prepare('UPDATE equipment_assets SET current_meter=MAX(current_meter,?),updated_at=CURRENT_TIMESTAMP WHERE id=?').run(num(b.meter_reading),assetId);audit(req.user,'CREATE_MAINTENANCE_RECORD','maintenance_record',r.lastInsertRowid,day+':'+clean(b.invoice_number,100));res.json({ok:true,id:r.lastInsertRowid});});
