@@ -299,6 +299,10 @@ function goToEditReport(id) {
 }
 
 function renderArchiveReports() {
+  if (location.pathname.replace(/\/+$/, "") === "/archive" && typeof window.loadArchivePage === "function") {
+    window.loadArchivePage(1);
+    return;
+  }
   const dateFilter = document.getElementById("archiveDateFilter")?.value || "";
   const monthFilter = document.getElementById("archiveMonthFilter")?.value || "";
   let filteredReports = [...archiveReports];

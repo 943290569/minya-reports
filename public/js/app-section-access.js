@@ -16,10 +16,15 @@
     el.style.removeProperty('display');el.removeAttribute('aria-hidden');
   }
   function addSectionLinks(menu){
+    const maintenancePaths=new Set(['/equipment','/equipment-management','/equipment-maintenance-finance.html','/maintenance-archive.html','/drivers-licenses.html','/fleet','/maintenance-incidents']);
+    menu.querySelectorAll('a[href]').forEach(link=>{if(maintenancePaths.has(new URL(link.getAttribute('href'),location.origin).pathname))link.remove();});
     const existing=new Set([...menu.querySelectorAll('a[href]')].map(a=>new URL(a.getAttribute('href'),location.origin).pathname));
     Object.entries(access.sections||{}).forEach(([feature,section])=>{
-      if(access.role!=='admin'&&Number(access.permissions[feature]?.can_view)!==1)return;
+      const centerAllowed=['equipment_management','fleet','incidents'].some(f=>Number(access.permissions[f]?.can_view)===1);
+      if(access.role!=='admin'&&Number(access.permissions[feature]?.can_view)!==1&&!(feature==='equipment_management'&&centerAllowed))return;
       (section.links||[]).forEach(item=>{
+        if(feature==='equipment_management'&&item.href!=='/maintenance-center.html')return;
+        if(feature==='fleet'||feature==='incidents')return;
         if(existing.has(item.href))return;
         const link=document.createElement('a');link.href=item.href;
         link.dataset.sectionRelated=feature;
@@ -50,7 +55,9 @@
       if(url.origin!==location.origin)return;
       const feature=routes.get(url.pathname.replace(/\/+$/,'')||'/');
       if(!feature)return;
-      if(Number(access.permissions[feature]?.can_view)===1)show(link);else hide(link);
+      const center=['/maintenance-center','/maintenance-center.html'].includes(url.pathname);
+      const centerAllowed=['equipment_management','fleet','incidents'].some(f=>Number(access.permissions[f]?.can_view)===1);
+      if(Number(access.permissions[feature]?.can_view)===1||(center&&centerAllowed))show(link);else hide(link);
     });
     document.querySelectorAll('.review-nav-group').forEach(group=>{
       const links=[...group.querySelectorAll('a[href]')];

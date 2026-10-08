@@ -33,26 +33,7 @@ function buildArchiveSummaryParams() {
 }
 
 async function syncArchiveSummaryCards() {
-  if (!isArchiveSearchPage()) return;
-  try {
-    const response = await fetch(`${API}/api/archive?${buildArchiveSummaryParams()}`, { cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل ملخص الأرشيف");
-
-    const summary = data.summary || {};
-    const setValue = (id, value) => {
-      const element = document.getElementById(id);
-      if (element) element.textContent = typeof formatNumber === "function" ? formatNumber(value) : String(value ?? 0);
-    };
-
-    setValue("archiveReportsCount", Number(data.count || 0));
-    setValue("archiveWasteTotal", Number(summary.total_waste_tons || 0));
-    setValue("archiveTrucksTotal", Number(summary.total_trucks || 0));
-    setValue("archiveDieselTotal", Number(summary.total_diesel || 0));
-    setValue("archiveSoilTotal", Number(summary.total_soil_trips || 0));
-  } catch (error) {
-    console.error("فشل تحديث بطاقات ملخص الأرشيف", error);
-  }
+  if (isArchiveSearchPage() && typeof window.loadArchivePage === "function") return window.loadArchivePage(1);
 }
 
 function setupArchiveQuickSearch() {
@@ -79,7 +60,7 @@ function setupArchiveQuickSearch() {
     clearTimeout(archiveSearchTimer);
     archiveSearchTimer = setTimeout(() => {
       if (typeof window.loadArchivePage === "function") window.loadArchivePage(1);
-      syncArchiveSummaryCards();
+
     }, 300);
   });
 
@@ -88,7 +69,7 @@ function setupArchiveQuickSearch() {
     clearTimeout(archiveSearchTimer);
     setTimeout(() => {
       if (typeof window.loadArchivePage === "function") window.loadArchivePage(1);
-      syncArchiveSummaryCards();
+
     }, 80);
   });
 }
@@ -98,18 +79,18 @@ if (isArchiveSearchPage()) {
 
   document.addEventListener("change", (event) => {
     if (["archiveDateFilter", "archiveMonthFilter"].includes(event.target?.id)) {
-      setTimeout(syncArchiveSummaryCards, 30);
+      // Pagination owns both the table and summary cards.
     }
   });
 
   document.getElementById("archiveBtn")?.addEventListener("click", () => {
     setTimeout(() => {
       setupArchiveQuickSearch();
-      syncArchiveSummaryCards();
+
     }, 200);
   });
 
-  setTimeout(syncArchiveSummaryCards, 100);
+
 }
 
 window.setupArchiveQuickSearch = setupArchiveQuickSearch;

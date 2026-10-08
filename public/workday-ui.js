@@ -80,7 +80,10 @@
   }
   async function renderPeriodSummary(){
     const summary=document.querySelector('.archive-summary,.monthly-summary');if(!summary)return;
-    await loadWorkdays();const rows=periodFilter(workdays);const holiday=rows.filter(x=>x.workday_type==='holiday').length,official=rows.length-holiday;
+    await loadWorkdays();const rows=periodFilter(workdays);
+    const archive=(location.pathname.replace(/\/+$/,'')==='/archive');
+    if(archive&&!window.MINYA_ARCHIVE_WORKDAYS)return;
+    const holiday=archive?window.MINYA_ARCHIVE_WORKDAYS.holiday:rows.filter(x=>x.workday_type==='holiday').length,official=archive?window.MINYA_ARCHIVE_WORKDAYS.official:rows.length-holiday;
     let box=$('workdayPeriodSummary');if(!box){box=document.createElement('div');box.id='workdayPeriodSummary';box.className='minya-workday-period';summary.insertAdjacentElement('afterend',box);}
     const html=`<span>أيام الدوام الرسمي: <strong>${official}</strong></span><span>العطل الرسمية / دوام الطوارئ: <strong>${holiday}</strong></span>`;
     if(box.innerHTML!==html)box.innerHTML=html;
@@ -117,6 +120,7 @@
   };
 
   function bindFilters(){['archiveDateFilter','archiveMonthFilter','annualYear','annualYearFilter'].forEach(id=>$(id)?.addEventListener('change',()=>{renderPeriodSummary();setTimeout(decorateDates,50);}));}
+  document.addEventListener('minya:archive-loaded',renderPeriodSummary);
   document.addEventListener('minya:annual-loaded',()=>{renderPeriodSummary();decorateDates();});
   function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{ensureReportField();renderPeriodSummary();decorateDates();},120);}
   async function init(){installStyle();ensureReportField();bindFilters();await loadWorkdays();renderPeriodSummary();decorateDates();

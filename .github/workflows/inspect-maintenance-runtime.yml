@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/inspect-maintenance-runtime.js'
+      - 'scripts/inspect-desktop-audit.js'
       - '.github/workflows/inspect-maintenance-runtime.yml'
 permissions:
   contents: read
@@ -33,4 +34,4 @@ jobs:
         run: |
           set -euo pipefail
           PORT="${DEPLOY_PORT:-22}"
-          ssh -i ~/.ssh/deploy_key -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && git fetch origin main >/dev/null 2>&1 && git show origin/main:scripts/inspect-maintenance-runtime.js | node && printf '\nROUTE_STATUS\n' && curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:6000/api/equipment-maintenance/meta"
+          ssh -i ~/.ssh/deploy_key -p "$PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && git fetch origin main >/dev/null 2>&1 && git show origin/main:scripts/inspect-desktop-audit.js > scripts/.desktop-audit-runtime.js && node scripts/.desktop-audit-runtime.js && printf '\nROUTE_STATUS\n' && curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:6000/api/equipment-maintenance/meta"

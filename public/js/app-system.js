@@ -34,6 +34,7 @@
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
+        timeZone: "Asia/Hebron",
       });
     } catch {
       return String(value);
@@ -204,6 +205,17 @@
     if (storedBackupTime) setText("lastBackupTime", storedBackupTime);
 
     registerBackupDownload();
+    document.getElementById("createBackupBtn")?.addEventListener("click", async (event) => {
+      const button=event.currentTarget;button.disabled=true;
+      setText("backupStatus","جاري إنشاء النسخة...");
+      try {
+        const response=await fetch('/api/backups',{method:'POST'}),result=await response.json();
+        if(!response.ok||!result.ok)throw new Error(result.message||'تعذر إنشاء النسخة');
+        setText("backupStatus",result.message);
+        await Promise.all([loadSavedBackups(),loadStorage()]);
+        document.getElementById('runIntegrityBtn')?.click();
+      } catch(error){setText("backupStatus",error.message);} finally{button.disabled=false;}
+    });
     document.getElementById("refreshBackupsBtn")?.addEventListener("click", () => {
       loadStorage();
       loadSavedBackups();

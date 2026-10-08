@@ -166,11 +166,13 @@ function setupArchivePagination() {
   };
 }
 
+let archiveRequestSequence = 0;
 async function loadArchivePage(page = 1) {
   if (!isArchivePage()) return;
 
   const tbody = document.querySelector("#archiveTable tbody");
   if (!tbody) return;
+  const requestSequence = ++archiveRequestSequence;
 
   try {
     const dateValue = document.getElementById("archiveDateFilter")?.value || "";
@@ -199,6 +201,7 @@ async function loadArchivePage(page = 1) {
     const response = await fetch(`${API}/api/archive?${params}`);
     const data = await response.json();
 
+    if (requestSequence !== archiveRequestSequence || searchValue !== (document.getElementById("archiveQuickSearch")?.value?.trim() || "") || dateValue !== (document.getElementById("archiveDateFilter")?.value || "") || monthValue !== (document.getElementById("archiveMonthFilter")?.value || "")) return;
     if (!response.ok || !data.ok) {
       throw new Error(data.message || "فشل تحميل صفحة الأرشيف");
     }
@@ -206,8 +209,12 @@ async function loadArchivePage(page = 1) {
     archivePage = Number(data.page || 1);
     archivePages = Number(data.pages || 1);
     const reports = data.reports || [];
-    const soilTotal = document.getElementById("archiveSoilTotal");
-    if (soilTotal) soilTotal.textContent = formatNumber(data.summary?.total_soil_trips || 0);
+    const summary = data.summary || {};
+    for (const [id,value] of Object.entries({archiveReportsCount:data.count,archiveWasteTotal:summary.total_waste_tons,archiveTrucksTotal:summary.total_trucks,archiveDieselTotal:summary.total_diesel,archiveSoilTotal:summary.total_soil_trips})) {
+      const card = document.getElementById(id); if(card) card.textContent = formatNumber(value || 0);
+    }
+    window.MINYA_ARCHIVE_WORKDAYS = {official:Number(summary.official_days||0),holiday:Number(summary.holiday_days||0)};
+    document.dispatchEvent(new Event("minya:archive-loaded"));
 
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
@@ -241,6 +248,7 @@ async function loadArchivePage(page = 1) {
     updateArchiveSelectionUI();
     if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
+    if (requestSequence !== archiveRequestSequence) return;
     console.error(error);
     tbody.innerHTML = `<tr><td colspan="8">تعذر تحميل الأرشيف</td></tr>`;
   }
