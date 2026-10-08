@@ -28,14 +28,16 @@ sections.equipment_management.links=[
   {href:'/equipment-management',label:'المعدات وأوامر الصيانة'},
   {href:'/equipment-maintenance-finance.html',label:'سجل الصيانة والتكاليف'},
   {href:'/maintenance-archive.html',label:'أرشيف ملفات الصيانة'},
-  {href:'/equipment',label:'تشغيل الآليات من التقارير'}
+  {href:'/equipment',label:'تشغيل الآليات من التقارير'},
+  {href:'/drivers-licenses.html',label:'رخص السائقين'},
+  {href:'/fleet',label:'رخص المركبات والتأمين'}
 ];
 sections.incidents.links=[{href:'/maintenance-incidents',label:'الحوادث والأعطال'}];
 function featureForPath(value){
   const path=String(value||'').replace(/\/+$/,'')||'/';
   return Object.keys(sections).find(key=>sections[key].routes.some(route=>route===path||(!route.endsWith('.html')&&route+'.html'===path)))||null;
 }
-function permission(db,user,feature){
+function directPermission(db,user,feature){
   if(!user)return{can_view:0,can_edit:0};
   if(user.role==='admin')return{can_view:1,can_edit:1};
   const row=db.prepare('SELECT can_view,can_edit FROM feature_permissions WHERE user_id=? AND feature=?').get(user.id,feature);
@@ -44,8 +46,21 @@ function permission(db,user,feature){
   if(db.prepare('SELECT 1 FROM feature_permissions WHERE user_id=? LIMIT 1').get(user.id))return{can_view:0,can_edit:0};
   return user.role==='editor'?{can_view:1,can_edit:1}:{can_view:1,can_edit:0};
 }
+function permission(db,user,feature){
+  const own=directPermission(db,user,feature);
+  if(feature!=='fleet'||!user||user.role==='admin')return own;
+  const maintenance=directPermission(db,user,'equipment_management');
+  return {can_view:own.can_view||maintenance.can_view?1:0,can_edit:own.can_edit||maintenance.can_edit?1:0};
+}
 function install(app,{db,currentUser}){
   app.use((req,res,next)=>{
+    const licenseApi=/^\/api\/(driver-licenses|movement-vehicles)(?:\/|$)/.test(req.path);
+    if(licenseApi){
+      const user=currentUser(req);if(!user)return next();
+      const allowed=permission(db,user,'fleet'),edit=!['GET','HEAD'].includes(req.method);
+      if(!allowed.can_view||(edit&&!allowed.can_edit))return res.status(403).json({ok:false,message:'لا توجد صلاحية كافية للرخص والمركبات'});
+      return next();
+    }
     if(!['GET','HEAD'].includes(req.method))return next();
     const feature=featureForPath(req.path);
     if(!feature)return next();

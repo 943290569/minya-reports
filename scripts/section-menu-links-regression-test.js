@@ -20,10 +20,10 @@ for(const mobile of [false,true]){
  ctx.addLinks(menu);const count=menu.children.length;
  for(let i=0;i<50;i++)ctx.addLinks(menu);
  assert.equal(menu.children.length,count,'Repeated updates must not duplicate destinations');
- assert.equal(count,5);
+ assert.equal(count,7);
  assert(menu.children.some(a=>a.href==='/equipment-maintenance-finance.html'));
  assert(menu.children.some(a=>a.href==='/maintenance-archive.html'));
- assert(!menu.children.some(a=>a.href==='/drivers-licenses.html'));
+ assert(menu.children.some(a=>a.href==='/drivers-licenses.html'));
  ctx.access.permissions.fleet={can_view:1};ctx.addLinks(menu);
  assert(menu.children.some(a=>a.href==='/drivers-licenses.html'));
  assert.equal(new Set(menu.children.map(a=>a.href)).size,menu.children.length);
