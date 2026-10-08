@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20260913-cloud-files-v1-20260918-station-subsource-reports-v1-review-20260919d-nav-20260929-cloudlinks1";
+const MINYA_ASSET_VERSION = "3.8.0-20261008-archive-soil-v1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -328,6 +328,7 @@ document.documentElement.style.setProperty("--appearance-line-height", String(wi
     applyRoleNavigation(user);
     removeUserBox();
     loadSharedEnhancements();
+    loadScriptOnce('/js/app-section-access.js?v=20261008-section-links2','data-minya-section-access');
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
@@ -3896,6 +3897,7 @@ async function syncArchiveSummaryCards() {
     setValue("archiveWasteTotal", Number(summary.total_waste_tons || 0));
     setValue("archiveTrucksTotal", Number(summary.total_trucks || 0));
     setValue("archiveDieselTotal", Number(summary.total_diesel || 0));
+    setValue("archiveSoilTotal", Number(summary.total_soil_trips || 0));
   } catch (error) {
     console.error("فشل تحديث بطاقات ملخص الأرشيف", error);
   }
@@ -4075,6 +4077,19 @@ function setupArchivePagination() {
     headerRow.insertBefore(header, headerRow.firstChild);
   }
 
+  if (headerRow && !headerRow.querySelector(".archive-soil-column")) {
+    const header = document.createElement("th");
+    header.className = "archive-soil-column";
+    header.textContent = "نقل الطمم (نقلة)";
+    headerRow.insertBefore(header, headerRow.lastElementChild);
+  }
+  const summary = document.querySelector("#archiveSection .archive-summary");
+  if (summary && !document.getElementById("archiveSoilTotal")) {
+    const card = document.createElement("div");
+    card.innerHTML = '<span>مجموع نقل الطمم</span><strong id="archiveSoilTotal">0</strong><small>نقلة</small>';
+    summary.appendChild(card);
+  }
+
   const toolbar = document.createElement("div");
   toolbar.id = "archiveBulkActions";
   toolbar.style.cssText = "display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;";
@@ -4147,7 +4162,7 @@ async function loadArchivePage(page = 1) {
       params.set("to", `${monthValue}-${String(lastDay).padStart(2, "0")}`);
     }
 
-    tbody.innerHTML = `<tr><td colspan="7">جاري تحميل الأرشيف...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8">جاري تحميل الأرشيف...</td></tr>`;
 
     const response = await fetch(`${API}/api/archive?${params}`);
     const data = await response.json();
@@ -4159,6 +4174,8 @@ async function loadArchivePage(page = 1) {
     archivePage = Number(data.page || 1);
     archivePages = Number(data.pages || 1);
     const reports = data.reports || [];
+    const soilTotal = document.getElementById("archiveSoilTotal");
+    if (soilTotal) soilTotal.textContent = formatNumber(data.summary?.total_soil_trips || 0);
 
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
@@ -4169,6 +4186,7 @@ async function loadArchivePage(page = 1) {
           <td>${formatNumber(report.total_waste_tons)}</td>
           <td>${formatNumber(report.total_trucks)}</td>
           <td>${formatNumber(report.total_diesel)}</td>
+          <td class="archive-soil-column">${report.soil_trips == null ? "—" : formatNumber(report.soil_trips)}</td>
           <td>
             <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
             <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
@@ -4177,7 +4195,7 @@ async function loadArchivePage(page = 1) {
           </td>
         </tr>
       `).join("")
-      : `<tr><td colspan="7">لا توجد تقارير مطابقة</td></tr>`;
+      : `<tr><td colspan="8">لا توجد تقارير مطابقة</td></tr>`;
 
     const info = document.getElementById("archivePageInfo");
     if (info) info.textContent = `صفحة ${archivePage} من ${archivePages} — ${data.count} تقرير`;
@@ -4192,7 +4210,7 @@ async function loadArchivePage(page = 1) {
     if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
     console.error(error);
-    tbody.innerHTML = `<tr><td colspan="7">تعذر تحميل الأرشيف</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8">تعذر تحميل الأرشيف</td></tr>`;
   }
 }
 
@@ -6036,16 +6054,17 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     el('eqmKpis').innerHTML=[['المعدات',d.summary.assets,'معدة'],['الجاهزة',d.summary.available,'معدة'],['أوامر مفتوحة',d.summary.open_orders,'أمر'],['صيانة مستحقة',d.summary.due_plans,'بند'],['ساعات التشغيل',fmt(d.summary.total_hours),'ساعة'],['السولار',fmt(d.summary.total_diesel),'لتر'],['تكلفة الصيانة',fmt(d.summary.maintenance_cost),'شيكل']].map(x=>`<div><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></div>`).join('');
     el('eqmAlerts').innerHTML=d.alerts.length?d.alerts.map(x=>`<div class="eqm-alert ${x.level}"><strong>${esc(x.title)}</strong><span>${esc(x.detail)}</span></div>`).join(''):'<p class="minya-empty-state">لا توجد تنبيهات معدات</p>';
     document.querySelectorAll('.eqm-asset-select').forEach(s=>{const old=s.value;s.innerHTML='<option value="">اختر المعدة</option>'+assetOptions();if(old)s.value=old;});
-    el('eqmAssetsBody').innerHTML=assets.length?assets.map(x=>`<tr><td><strong>${esc(x.name)}</strong><small>${esc(x.equipment_type)} ${esc(x.model)}</small></td><td>${esc(x.current_driver||'-')}</td><td>${esc(x.status)}</td><td>${fmt(x.current_meter)}</td><td>${fmt(x.working_hours)}</td><td>${fmt(x.diesel_liters)}<small>${fmt(x.consumption_per_hour)} لتر/ساعة</small></td><td>${fmt(x.availability_percent)}%</td><td>${fmt(x.maintenance_cost)}</td><td>${editable?`<button data-asset="${x.id}">تعديل</button><button data-readings="${x.id}">السجل</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="9">لا توجد معدات مسجلة</td></tr>';
+    el('eqmAssetsBody').innerHTML=assets.length?assets.map(x=>`<tr><td><strong>${esc(x.name)}</strong><small>${esc(x.equipment_type)} ${esc(x.model)}</small></td><td>${esc(x.current_driver||'-')}</td><td>${esc(x.status)}</td><td>${fmt(x.current_meter)}</td><td>${fmt(x.working_hours)}</td><td>${fmt(x.diesel_liters)}<small>${fmt(x.consumption_per_hour)} لتر/ساعة</small></td><td>${fmt(x.availability_percent)}%</td><td>${fmt(x.maintenance_cost)}</td><td>${editable?`<button data-asset="${x.id}">تعديل</button><button data-readings="${x.id}">السجل</button><button data-files="${x.id}">الملفات</button><a class="eqm-inline-link" href="/equipment-maintenance-finance.html?asset=${x.id}">الصيانة والتكاليف</a>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="9">لا توجد معدات مسجلة</td></tr>';
     el('eqmPlansBody').innerHTML=plans.length?plans.map(x=>`<tr class="${x.state==='متأخرة'?'eqm-overdue':''}"><td>${esc(x.asset_name)}</td><td>${esc(x.title)}</td><td>${fmt(x.interval_hours)}</td><td>${fmt(x.next_due_meter)}</td><td>${fmt(x.hours_remaining)}</td><td>${esc(x.state)}</td><td>${editable?`<button data-service="${x.id}" data-meter="${x.current_meter}">تنفيذ الصيانة</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="7">لا توجد خطط صيانة</td></tr>';
     el('eqmOrdersBody').innerHTML=orders.length?orders.map(x=>`<tr><td>${esc(x.order_number)}</td><td>${esc(x.asset_name)}</td><td>${esc(x.reported_date)}</td><td>${esc(x.order_type)}</td><td>${esc(x.status)}</td><td>${esc(x.description)}</td><td>${fmt(x.total_cost)}</td><td>${editable?`<button data-order="${x.id}">تحديث</button>`:'قراءة فقط'}</td></tr>`).join(''):'<tr><td colspan="8">لا توجد أوامر صيانة</td></tr>';
-    document.querySelectorAll('[data-asset]').forEach(b=>b.onclick=()=>editAsset(Number(b.dataset.asset)));document.querySelectorAll('[data-readings]').forEach(b=>b.onclick=()=>showReadings(Number(b.dataset.readings)));document.querySelectorAll('[data-service]').forEach(b=>b.onclick=()=>completeService(Number(b.dataset.service),Number(b.dataset.meter)));document.querySelectorAll('[data-order]').forEach(b=>b.onclick=()=>editOrder(Number(b.dataset.order)));if(!editable)document.querySelectorAll('.eqm-editor').forEach(x=>x.hidden=true);
+    document.querySelectorAll('[data-asset]').forEach(b=>b.onclick=()=>editAsset(Number(b.dataset.asset)));document.querySelectorAll('[data-readings]').forEach(b=>b.onclick=()=>showReadings(Number(b.dataset.readings)));document.querySelectorAll('[data-files]').forEach(b=>b.onclick=()=>showFiles(Number(b.dataset.files)));document.querySelectorAll('[data-service]').forEach(b=>b.onclick=()=>completeService(Number(b.dataset.service),Number(b.dataset.meter)));document.querySelectorAll('[data-order]').forEach(b=>b.onclick=()=>editOrder(Number(b.dataset.order)));if(!editable)document.querySelectorAll('.eqm-editor').forEach(x=>x.hidden=true);
   }
   function editAsset(id){const x=assets.find(a=>a.id===id);if(!x)return;editingAsset=id;el('assetName').closest('details').open=true;['Name','Type','Model','Serial','Year','Driver','Initial','Current','Start','Notes'].forEach(k=>el('asset'+k).value=x[{Name:'name',Type:'equipment_type',Model:'model',Serial:'serial_number',Year:'manufacture_year',Driver:'current_driver',Initial:'initial_meter',Current:'current_meter',Start:'service_start_date',Notes:'notes'}[k]]??'');el('assetStatus').value=x.status;el('assetSave').textContent='حفظ التعديل';scrollTo({top:0,behavior:'smooth'});}
   async function showReadings(id){const d=await api(`/api/equipment-management/readings/${id}`);el('eqmReadingHistory').innerHTML=`<h4>سجل ${esc(assets.find(x=>x.id===id)?.name||'المعدة')}</h4><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>التاريخ</th><th>الساعات</th><th>السولار</th><th>التوقف</th><th>المصدر</th></tr></thead><tbody>${d.rows.map(x=>`<tr><td>${esc(x.day)}</td><td>${fmt(x.working_hours)}</td><td>${fmt(x.diesel_liters)}</td><td>${fmt(x.downtime_hours)}</td><td>${x.source==='manual'?'قراءة عداد':'التقرير اليومي'}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد قراءات</td></tr>'}</tbody></table></div>`;}
+  async function showFiles(id){try{const d=await api('/api/equipment-maintenance/files/'+id);el('eqmReadingHistory').innerHTML='<h4>ملفات '+esc(assets.find(x=>x.id===id)?.name||'المعدة')+'</h4><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>الملف</th><th>الحجم</th><th>التاريخ</th><th>فتح</th></tr></thead><tbody>'+((d.files||[]).map(f=>'<tr><td>'+esc(f.original_name)+'</td><td>'+fmt(Number(f.size_bytes||0)/1024)+' KB</td><td>'+esc(String(f.created_at||'').slice(0,10))+'</td><td><a target="_blank" rel="noopener" href="/api/cloud-files/'+f.id+'/download">فتح</a></td></tr>').join('')||'<tr><td colspan="4">لا توجد ملفات مرتبطة</td></tr>')+'</tbody></table></div><p><a href="/equipment-maintenance-finance.html?asset='+id+'">فتح سجل الصيانة والتكاليف لهذه الآلية</a></p>';}catch(e){el('eqmReadingHistory').innerHTML='<p>'+esc(e.message)+'</p>';}}
   async function completeService(id,meter){const value=prompt('قراءة العداد عند تنفيذ الصيانة',String(meter||0));if(value===null)return;await api(`/api/equipment-management/plans/${id}/service`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_meter:value})});load();}
   function editOrder(id){const x=orders.find(o=>o.id===id);if(!x)return;editingOrder=id;el('orderAsset').closest('details').open=true;el('orderAsset').value=x.asset_id;el('orderType').value=x.order_type;el('orderStatus').value=x.status;el('orderReported').value=x.reported_date;el('orderStart').value=x.start_date||'';el('orderCompleted').value=x.completed_date||'';el('orderDescription').value=x.description||'';el('orderAction').value=x.action_taken||'';el('orderParts').value=x.parts_cost||0;el('orderLabor').value=x.labor_cost||0;el('orderOther').value=x.other_cost||0;el('orderOwner').value=x.responsible_person||'';el('orderSave').textContent='حفظ التحديث';}
-  async function render(){const main=document.querySelector('main.container');if(!main)return;main.innerHTML=`<section class="v3-page eqm-page"><div class="v3-hero"><div><span>EQUIPMENT MANAGEMENT V3.7</span><h2>إدارة المعدات والصيانة الوقائية</h2><p>بطاقات المعدات والعدادات والسولار وخطط الصيانة وأوامر العمل والتكاليف.</p></div></div><div id="eqmKpis" class="v3-kpis"></div><div class="v3-panel"><h3>التنبيهات</h3><div id="eqmAlerts"></div></div>
+  async function render(){const main=document.querySelector('main.container');if(!main)return;main.innerHTML=`<section class="v3-page eqm-page"><div class="v3-hero"><div><span>EQUIPMENT MANAGEMENT V3.7</span><h2>إدارة المعدات والصيانة الوقائية</h2><p>بطاقات المعدات والعدادات والسولار وخطط الصيانة وأوامر العمل والتكاليف.</p><p><a class="v3-primary" href="/equipment-maintenance-finance.html">سجل الصيانة والتكاليف والتقارير</a></p></div></div><div id="eqmKpis" class="v3-kpis"></div><div class="v3-panel"><h3>التنبيهات</h3><div id="eqmAlerts"></div></div>
     <details class="v3-panel eqm-editor"><summary>بطاقة معدة</summary><div class="v3-form-grid"><label>اسم المعدة<input id="assetName"></label><label>النوع<input id="assetType"></label><label>الموديل<input id="assetModel"></label><label>الرقم التسلسلي<input id="assetSerial"></label><label>سنة الصنع<input id="assetYear" type="number"></label><label>السائق الحالي<input id="assetDriver"></label><label>العداد الابتدائي<input id="assetInitial" type="number" step="0.1"></label><label>العداد الحالي<input id="assetCurrent" type="number" step="0.1"></label><label>الحالة<select id="assetStatus"><option>تعمل</option><option>متوقفة</option><option>تحت الصيانة</option><option>متعطلة</option></select></label><label>تاريخ دخول الخدمة<input id="assetStart" type="date"></label></div><label>ملاحظات<textarea id="assetNotes"></textarea></label><button id="assetSave" class="v3-primary">حفظ المعدة</button><span id="assetMsg"></span></details>
     <details class="v3-panel eqm-editor"><summary>إدخال قراءة عداد يومية</summary><div class="v3-form-grid"><label>المعدة<select id="readingAsset" class="eqm-asset-select"></select></label><label>التاريخ<input id="readingDate" type="date" value="${today()}"></label><label>قراءة البداية<input id="readingStart" type="number" step="0.1"></label><label>قراءة النهاية<input id="readingEnd" type="number" step="0.1"></label><label>ساعات التوقف<input id="readingDown" type="number" step="0.1"></label><label>السولار لتر<input id="readingDiesel" type="number" step="0.1"></label><label>السائق<input id="readingDriver"></label><label>سبب التوقف<input id="readingReason"></label></div><button id="readingSave" class="v3-primary">حفظ القراءة</button><span id="readingMsg"></span></details>
     <details class="v3-panel eqm-editor"><summary>خطة صيانة وقائية</summary><div class="v3-form-grid"><label>المعدة<select id="planAsset" class="eqm-asset-select"></select></label><label>بند الصيانة<input id="planTitle" placeholder="تغيير زيت المحرك"></label><label>كل عدد ساعات<input id="planInterval" type="number"></label><label>آخر صيانة عند<input id="planLast" type="number"></label><label>تنبيه قبل ساعات<input id="planWarning" type="number" value="20"></label></div><button id="planSave" class="v3-primary">حفظ الخطة</button><span id="planMsg"></span></details>
@@ -6634,7 +6653,7 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     return role;
   }
 
-  function hide(el) { if (!el) return; if (el.style.display !== "none") el.style.display = "none"; if (el.getAttribute("aria-hidden") !== "true") el.setAttribute("aria-hidden", "true"); }
+  function hide(el) { if (!el) return; if (el.style.display !== "none") el.style.setProperty("display","none","important"); if (el.getAttribute("aria-hidden") !== "true") el.setAttribute("aria-hidden", "true"); }
   function disableEditorForm() {
     document.querySelectorAll("#reportFormSection input, #reportFormSection select, #reportFormSection textarea, #crewsTable input, #crewsTable select, #operationsTable input, #operationsTable select, #stationsTable input, #stationsTable select, #equipmentTable input, #equipmentTable select, #notes").forEach(el => { if (!el.disabled) el.disabled = true; el.title = "حساب قراءة فقط"; });
     hide(document.getElementById("saveBtn")?.closest("section") || document.getElementById("saveBtn"));
@@ -6647,8 +6666,8 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     const adminOnlyHrefs = ["/admin","/admin.html","/system.html","/drive-import.html","/reviews"];
     adminOnlyHrefs.forEach(href => document.querySelectorAll(`a[href="${href}"]`).forEach(link => { if (role !== "admin") hide(link); }));
     if (role === "viewer") document.querySelectorAll('a[href="/report"]').forEach(hide);
-    const featureLinks = { fleet:"/fleet", incidents:"/maintenance-incidents", environment:"/environment", tasks:"/tasks", contracts:"/contracts", cells:"/cells", equipment_management:"/equipment-management", global_search:"/global-search" };
-    if (featurePermissions) Object.entries(featureLinks).forEach(([feature,href]) => { if (!featurePermissions[feature]?.can_view) document.querySelectorAll(`a[href="${href}"]`).forEach(hide); });
+    const featureLinks = { fleet:["/fleet"], incidents:["/maintenance-incidents"], environment:["/environment"], tasks:["/tasks"], contracts:["/contracts"], cells:["/cells"], equipment_management:["/maintenance-center.html","/equipment-maintenance-finance.html","/equipment-management"], global_search:["/global-search"] };
+    if (featurePermissions) Object.entries(featureLinks).forEach(([feature,hrefs]) => { if (!featurePermissions[feature]?.can_view) hrefs.forEach(href=>document.querySelectorAll(`a[href="${href}"]`).forEach(hide)); });
   }
   function applyV3Permissions() {
     if (role === "viewer") { hide(document.getElementById("maintSave")); document.querySelectorAll("#v3Content input, #v3Content textarea, #v3Content select").forEach(el => { if (!el.closest(".v3-filter") && !el.closest(".v3-search-grid")) el.disabled = true; }); }
@@ -6663,16 +6682,17 @@ window.updateArchiveSelectionUI = updateArchiveSelectionUI;
     try {
       const response = await fetch("/api/feature-permissions", { cache:"no-store" });
       const data = await response.json(); if (!response.ok || !data.ok) return;
-      const labels = { fleet:"المركبات والسائقون", incidents:"الصيانة والحوادث", environment:"العصارة والغطاء", tasks:"الملاحظات والمهام", contracts:"المقاولون والعقود", cells:"الخلايا والسعة", equipment_management:"إدارة المعدات الوقائية", global_search:"البحث الشامل", backups:"النسخ الاحتياطي" };
+      const labels = { fleet:"المركبات والسائقون", incidents:"الصيانة والحوادث", environment:"العصارة والغطاء", tasks:"الملاحظات والمهام", contracts:"المقاولون والعقود", cells:"الخلايا والسعة", equipment_management:"الصيانة", global_search:"البحث الشامل", backups:"النسخ الاحتياطي" };
       const section = document.createElement("section"); section.id = "featurePermissionManager"; section.className = "v3-panel";
       section.innerHTML = `<h3>صلاحيات الأقسام</h3><p>تحديد من يستطيع مشاهدة أو تعديل كل قسم. صلاحيات المدير كاملة دائمًا.</p><label>المستخدم<select id="featurePermissionUser"><option value="">اختر مستخدمًا</option>${data.users.filter(u=>u.role!=="admin").map(u=>`<option value="${u.id}">${u.display_name} (${u.username})</option>`).join("")}</select></label><div id="featurePermissionRows"></div><button id="featurePermissionSave" class="v3-primary" type="button">حفظ الصلاحيات</button><span id="featurePermissionMsg"></span>`;
       host.appendChild(section);
       const select = section.querySelector("#featurePermissionUser"), rows = section.querySelector("#featurePermissionRows"), msg = section.querySelector("#featurePermissionMsg");
       function renderRows() {
         const uid = Number(select.value); if (!uid) { rows.innerHTML = ""; return; }
-        const user = data.users.find(u=>Number(u.id)===uid); rows.innerHTML = data.features.map(feature => { const saved = data.rows.find(r=>Number(r.user_id)===uid && r.feature===feature); const view = saved ? Number(saved.can_view)===1 : true; const edit = saved ? Number(saved.can_edit)===1 : user?.role === "editor"; return `<div class="feature-permission-row" data-feature="${feature}" style="display:grid;grid-template-columns:minmax(160px,1fr) auto auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb"><strong>${labels[feature]||feature}</strong><label><input type="checkbox" data-view ${view?'checked':''}> مشاهدة</label><label><input type="checkbox" data-edit ${edit?'checked':''}> تعديل</label></div>`; }).join("");
+        const user = data.users.find(u=>Number(u.id)===uid); rows.innerHTML = data.features.map(feature => { const saved = data.rows.find(r=>Number(r.user_id)===uid && r.feature===feature); const configured=data.rows.some(r=>Number(r.user_id)===uid); const view = saved ? Number(saved.can_view)===1 : !configured; const edit = view && (saved ? Number(saved.can_edit)===1 : user?.role === "editor"); return `<div class="feature-permission-row" data-feature="${feature}" style="display:grid;grid-template-columns:minmax(160px,1fr) auto auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb"><strong>${data.sections?.[feature]?.label||labels[feature]||feature}</strong><label><input type="checkbox" data-view ${view?'checked':''}> مشاهدة</label><label><input type="checkbox" data-edit ${edit?'checked':''}> تعديل</label></div>`; }).join("");
       }
       select.onchange = renderRows;
+      rows.addEventListener("change",event=>{const row=event.target.closest("[data-feature]");if(!row)return;const view=row.querySelector("[data-view]"),edit=row.querySelector("[data-edit]");if(event.target===view&&!view.checked)edit.checked=false;if(event.target===edit&&edit.checked)view.checked=true;});
       section.querySelector("#featurePermissionSave").onclick = async () => { const uid = Number(select.value); if (!uid) { msg.textContent = "اختر مستخدمًا"; return; } const permissions = [...rows.querySelectorAll("[data-feature]")].map(r=>({feature:r.dataset.feature,can_view:r.querySelector("[data-view]").checked,can_edit:r.querySelector("[data-edit]").checked})); const res = await fetch(`/api/feature-permissions/${uid}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({permissions}) }); const out = await res.json().catch(()=>({})); msg.textContent = res.ok ? "تم حفظ الصلاحيات" : (out.message || "تعذر الحفظ"); };
     } catch {}
   }
@@ -8691,13 +8711,11 @@ ${payload.sections.join("\n")}
     {label:"أرشيف التقارير", href:"/archive", icon:"▤"},
     {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
-    {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
-    {label:"إدارة المعدات الوقائية", href:"/equipment-management", icon:"⚙"},
     {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
     {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
+    {label:"الصيانة", href:"/maintenance-center.html", icon:"⚒"},
     {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
-    {label:"الصيانة والحوادث", href:"/maintenance-incidents", icon:"⚒"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
     {label:"المقاولون والعقود", href:"/contracts", icon:"▧"},

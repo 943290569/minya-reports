@@ -111,6 +111,7 @@
     applyRoleNavigation(user);
     removeUserBox();
     loadSharedEnhancements();
+    loadScriptOnce('/js/app-section-access.js?v=20261008-section-links2','data-minya-section-access');
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
@@ -319,13 +320,11 @@
     {label:"أرشيف التقارير", href:"/archive", icon:"▤"},
     {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
-    {label:"المعدات والصيانة", href:"/equipment", icon:"⚙"},
-    {label:"إدارة المعدات الوقائية", href:"/equipment-management", icon:"⚙"},
     {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
     {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
+    {label:"الصيانة", href:"/maintenance-center.html", icon:"⚒"},
     {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
-    {label:"الصيانة والحوادث", href:"/maintenance-incidents", icon:"⚒"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
     {label:"المقاولون والعقود", href:"/contracts", icon:"▧"},

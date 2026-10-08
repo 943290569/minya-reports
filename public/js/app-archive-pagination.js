@@ -109,6 +109,19 @@ function setupArchivePagination() {
     headerRow.insertBefore(header, headerRow.firstChild);
   }
 
+  if (headerRow && !headerRow.querySelector(".archive-soil-column")) {
+    const header = document.createElement("th");
+    header.className = "archive-soil-column";
+    header.textContent = "نقل الطمم (نقلة)";
+    headerRow.insertBefore(header, headerRow.lastElementChild);
+  }
+  const summary = document.querySelector("#archiveSection .archive-summary");
+  if (summary && !document.getElementById("archiveSoilTotal")) {
+    const card = document.createElement("div");
+    card.innerHTML = '<span>مجموع نقل الطمم</span><strong id="archiveSoilTotal">0</strong><small>نقلة</small>';
+    summary.appendChild(card);
+  }
+
   const toolbar = document.createElement("div");
   toolbar.id = "archiveBulkActions";
   toolbar.style.cssText = "display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;";
@@ -181,7 +194,7 @@ async function loadArchivePage(page = 1) {
       params.set("to", `${monthValue}-${String(lastDay).padStart(2, "0")}`);
     }
 
-    tbody.innerHTML = `<tr><td colspan="7">جاري تحميل الأرشيف...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8">جاري تحميل الأرشيف...</td></tr>`;
 
     const response = await fetch(`${API}/api/archive?${params}`);
     const data = await response.json();
@@ -193,6 +206,8 @@ async function loadArchivePage(page = 1) {
     archivePage = Number(data.page || 1);
     archivePages = Number(data.pages || 1);
     const reports = data.reports || [];
+    const soilTotal = document.getElementById("archiveSoilTotal");
+    if (soilTotal) soilTotal.textContent = formatNumber(data.summary?.total_soil_trips || 0);
 
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
@@ -203,6 +218,7 @@ async function loadArchivePage(page = 1) {
           <td>${formatNumber(report.total_waste_tons)}</td>
           <td>${formatNumber(report.total_trucks)}</td>
           <td>${formatNumber(report.total_diesel)}</td>
+          <td class="archive-soil-column">${report.soil_trips == null ? "—" : formatNumber(report.soil_trips)}</td>
           <td>
             <button class="archive-open" onclick="openReport(${report.id})">فتح</button>
             <button class="role-editor-action archive-edit" onclick="goToEditReport(${report.id})">تعديل</button>
@@ -211,7 +227,7 @@ async function loadArchivePage(page = 1) {
           </td>
         </tr>
       `).join("")
-      : `<tr><td colspan="7">لا توجد تقارير مطابقة</td></tr>`;
+      : `<tr><td colspan="8">لا توجد تقارير مطابقة</td></tr>`;
 
     const info = document.getElementById("archivePageInfo");
     if (info) info.textContent = `صفحة ${archivePage} من ${archivePages} — ${data.count} تقرير`;
@@ -226,7 +242,7 @@ async function loadArchivePage(page = 1) {
     if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
     console.error(error);
-    tbody.innerHTML = `<tr><td colspan="7">تعذر تحميل الأرشيف</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8">تعذر تحميل الأرشيف</td></tr>`;
   }
 }
 

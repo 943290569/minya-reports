@@ -978,12 +978,13 @@ app.get("/api/archive", requireAuth, (req,res) => {
   try {
     const page=Math.max(1,Number.parseInt(req.query.page,10)||1); const limit=Math.min(100,Math.max(10,Number.parseInt(req.query.limit,10)||50)); const offset=(page-1)*limit;
     const q=String(req.query.q||"").trim(),from=String(req.query.from||"").trim(),to=String(req.query.to||"").trim(),status=String(req.query.status||"").trim();
+    const soilTripsSql="(SELECT SUM(o.vehicle_count) FROM operations o WHERE o.report_id=daily_reports.id AND TRIM(o.operation_name) IN ('مواد التغطية (طمم)','مواد التغطية ( طمم)') AND TRIM(o.unit)='كوب')";
     let where=" WHERE 1=1"; const params=[];
     if(q){where+=" AND (report_no LIKE ? OR notes LIKE ?)";const like=`%${q}%`;params.push(like,like);} if(from){where+=" AND report_date >= ?";params.push(from);} if(to){where+=" AND report_date <= ?";params.push(to);} if(["draft","pending","approved"].includes(status)){where+=" AND workflow_status = ?";params.push(status);}
-    const summary=db.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(total_waste_tons),0) AS total_waste_tons,COALESCE(SUM(total_trucks),0) AS total_trucks,COALESCE(SUM(total_diesel),0) AS total_diesel FROM daily_reports ${where}`).get(...params);
-    const reports=db.prepare(`SELECT * FROM daily_reports ${where} ORDER BY report_date DESC LIMIT ? OFFSET ?`).all(...params,limit,offset);
+    const summary=db.prepare(`SELECT COUNT(*) AS count,COALESCE(SUM(total_waste_tons),0) AS total_waste_tons,COALESCE(SUM(total_trucks),0) AS total_trucks,COALESCE(SUM(total_diesel),0) AS total_diesel,COALESCE(SUM(${soilTripsSql}),0) AS total_soil_trips FROM daily_reports ${where}`).get(...params);
+    const reports=db.prepare(`SELECT *,${soilTripsSql} AS soil_trips FROM daily_reports ${where} ORDER BY report_date DESC LIMIT ? OFFSET ?`).all(...params,limit,offset);
     const total=Number(summary.count||0),pages=Math.max(1,Math.ceil(total/limit));
-    res.json({ok:true,page,limit,pages,count:total,reports,summary:{total_waste_tons:Number(summary.total_waste_tons||0),total_trucks:Number(summary.total_trucks||0),total_diesel:Number(summary.total_diesel||0)}});
+    res.json({ok:true,page,limit,pages,count:total,reports,summary:{total_waste_tons:Number(summary.total_waste_tons||0),total_trucks:Number(summary.total_trucks||0),total_diesel:Number(summary.total_diesel||0),total_soil_trips:Number(summary.total_soil_trips||0)}});
   } catch(error){res.status(500).json({ok:false,message:"تعذر تحميل الأرشيف",error:error.message});}
 });
 

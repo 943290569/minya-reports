@@ -44,27 +44,34 @@ const apply = process.argv.includes("--apply-acknowledge-unverified");
 const db = new Database(dbPath,{readonly:!apply,fileMustExist:true});
 try {
   const getReport = db.prepare("SELECT id FROM daily_reports WHERE report_date=?");
-  const findOperations = db.prepare("SELECT operation_name, quantity, notes FROM operations WHERE report_id=? AND (operation_name=? OR operation_name LIKE ?)");
-  const insert = apply ? db.prepare("INSERT INTO operations (report_id,operation_name,start_time,end_time,vehicle_count,quantity,unit,notes) VALUES (?,?, '', '',0,?,'نقلة',?)") : null;
-  const summary = {mode:apply?"APPLY":"DRY_RUN",source_rows:rows.length,days:grouped.size,source_trips:rows.reduce((s,r)=>s+r.trips,0),inserted_days:0,already_present:0,conflicts:[],missing_reports:[]};
+  const findOperations = db.prepare("SELECT * FROM operations WHERE report_id=? AND (TRIM(operation_name) IN ('مواد التغطية (طمم)','مواد التغطية ( طمم)','نقل الطمم') OR operation_name LIKE 'نقل الطمم - قلاب %')");
+  const insert = apply ? db.prepare("INSERT INTO operations (report_id,operation_name,start_time,end_time,vehicle_count,quantity,unit,notes) VALUES (?,?,'','',?,?,'كوب',?)") : null;
+  const update = apply ? db.prepare("UPDATE operations SET operation_name='مواد التغطية (طمم)',vehicle_count=?,quantity=?,unit='كوب',notes=? WHERE id=?") : null;
+  const remove = apply ? db.prepare("DELETE FROM operations WHERE id=?") : null;
+  const summary = {mode:apply?"APPLY":"DRY_RUN",source_rows:rows.length,days:grouped.size,source_trips:rows.reduce((s,r)=>s+r.trips,0),source_volume:rows.reduce((s,r)=>s+r.trips*15,0),inserted_days:0,already_present:0,conflicts:[],missing_reports:[]};
   const marker="[soil-trip-import-2026-08-09:";
   const run=db.transaction(()=>{
     for(const day of grouped.values()){
       const report=getReport.get(day.date);
       if(!report){summary.missing_reports.push(day.date);continue;}
-      const operationName="نقل الطمم";
-      // Detect old per-machine imports as conflicts to prevent double counting.
-      const matches=findOperations.all(report.id,operationName,"نقل الطمم - قلاب %");
-      if(matches.length){
-        if(matches.length===1 && matches[0].operation_name===operationName && Number(matches[0].quantity)===day.trips && String(matches[0].notes||"").includes(marker+day.date+":daily]")){
-          summary.already_present++;
-        }else{
-          summary.conflicts.push(day.date);
+      const tag=marker+day.date+":daily]";
+      const matches=findOperations.all(report.id);
+      const cover=matches.filter(r=>r.operation_name.trim().startsWith('مواد التغطية'));
+      const old=matches.filter(r=>!cover.includes(r));
+      if(cover.length>1 || old.length>1 || old.some(r=>r.operation_name!=='نقل الطمم' || Number(r.quantity)!==day.trips || r.unit!=='نقلة' || !String(r.notes||'').includes(tag))){summary.conflicts.push(day.date);continue;}
+      const target=cover[0];
+      const present=target && Number(target.vehicle_count)===day.trips && Number(target.quantity)===day.trips*15 && target.unit==='كوب' && String(target.notes||'').includes(tag);
+      if(target && !present && (Number(target.vehicle_count)!==0 || Number(target.quantity)!==0 || (String(target.unit||'').trim() && target.unit!=='كوب'))){summary.conflicts.push(day.date);continue;}
+      if(present && old.length===0){summary.already_present++;continue;}
+      const note=[target?.notes||'',tag+' '+day.parts.join('، ')+'؛ سعة النقلة 15 كوب؛ قراءات أولية بحاجة للتدقيق'].filter(Boolean).join('\n');
+      if(apply){
+        if(!present){
+          if(target) update.run(day.trips,day.trips*15,note,target.id);
+          else insert.run(report.id,'مواد التغطية (طمم)',day.trips,day.trips*15,note);
         }
-        continue;
+        // Consolidate only the verified import row after copying its counts and provenance.
+        for(const row of old) remove.run(row.id);
       }
-      const note=marker+day.date+":daily] "+day.parts.join("، ")+"؛ قراءات أولية بحاجة للتدقيق";
-      if(apply) insert.run(report.id,operationName,day.trips,note);
       summary.inserted_days++;
     }
     if(apply && summary.conflicts.length) throw new Error("Existing transport rows conflict: "+summary.conflicts.join(", "));
