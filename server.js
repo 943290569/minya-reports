@@ -335,6 +335,7 @@ require("./external-diesel")(app,{db,requireAuth,requireRole,audit,writeAutomati
 require("./cloud-files")(app,{db,requireAuth,requireRole,audit});
 require("./equipment-management")(app,{db,requireAuth,requireRole,audit});
 require("./equipment-maintenance-finance")(app,{db,requireAuth,requireRole,audit});
+require("./desktop-audit-review")(app,{db,requireRole,dataDir});
 require("./employee-complaints")(app,{db,requireRole,currentUser,audit,uploadsDir});
 require("./employee-evaluations")(app,{db,requireRole,audit,writeAutomaticBackup});
 require("./water-spraying")(app,{db,requireRole,audit,writeAutomaticBackup});
@@ -1113,6 +1114,7 @@ app.get("/api/system/integrity", requireRole("admin"), (req,res)=>{
   const invalidAttachmentPaths=attachmentRows.filter(a=>!safeUploadPath(a.stored_name)).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name,stored_name:a.stored_name}));
   const missingAttachments=attachmentRows.filter(a=>{const file=safeUploadPath(a.stored_name);return!file||!fs.existsSync(file);}).map(a=>({id:a.id,report_id:a.report_id,name:a.original_name,stored_name:a.stored_name}));
   const knownNames=new Set(attachmentRows.filter(a=>safeUploadPath(a.stored_name)).map(a=>a.stored_name));
+  for(const row of db.prepare("SELECT audio_stored_name FROM employee_complaints WHERE audio_stored_name<>''").all())if(safeUploadPath(row.audio_stored_name))knownNames.add(row.audio_stored_name);
   const orphanFiles=fs.readdirSync(uploadsDir).filter(name=>{try{return fs.statSync(path.join(uploadsDir,name)).isFile()&&!knownNames.has(name);}catch{return false;}});
   const reportsWithoutOperations=db.prepare(`SELECT id,report_no,report_date FROM daily_reports r WHERE NOT EXISTS (SELECT 1 FROM operations o WHERE o.report_id=r.id) ORDER BY report_date DESC`).all();
   const reportsWithoutEquipment=db.prepare(`SELECT id,report_no,report_date FROM daily_reports r WHERE NOT EXISTS (SELECT 1 FROM equipment e WHERE e.report_id=r.id) ORDER BY report_date DESC`).all();
