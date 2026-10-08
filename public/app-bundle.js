@@ -1,5 +1,5 @@
 // Minya Landfill app loader
-const MINYA_ASSET_VERSION = "3.8.0-20261008-archive-soil-v1";
+const MINYA_ASSET_VERSION = "3.8.0-20261008-desktop-audit1";
 const MINYA_LOADING_STARTED_AT = Date.now();
 const MINYA_APPEARANCE_STORAGE_KEY = "minya_appearance_settings_v1";
 const MINYA_TYPOGRAPHY_PRESETS = {
@@ -327,8 +327,15 @@ document.documentElement.style.setProperty("--appearance-line-height", String(wi
 
     applyRoleNavigation(user);
     removeUserBox();
+    const header=document.querySelector('.top-header');
+    if(header&&!header.querySelector('.header-brand-logo')){
+      const logo=document.createElement('img');logo.src='/assets/brand-recycle-truck-jsc-512.png';logo.alt='JSC_H&B';logo.className='header-brand-logo';
+      logo.style.cssText='width:64px;height:64px;object-fit:contain;flex:0 0 auto;border-radius:14px';header.prepend(logo);
+    }
+    header?.querySelector('nav')?.setAttribute('aria-label','التنقل الرئيسي');
+    loadScriptOnce('/js/app-logout-header.js?v=20261008-desktop-audit1','data-minya-shared-logout');
     loadSharedEnhancements();
-    loadScriptOnce('/js/app-section-access.js?v=20261008-section-links2','data-minya-section-access');
+    loadScriptOnce('/js/app-section-access.js?v=20261008-desktop-audit1','data-minya-section-access');
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
@@ -1247,6 +1254,10 @@ function goToEditReport(id) {
 }
 
 function renderArchiveReports() {
+  if (location.pathname.replace(/\/+$/, "") === "/archive" && typeof window.loadArchivePage === "function") {
+    window.loadArchivePage(1);
+    return;
+  }
   const dateFilter = document.getElementById("archiveDateFilter")?.value || "";
   const monthFilter = document.getElementById("archiveMonthFilter")?.value || "";
   let filteredReports = [...archiveReports];
@@ -3881,26 +3892,7 @@ function buildArchiveSummaryParams() {
 }
 
 async function syncArchiveSummaryCards() {
-  if (!isArchiveSearchPage()) return;
-  try {
-    const response = await fetch(`${API}/api/archive?${buildArchiveSummaryParams()}`, { cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.message || "فشل تحميل ملخص الأرشيف");
-
-    const summary = data.summary || {};
-    const setValue = (id, value) => {
-      const element = document.getElementById(id);
-      if (element) element.textContent = typeof formatNumber === "function" ? formatNumber(value) : String(value ?? 0);
-    };
-
-    setValue("archiveReportsCount", Number(data.count || 0));
-    setValue("archiveWasteTotal", Number(summary.total_waste_tons || 0));
-    setValue("archiveTrucksTotal", Number(summary.total_trucks || 0));
-    setValue("archiveDieselTotal", Number(summary.total_diesel || 0));
-    setValue("archiveSoilTotal", Number(summary.total_soil_trips || 0));
-  } catch (error) {
-    console.error("فشل تحديث بطاقات ملخص الأرشيف", error);
-  }
+  if (isArchiveSearchPage() && typeof window.loadArchivePage === "function") return window.loadArchivePage(1);
 }
 
 function setupArchiveQuickSearch() {
@@ -3927,7 +3919,7 @@ function setupArchiveQuickSearch() {
     clearTimeout(archiveSearchTimer);
     archiveSearchTimer = setTimeout(() => {
       if (typeof window.loadArchivePage === "function") window.loadArchivePage(1);
-      syncArchiveSummaryCards();
+
     }, 300);
   });
 
@@ -3936,7 +3928,7 @@ function setupArchiveQuickSearch() {
     clearTimeout(archiveSearchTimer);
     setTimeout(() => {
       if (typeof window.loadArchivePage === "function") window.loadArchivePage(1);
-      syncArchiveSummaryCards();
+
     }, 80);
   });
 }
@@ -3946,18 +3938,18 @@ if (isArchiveSearchPage()) {
 
   document.addEventListener("change", (event) => {
     if (["archiveDateFilter", "archiveMonthFilter"].includes(event.target?.id)) {
-      setTimeout(syncArchiveSummaryCards, 30);
+      // Pagination owns both the table and summary cards.
     }
   });
 
   document.getElementById("archiveBtn")?.addEventListener("click", () => {
     setTimeout(() => {
       setupArchiveQuickSearch();
-      syncArchiveSummaryCards();
+
     }, 200);
   });
 
-  setTimeout(syncArchiveSummaryCards, 100);
+
 }
 
 window.setupArchiveQuickSearch = setupArchiveQuickSearch;
@@ -4134,11 +4126,13 @@ function setupArchivePagination() {
   };
 }
 
+let archiveRequestSequence = 0;
 async function loadArchivePage(page = 1) {
   if (!isArchivePage()) return;
 
   const tbody = document.querySelector("#archiveTable tbody");
   if (!tbody) return;
+  const requestSequence = ++archiveRequestSequence;
 
   try {
     const dateValue = document.getElementById("archiveDateFilter")?.value || "";
@@ -4167,6 +4161,7 @@ async function loadArchivePage(page = 1) {
     const response = await fetch(`${API}/api/archive?${params}`);
     const data = await response.json();
 
+    if (requestSequence !== archiveRequestSequence || searchValue !== (document.getElementById("archiveQuickSearch")?.value?.trim() || "") || dateValue !== (document.getElementById("archiveDateFilter")?.value || "") || monthValue !== (document.getElementById("archiveMonthFilter")?.value || "")) return;
     if (!response.ok || !data.ok) {
       throw new Error(data.message || "فشل تحميل صفحة الأرشيف");
     }
@@ -4174,8 +4169,12 @@ async function loadArchivePage(page = 1) {
     archivePage = Number(data.page || 1);
     archivePages = Number(data.pages || 1);
     const reports = data.reports || [];
-    const soilTotal = document.getElementById("archiveSoilTotal");
-    if (soilTotal) soilTotal.textContent = formatNumber(data.summary?.total_soil_trips || 0);
+    const summary = data.summary || {};
+    for (const [id,value] of Object.entries({archiveReportsCount:data.count,archiveWasteTotal:summary.total_waste_tons,archiveTrucksTotal:summary.total_trucks,archiveDieselTotal:summary.total_diesel,archiveSoilTotal:summary.total_soil_trips})) {
+      const card = document.getElementById(id); if(card) card.textContent = formatNumber(value || 0);
+    }
+    window.MINYA_ARCHIVE_WORKDAYS = {official:Number(summary.official_days||0),holiday:Number(summary.holiday_days||0)};
+    document.dispatchEvent(new Event("minya:archive-loaded"));
 
     tbody.innerHTML = reports.length
       ? reports.map((report) => `
@@ -4209,6 +4208,7 @@ async function loadArchivePage(page = 1) {
     updateArchiveSelectionUI();
     if (typeof window.applyRoleAwareUI === "function") window.applyRoleAwareUI();
   } catch (error) {
+    if (requestSequence !== archiveRequestSequence) return;
     console.error(error);
     tbody.innerHTML = `<tr><td colspan="8">تعذر تحميل الأرشيف</td></tr>`;
   }
@@ -8712,10 +8712,8 @@ ${payload.sections.join("\n")}
     {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
     {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
-    {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
     {label:"الصيانة", href:"/maintenance-center.html", icon:"⚒"},
-    {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
     {label:"المقاولون والعقود", href:"/contracts", icon:"▧"},

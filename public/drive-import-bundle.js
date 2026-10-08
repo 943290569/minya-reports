@@ -110,8 +110,15 @@
 
     applyRoleNavigation(user);
     removeUserBox();
+    const header=document.querySelector('.top-header');
+    if(header&&!header.querySelector('.header-brand-logo')){
+      const logo=document.createElement('img');logo.src='/assets/brand-recycle-truck-jsc-512.png';logo.alt='JSC_H&B';logo.className='header-brand-logo';
+      logo.style.cssText='width:64px;height:64px;object-fit:contain;flex:0 0 auto;border-radius:14px';header.prepend(logo);
+    }
+    header?.querySelector('nav')?.setAttribute('aria-label','التنقل الرئيسي');
+    loadScriptOnce('/js/app-logout-header.js?v=20261008-desktop-audit1','data-minya-shared-logout');
     loadSharedEnhancements();
-    loadScriptOnce('/js/app-section-access.js?v=20261008-section-links2','data-minya-section-access');
+    loadScriptOnce('/js/app-section-access.js?v=20261008-desktop-audit1','data-minya-section-access');
 
     if(!window.__MINYA_ROLE_OBSERVER__){
       let scheduled=false;
@@ -321,10 +328,8 @@
     {label:"التقرير الشهري", href:"/monthly", icon:"▦"},
     {label:"التقرير السنوي", href:"/annual", icon:"◔"},
     {label:"ملفات ومرفقات الموقع", href:"/files", icon:"▰"},
-    {label:"رخص السائقين", href:"/drivers-licenses.html", icon:"▣"},
     {label:"لوحة التشغيل", href:"/ops-dashboard", icon:"▥"},
     {label:"الصيانة", href:"/maintenance-center.html", icon:"⚒"},
-    {label:"مركبات حركة المكب", href:"/fleet", icon:"▣"},
     {label:"العصارة والغطاء اليومي", href:"/environment", icon:"◫"},
     {label:"الملاحظات والمهام", href:"/tasks", icon:"✓"},
     {label:"المقاولون والعقود", href:"/contracts", icon:"▧"},

@@ -29,7 +29,7 @@ module.exports=function installEquipmentMaintenanceFinance(app,{db,requireAuth,r
     const tx=db.transaction(rows=>{
       for(const row of rows){
         if(existsStmt.get(row.id)){skipped++;continue;}
-        const a=ensureAssetByLegacyName(row.equipment_name); if(!a||!/\\d{4}-\\d{2}-\\d{2}/.test(String(row.log_date||''))){skipped++;continue;}
+        const a=ensureAssetByLegacyName(row.equipment_name); if(!a||!/^\d{4}-\d{2}-\d{2}$/.test(String(row.log_date||''))){skipped++;continue;}
         insertStmt.run(a.id,String(row.log_date).slice(0,10),'','',String(row.status||'صيانة قديمة').trim()||'صيانة قديمة',String(row.description||'').trim(),String(row.action_taken||'').trim(),0,0,0,Math.max(0,Number(row.cost||0)||0),'بيانات قديمة',null,'مرحّل تلقائيًا من سجل الصيانة السابق',row.created_by||null,'maintenance_logs',row.id);
         migrated++;
       }

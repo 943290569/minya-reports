@@ -65,7 +65,8 @@ function install(app,{db,currentUser}){
     const feature=featureForPath(req.path);
     if(!feature)return next();
     const user=currentUser(req);
-    if(!user||permission(db,user,feature).can_view)return next();
+    const center=['/maintenance-center','/maintenance-center.html'].includes(req.path);
+    if(!user||permission(db,user,feature).can_view||(center&&['fleet','incidents'].some(f=>permission(db,user,f).can_view)))return next();
     res.setHeader('Cache-Control','no-store');
     return res.redirect(303,'/');
   });
