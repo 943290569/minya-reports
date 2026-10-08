@@ -240,6 +240,16 @@ function wordPreviewPayload(){
     x=await json('/api/reports',auth(editorCookie));
     expectStatus(x,200,'editor could not use a new session after password change');
 
+    x=await json('/api/employee-complaints',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({employee_name:'اختبار',complaint_type:'أخرى',complaint_text:'fixture',audio_mime_type:'audio/webm',audio_base64:Buffer.from('audio fixture').toString('base64')})});
+    expectStatus(x,201,'complaint audio fixture failed');
+    fs.writeFileSync(path.join(tmp,'uploads','unlinked-fixture.txt'),'orphan');
+    x=await json('/api/system/integrity',auth(adminCookie));
+    expectStatus(x,200,'integrity check failed');
+    if((x.data.orphan_files||[]).some(name=>name.startsWith('employee-complaint-')))throw Error('linked complaint audio reported as orphan');
+    if(!(x.data.orphan_files||[]).includes('unlinked-fixture.txt'))throw Error('genuine orphan was hidden');
+    const anonymousReview=await fetch(base+'/maintenance-document-review',{redirect:'manual'});
+    if(anonymousReview.status===200)throw Error('private maintenance review exposed anonymously');
+
     console.log(`Production runtime smoke passed: V${pkg.version} + SQLite integrity + canonical report totals + role permissions + session invalidation + safe attachments + returned-report workflow ok.`);
   } catch (error) {
     console.error(output);
