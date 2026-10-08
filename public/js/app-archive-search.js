@@ -49,6 +49,7 @@ async function syncArchiveSummaryCards() {
     setValue("archiveWasteTotal", Number(summary.total_waste_tons || 0));
     setValue("archiveTrucksTotal", Number(summary.total_trucks || 0));
     setValue("archiveDieselTotal", Number(summary.total_diesel || 0));
+    setValue("archiveSoilTotal", Number(summary.total_soil_trips || 0));
   } catch (error) {
     console.error("فشل تحديث بطاقات ملخص الأرشيف", error);
   }
