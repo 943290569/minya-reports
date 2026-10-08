@@ -1,4 +1,4 @@
-name: Inspect vehicle registry on Google
+name: Import vehicle registry on Google
 on:
   push:
     branches: [main]
@@ -34,7 +34,7 @@ jobs:
             sleep 5
           done
           test -s ~/.ssh/known_hosts
-      - name: Inspect current vehicle and equipment records
+      - name: Backup, import vehicle registry and verify
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -57,8 +57,9 @@ jobs:
           db=root/'database.db'
           namespace={'__name__':'production_import'}
           exec(payload['script'],namespace)
-          backups=Path.home()/'minya-db-backups'/'september-2026-import'
+          backups=Path.home()/'minya-db-backups'/'vehicle-register-import'
           namespace['run'](db,payload['data'],backups,False)
+          namespace['run'](db,payload['data'],backups,True)
           '''
           command=['ssh','-i',os.path.expanduser('~/.ssh/deploy_key'),'-p',os.environ.get('DEPLOY_PORT') or '22','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes',os.environ['DEPLOY_USER']+'@'+os.environ['DEPLOY_HOST'],'python3 -c '+shlex.quote(bootstrap)]
           payload={'name':os.environ['DEPLOY_PM2_NAME'],'path':os.environ['DEPLOY_PATH'],'script':Path('scripts/import-vehicle-register.py').read_text(),'data':json.loads(Path('scripts/vehicle-register-2026.json').read_text())}
