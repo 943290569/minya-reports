@@ -29,34 +29,47 @@ for (const r of rows) {
   if (keys.has(key)) throw new Error("Duplicate source key: " + key);
   keys.add(key);
 }
+// Aggregate the two machines into one operation per date.
+const grouped = new Map();
+for (const r of rows) {
+  const day = grouped.get(r.date) || {date:r.date,trips:0,parts:[]};
+  day.trips += r.trips;
+  day.parts.push(r.equipment + "=" + r.trips);
+  grouped.set(r.date,day);
+}
 const dataDir = process.env.MINYA_DATA_DIR ? path.resolve(process.env.MINYA_DATA_DIR) : (process.env.RAILWAY_ENVIRONMENT ? "/data" : root);
 const dbPath = path.join(dataDir, "database.db");
 if (!fs.existsSync(dbPath)) throw new Error("Database does not exist at " + dbPath + "; refusing to create one");
-const db = new Database(dbPath, { readonly: !process.argv.includes("--apply-acknowledge-unverified"), fileMustExist:true });
+const apply = process.argv.includes("--apply-acknowledge-unverified");
+const db = new Database(dbPath,{readonly:!apply,fileMustExist:true});
 try {
-  const apply = process.argv.includes("--apply-acknowledge-unverified");
-  const selectReport = db.prepare("SELECT id, report_date FROM daily_reports WHERE report_date=?");
-  const existing = db.prepare("SELECT id, operation_name, quantity, notes FROM operations WHERE report_id=? AND operation_name=?");
+  const getReport = db.prepare("SELECT id FROM daily_reports WHERE report_date=?");
+  const findOperations = db.prepare("SELECT operation_name, quantity, notes FROM operations WHERE report_id=? AND (operation_name=? OR operation_name LIKE ?)");
   const insert = apply ? db.prepare("INSERT INTO operations (report_id,operation_name,start_time,end_time,vehicle_count,quantity,unit,notes) VALUES (?,?, '', '',0,?,'نقلة',?)") : null;
-  const summary = {mode:apply?"APPLY":"DRY_RUN",source_rows:rows.length,source_trips:rows.reduce((s,r)=>s+r.trips,0),inserted:0,already_present:0,conflicts:[],missing_reports:[]};
-  const run = db.transaction(() => {
-    for (const r of rows) {
-      const daily = selectReport.get(r.date);
-      if (!daily) { summary.missing_reports.push(r.date + " / " + r.equipment); continue; }
-      const label = "نقل الطمم - قلاب " + r.equipment;
-      const note = "[soil-trip-import-2026-08-09:" + r.date + ":" + r.equipment + "] مصدر: " + r.photo + "؛ قراءة أولية بحاجة للتدقيق";
-      const matches = existing.all(daily.id, label);
-      if (matches.length) {
-        if (matches.length === 1 && Number(matches[0].quantity) === r.trips && String(matches[0].notes||"").includes("[soil-trip-import-2026-08-09:")) summary.already_present++;
-        else summary.conflicts.push(r.date + " / " + r.equipment);
+  const summary = {mode:apply?"APPLY":"DRY_RUN",source_rows:rows.length,days:grouped.size,source_trips:rows.reduce((s,r)=>s+r.trips,0),inserted_days:0,already_present:0,conflicts:[],missing_reports:[]};
+  const marker="[soil-trip-import-2026-08-09:";
+  const run=db.transaction(()=>{
+    for(const day of grouped.values()){
+      const report=getReport.get(day.date);
+      if(!report){summary.missing_reports.push(day.date);continue;}
+      const operationName="نقل الطمم";
+      // Detect old per-machine imports as conflicts to prevent double counting.
+      const matches=findOperations.all(report.id,operationName,"نقل الطمم - قلاب %");
+      if(matches.length){
+        if(matches.length===1 && matches[0].operation_name===operationName && Number(matches[0].quantity)===day.trips && String(matches[0].notes||"").includes(marker+day.date+":daily]")){
+          summary.already_present++;
+        }else{
+          summary.conflicts.push(day.date);
+        }
         continue;
       }
-      if (apply) insert.run(daily.id, label, r.trips, note);
-      summary.inserted++;
+      const note=marker+day.date+":daily] "+day.parts.join("، ")+"؛ قراءات أولية بحاجة للتدقيق";
+      if(apply) insert.run(report.id,operationName,day.trips,note);
+      summary.inserted_days++;
     }
-    if (apply && summary.conflicts.length) throw new Error("Conflict detected; transaction rolled back: " + summary.conflicts.join(", "));
+    if(apply && summary.conflicts.length) throw new Error("Existing transport rows conflict: "+summary.conflicts.join(", "));
   });
   run();
-  console.log(JSON.stringify(summary, null, 2));
-  if (summary.missing_reports.length) console.log("Missing daily reports were NOT created. Create them normally and rerun this idempotent importer.");
-} finally { db.close(); }
+  console.log(JSON.stringify(summary,null,2));
+  if(summary.missing_reports.length) console.log("Missing daily reports were NOT created.");
+} finally {db.close();}
