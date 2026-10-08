@@ -30,7 +30,7 @@ reviews.push({file_id:file.id,name:file.original_name,assets:file.assets,text});
 }
 const target=path.join(root,'desktop-audit-maintenance-review.json');fs.writeFileSync(target,JSON.stringify(reviews,null,2),{mode:0o600});
 console.log('DOCX_REVIEW',JSON.stringify({parsed:reviews.filter(x=>x.text).length,errors:reviews.filter(x=>x.error).length}));
-console.log('DOCX_SAMPLES',JSON.stringify(reviews.slice(0,5).map(r=>({...r,text:r.text?.slice(0,1400)}))));
+console.log('DOCX_REVIEW_SAVED', 'Private review checkpoint saved on server');
 console.log('MAINTENANCE_RECORDS',db.prepare('SELECT COUNT(*) n FROM equipment_maintenance_records').get().n);
 console.log('SOIL_MISSING',JSON.stringify(db.prepare("SELECT substr(r.report_date,1,7) month,COUNT(DISTINCT r.id) days,SUM(o.vehicle_count) trips,SUM(o.quantity) volume FROM daily_reports r JOIN operations o ON o.report_id=r.id WHERE r.report_date>='2026-04-01' AND r.report_date<='2026-05-31' AND o.operation_name LIKE '%طمم%' GROUP BY month").all()));
 db.close();
