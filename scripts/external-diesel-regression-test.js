@@ -57,16 +57,16 @@ assert(page.includes("السولار الذي عبّأه طاقم المكب ل�
 assert(page.includes("الشركة"), "company label is missing");
 assert(!page.includes("المستفيدة"), "obsolete beneficiary wording is still visible");
 assert(!client.includes("المستفيدة"), "obsolete beneficiary wording is still used in client messages or print");
-assert(client.includes("تمت تعبئة السولار للشركة بواسطة طاقم المكب"), "print report does not identify who filled the diesel");
+assert(!client.includes("تمت تعبئة السولار للشركة بواسطة طاقم المكب"), "removed filling attribution returned to print");
 assert(!client.includes("بسبب نقص السولار لديها"), "print report still displays the diesel-shortage reason");
-assert(client.includes("توقيع مسؤول تعبئة السولار"), "fuel officer signature is missing from print");
-assert(client.includes("توقيع قسم المكب"), "landfill signature is missing from print");
+assert(!client.includes("توقيع مسؤول تعبئة السولار"), "removed fuel officer signature returned to print");
+assert(!client.includes("توقيع قسم المكب"), "removed landfill signature returned to print");
 assert(client.includes("مجموع يوم"), "daily diesel totals are missing");
 assert(client.includes("المجموع الشهري"), "monthly diesel total is missing");
 assert(client.includes("previewLiters"), "import preview liters total is missing");
 assert(menu.includes('href:"/external-diesel"'), "external diesel navigation link is missing");
 assert(desktopMenu.includes('addLink(nav, "/external-diesel", "السولار الخارجي")'), "external diesel desktop navigation link is missing");
-assert(server.includes("external_diesel, appearance_settings"), "external diesel is missing from base backups");
+assert(server.includes("const external_diesel = db.prepare(`SELECT * FROM external_diesel_entries") && /return \{[^;]*\breports, maintenance, external_diesel,/.test(server), "external diesel is missing from base backups");
 assert(installer.includes("external_diesel: rows('external_diesel_entries')"), "external diesel is missing from deployed backups");
 const wordSample = [
   "كشف تعبئة السولار لشركة رائد أبو القاطم شهر 8/2026",
