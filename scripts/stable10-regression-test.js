@@ -108,7 +108,8 @@ assert(!monthlyExport.includes('diesel_liters'), 'Monthly CSV must not recalcula
 
 const appLoader = read('public/app.js');
 assert(appLoader.includes('js/app-monthly-chart-stable10.js'), 'Stored-total monthly chart override must be loaded');
-assert(appLoader.includes('3.8.0-20260913-cloud-files-v1'), 'Main asset version must force the cloud-files update');
+const assetVersionDate = appLoader.match(/MINYA_ASSET_VERSION\s*=\s*[\"']\d+\.\d+\.\d+-(\d{8})/);
+assert(assetVersionDate && assetVersionDate[1] >= '20260913', 'Main asset version must include the cloud-files update or a newer release');
 const monthlyChart = read('public/js/app-monthly-chart-stable10.js');
 assert(monthlyChart.includes('Number(report.total_trucks || 0)'), 'Monthly trucks chart must use stored total_trucks values');
 assert(monthlyChart.includes('Number(report.total_diesel || 0)'), 'Monthly diesel chart must use stored total_diesel values');
