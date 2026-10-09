@@ -90,7 +90,7 @@ module.exports=function installEquipmentMaintenanceFinance(app,{db,requireAuth,r
       FROM cloud_file_links l
       JOIN cloud_files f ON f.id=l.file_id
       JOIN equipment_assets a ON a.id=l.entity_id
-      LEFT JOIN equipment_maintenance_records m ON m.source_file_id=f.id
+      LEFT JOIN equipment_maintenance_records m ON (m.source_file_id=f.id OR m.invoice_file_id=f.id)
       WHERE ${where.join(' AND ')}
       ORDER BY a.name,f.created_at DESC,f.id DESC`).all(...args);
     res.json({ok:true,candidates:rows});
